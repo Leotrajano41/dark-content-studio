@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Studio Dark - Gerador de Conteúdo & Prompts (Fórmula Explicador Bíblico)</title>
+  <meta name="description" content="Ferramenta de automação de conteúdo para canais dark no YouTube inspirada no canal Explicador Bíblico com integração direta via API OpenRouter.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header Principal -->
+    <header class="app-header">
+      <div class="header-brand">
+        <div class="brand-logo">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+          </svg>
+        </div>
+        <div>
+          <h1>Dark Studio <span>Pro</span></h1>
+          <p class="subtitle">Automação de Conteúdo & IA • Fórmula Explicador Bíblico</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="btn-load-preset" class="btn btn-secondary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="1 4 1 10 7 10"></polyline>
+            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+          </svg>
+          Carregar Exemplo
+        </button>
+        <button id="btn-clear-all" class="btn btn-ghost" title="Limpar todos os campos">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          Limpar
+        </button>
+      </div>
+    </header>
+
+    <!-- SEÇÃO 2.0: Configurações da API OpenRouter -->
+    <section class="api-config-card">
+      <div class="api-config-header">
+        <div class="api-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
+          </svg>
+          <h3>Configurações da API (OpenRouter)</h3>
+        </div>
+        <span id="api-status-badge" class="status-badge status-pending">
+          <span class="status-dot"></span>
+          API Não Configurada
+        </span>
+      </div>
+
+      <div class="api-form-grid">
+        <div class="form-group">
+          <label for="input-api-key">
+            API Key (OpenRouter)
+            <span class="tooltip-wrapper" data-tooltip="Insira sua chave de API da OpenRouter aqui (ex: sk-or-v1-...). Ela será salva localmente no seu navegador de forma segura.">?</span>
+          </label>
+          <input type="password" id="input-api-key" class="form-control" placeholder="sk-or-v1-..." autocomplete="off">
+        </div>
+
+        <div class="form-group">
+          <label for="input-api-model">
+            Modelo de IA (OpenRouter)
+            <span class="tooltip-wrapper" data-tooltip="Digite o nome do modelo de IA que deseja usar na OpenRouter (ex: 'gpt-4o', 'anthropic/claude-3.5-sonnet', 'google/gemini-2.0-flash-001', 'deepseek/deepseek-r1').">?</span>
+          </label>
+          <input type="text" id="input-api-model" class="form-control" placeholder="google/gemini-2.0-flash-001">
+        </div>
+
+        <div class="form-group form-group-btn">
+          <button id="btn-save-api-config" class="btn btn-secondary btn-full">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+              <polyline points="17 21 17 13 7 13 7 21"></polyline>
+              <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            Salvar Configurações
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Navegação por Abas -->
+    <nav class="nav-tabs" aria-label="Navegação por Seções">
+      <button class="nav-tab active" data-target="sec-roteiros">
+        <span class="tab-step">1</span>
+        <span class="tab-label">Ideias & Roteiros</span>
+      </button>
+      <button class="nav-tab" data-target="sec-midia">
+        <span class="tab-step">2</span>
+        <span class="tab-label">Mídias & IA Visual</span>
+      </button>
+      <button class="nav-tab" data-target="sec-thumbnails">
+        <span class="tab-step">3</span>
+        <span class="tab-label">Thumbnails (A/B/C)</span>
+      </button>
+      <button class="nav-tab" data-target="sec-seo">
+        <span class="tab-step">4</span>
+        <span class="tab-label">SEO & Títulos</span>
+      </button>
+    </nav>
+
+    <!-- Conteúdo Principal / Seções -->
+    <main class="main-content">
+
+      <!-- SEÇÃO 2.1: Ideias e Roteiros -->
+      <section id="sec-roteiros" class="section-card tab-content active">
+        <div class="section-header">
+          <h2>1. Geração de Ideias e Roteiro Completo</h2>
+          <p class="section-description">Gere ideias de vídeos virais e roteiros completos, adaptados ao estilo do canal 'Explicador Bíblico'.</p>
+        </div>
+
+        <div class="form-grid">
+          <!-- Combobox: Tema do Vídeo -->
+          <div class="form-group">
+            <label for="select-tema">
+              Tema do Vídeo
+              <span class="tooltip-wrapper" data-tooltip="Escolha um tema pré-definido ou digite um novo para o seu vídeo.">?</span>
+            </label>
+            <select id="select-tema" class="form-control">
+              <option value="Fins Trágicos Bíblicos">Fins Trágicos Bíblicos</option>
+              <option value="Versículos Mal Interpretados">Versículos Mal Interpretados</option>
+              <option value="Provas da Bíblia">Provas da Bíblia</option>
+              <option value="Milagres de Jesus">Milagres de Jesus</option>
+              <option value="Personagens Bíblicos">Personagens Bíblicos</option>
+              <option value="Histórias Inesperadas da Bíblia">Histórias Inesperadas da Bíblia</option>
+              <option value="Profecias Cumpridas">Profecias Cumpridas</option>
+              <option value="Mitos e Verdades Bíblicas">Mitos e Verdades Bíblicas</option>
+              <option value="Acontecimentos Chave da Bíblia">Acontecimentos Chave da Bíblia</option>
+              <option value="Ensinamentos Profundos da Bíblia">Ensinamentos Profundos da Bíblia</option>
+              <option value="Personalizável">-- Personalizável --</option>
+            </select>
+            <div id="container-tema-custom" class="custom-input-container hidden">
+              <input type="text" id="input-tema-custom" class="form-control mt-2" placeholder="Digite o tema personalizado ex: Arqueologia Sagrada...">
+            </div>
+          </div>
+
+          <!-- Combobox: Idioma -->
+          <div class="form-group">
+            <label for="select-idioma">
+              Idioma do Conteúdo
+              <span class="tooltip-wrapper" data-tooltip="Selecione o idioma em que o conteúdo será gerado.">?</span>
+            </label>
+            <select id="select-idioma" class="form-control">
+              <option value="Português (Brasil)">Português (Brasil)</option>
+              <option value="Inglês">Inglês</option>
+              <option value="Espanhol">Espanhol</option>
+              <option value="Espanhol (LATAM)">Espanhol (LATAM)</option>
+              <option value="Francês">Francês</option>
+              <option value="Alemão">Alemão</option>
+              <option value="Italiano">Italiano</option>
+              <option value="Japonês">Japonês</option>
+              <option value="Coreano">Coreano</option>
+              <option value="Mandarim">Mandarim</option>
+              <option value="Russo">Russo</option>
+              <option value="Árabe">Árabe</option>
+              <option value="Hindi">Hindi</option>
+              <option value="Holandês">Holandês</option>
+              <option value="Sueco">Sueco</option>
+              <option value="Polonês">Polonês</option>
+              <option value="Personalizável">-- Personalizável --</option>
+            </select>
+            <div id="container-idioma-custom" class="custom-input-container hidden">
+              <input type="text" id="input-idioma-custom" class="form-control mt-2" placeholder="Digite o idioma desejado...">
+            </div>
+          </div>
+
+          <!-- Combobox: Estilo de Roteiro -->
+          <div class="form-group">
+            <label for="select-estilo-roteiro">
+              Estilo de Roteiro
+              <span class="tooltip-wrapper" data-tooltip="Defina a duração aproximada do roteiro para adaptar a profundidade do conteúdo.">?</span>
+            </label>
+            <select id="select-estilo-roteiro" class="form-control">
+              <option value="Vídeo Curto (aprox. 1 minuto)">Vídeo Curto (aprox. 1 minuto)</option>
+              <option value="Vídeo Longo (aprox. 18-20 minutos)" selected>Vídeo Longo (aprox. 18-20 minutos)</option>
+            </select>
+          </div>
+
+          <!-- Combobox: Tom de Voz da Narrativa -->
+          <div class="form-group">
+            <label for="select-tom">
+              Tom de Voz da Narrativa
+              <span class="tooltip-wrapper" data-tooltip="Escolha o tom que a IA deve usar ao criar a narrativa.">?</span>
+            </label>
+            <select id="select-tom" class="form-control">
+              <option value="Didático e Sério">Didático e Sério</option>
+              <option value="Investigativo e Curioso" selected>Investigativo e Curioso</option>
+              <option value="Inspirador e Reflexivo">Inspirador e Reflexivo</option>
+              <option value="Dramático e Impactante">Dramático e Impactante</option>
+              <option value="Personalizável">-- Personalizável --</option>
+            </select>
+            <div id="container-tom-custom" class="custom-input-container hidden">
+              <input type="text" id="input-tom-custom" class="form-control mt-2" placeholder="Descreva o tom de voz desejado...">
+            </div>
+          </div>
+
+          <!-- Combobox: Tipo de Gancho Inicial -->
+          <div class="form-group form-group-full">
+            <label for="select-gancho">
+              Tipo de Gancho Inicial (Hook 0-15s)
+              <span class="tooltip-wrapper" data-tooltip="Selecione o tipo de gancho para prender a atenção do espectador nos primeiros segundos.">?</span>
+            </label>
+            <select id="select-gancho" class="form-control">
+              <option value="Pergunta Intrigante" selected>Pergunta Intrigante ("Você sabia que...?")</option>
+              <option value="Afirmação Provocativa">Afirmação Provocativa ("A maioria das pessoas entendeu isso errado")</option>
+              <option value="Quebra de Mito">Quebra de Mito ("O que a história realmente escondeu")</option>
+              <option value="Citação Impactante">Citação Impactante ("Como dito nos textos antigos...")</option>
+              <option value="Personalizável">-- Personalizável --</option>
+            </select>
+            <div id="container-gancho-custom" class="custom-input-container hidden">
+              <input type="text" id="input-gancho-custom" class="form-control mt-2" placeholder="Digite o estilo do gancho inicial...">
+            </div>
+          </div>
+        </div>
+
+        <!-- Ação 1: Gerar Ideias com IA -->
+        <div class="action-box">
+          <button id="btn-gerar-prompt-ideias" class="btn btn-primary">
+            <span class="spinner hidden"></span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+            <span class="btn-text">Gerar Ideias de Vídeo com IA</span>
+          </button>
+        </div>
+
+        <!-- Output 1: Ideias -->
+        <div class="output-card mt-4">
+          <div class="output-header">
+            <span class="output-title">10 Ideias Virais Geradas pela IA</span>
+            <button class="btn btn-copy" data-clipboard-target="output-prompt-ideias">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              Copiar Conteúdo
+            </button>
+          </div>
+          <textarea id="output-prompt-ideias" class="form-control prompt-output" readonly placeholder="As 10 ideias de vídeos geradas pela IA aparecerão aqui..."></textarea>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Etapa 2: Selecionar Ideia e Gerar Roteiro -->
+        <div class="section-subheader">
+          <h3>Passo B: Gerar Roteiro Completo para a Ideia Escolhida</h3>
+          <p>Cole a ideia selecionada para que a IA crie a narrativa no estilo Explicador Bíblico.</p>
+        </div>
+
+        <div class="form-group form-group-full">
+          <label for="input-ideia-escolhida">
+            Ideia de Vídeo Escolhida
+            <span class="tooltip-wrapper" data-tooltip="Cole a ideia de vídeo que você selecionou para que a IA possa criar o roteiro completo.">?</span>
+          </label>
+          <input type="text" id="input-ideia-escolhida" class="form-control" placeholder="Cole aqui a ideia de vídeo que você mais gostou das geradas acima.">
+        </div>
+
+        <div class="action-box">
+          <button id="btn-gerar-prompt-roteiro" class="btn btn-accent">
+            <span class="spinner hidden"></span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+            <span class="btn-text">Gerar Roteiro Completo com IA</span>
+          </button>
+        </div>
+
+        <!-- Output 2: Roteiro -->
+        <div class="output-card mt-4">
+          <div class="output-header">
+            <span class="output-title">Roteiro Completo Gerado pela IA</span>
+            <button class="btn btn-copy" data-clipboard-target="output-prompt-roteiro">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              Copiar Roteiro
+            </button>
+          </div>
+          <textarea id="output-prompt-roteiro" class="form-control prompt-output" readonly placeholder="O roteiro completo gerado pela IA aparecerá aqui..."></textarea>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 2.2: Prompts para Mídia -->
+      <section id="sec-midia" class="section-card tab-content">
+        <div class="section-header">
+          <h2>2. Geração de Prompts para Mídias (Bancos & IA Visual)</h2>
+          <p class="section-description">Obtenha palavras-chave para bancos de mídia e prompts para IAs visuais, ilustrando seu roteiro.</p>
+        </div>
+
+        <div class="form-group form-group-full">
+          <label for="textarea-roteiro-gerado">
+            Roteiro Gerado
+            <span class="tooltip-wrapper" data-tooltip="O roteiro do seu vídeo será usado para gerar as palavras-chave e prompts visuais.">?</span>
+          </label>
+          <textarea id="textarea-roteiro-gerado" class="form-control h-180" placeholder="Cole aqui o roteiro completo ou ele será preenchido automaticamente ao gerar na Seção 1."></textarea>
+        </div>
+
+        <div class="button-group">
+          <button id="btn-gerar-prompt-keywords" class="btn btn-secondary">
+            <span class="spinner hidden"></span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <span class="btn-text">Gerar Keywords de Mídia com IA</span>
+          </button>
+
+          <button id="btn-gerar-prompt-imagens-ia" class="btn btn-primary">
+            <span class="spinner hidden"></span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+              <polyline points="21 15 16 10 5 21"></polyline>
+            </svg>
+            <span class="btn-text">Gerar Prompts para Imagens/Vídeos com IA</span>
+          </button>
+        </div>
+
+        <!-- Output 3: Keywords -->
+        <div class="output-card mt-4">
+          <div class="output-header">
+            <span class="output-title">Keywords de Mídia Segmentadas (Pixabay / Pexels / Envato)</span>
+            <button class="btn btn-copy" data-clipboard-target="output-prompt-keywords">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              Copiar Keywords
+            </button>
+          </div>
+          <textarea id="output-prompt-keywords" class="form-control prompt-output" readonly placeholder="A lista de keywords de mídia gerada pela IA aparecerá aqui..."></textarea>
+        </div>
+
+        <!-- Output 4: Prompts IA Visual -->
+        <div class="output-card mt-4">
+          <div class="output-header">
+            <span class="output-title">Prompts Detalhados para IA Visual (Midjourney / DALL-E / Runway)</span>
+            <button class="btn btn-copy" data-clipboard-target="output-prompt-imagens-ia">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              Copiar Prompts Visuais
+            </button>
+          </div>
+          <textarea id="output-prompt-imagens-ia" class="form-control prompt-output" readonly placeholder="Os prompts em inglês para IA de criação visual aparecerão aqui..."></textarea>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 2.3: Prompts para Thumbnails A/B/C -->
+      <section id="sec-thumbnails" class="section-card tab-content">
+        <div class="section-header">
+          <h2>3. Geração de Prompts para Thumbnails A/B/C</h2>
+          <p class="section-description">Crie 3 prompts distintos para IAs de imagem, otimizados para testes A/B/C e inspirados no estilo do canal modelo.</p>
+        </div>
+
+        <div class="form-grid">
+          <!-- Input: Tema da Thumbnail -->
+          <div class="form-group form-group-full">
+            <label for="input-tema-thumb">
+              Tema do Vídeo para Thumbnail
+              <span class="tooltip-wrapper" data-tooltip="O tema principal do seu vídeo, usado para gerar as thumbnails.">?</span>
+            </label>
+            <input type="text" id="input-tema-thumb" class="form-control" placeholder="O tema do vídeo será preenchido automaticamente.">
+          </div>
+
+          <!-- Combobox: Estilo da Thumbnail -->
+          <div class="form-group">
+            <label for="select-estilo-thumb">
+              Estilo da Thumbnail
+              <span class="tooltip-wrapper" data-tooltip="Escolha o estilo visual predominante para a thumbnail.">?</span>
+            </label>
+            <select id="select-estilo-thumb" class="form-control">
+              <option value="Impacto Visual Dramático" selected>Impacto Visual Dramático</option>
+              <option value="Curiosidade Textual">Curiosidade Textual</option>
+              <option value="Ilustração Simbólica">Ilustração Simbólica</option>
+              <option value="Cena Bíblica Estilizada">Cena Bíblica Estilizada</option>
+              <option value="Personalizável">-- Personalizável --</option>
+            </select>
+            <div id="container-estilo-thumb-custom" class="custom-input-container hidden">
+              <input type="text" id="input-estilo-thumb-custom" class="form-control mt-2" placeholder="Digite o estilo visual desejado...">
+            </div>
+          </div>
+
+          <!-- Combobox: Cores Predominantes -->
+          <div class="form-group">
+            <label for="select-cores-thumb">
+              Cores Predominantes
+              <span class="tooltip-wrapper" data-tooltip="Defina a paleta de cores para a thumbnail.">?</span>
+            </label>
+            <select id="select-cores-thumb" class="form-control">
+              <option value="Sóbrias e Dramáticas (tons escuros, sépia)" selected>Sóbrias e Dramáticas (tons escuros, sépia)</option>
+              <option value="Contrastes Fortes (vermelho, amarelo em fundo escuro)">Contrastes Fortes (vermelho, amarelo em fundo escuro)</option>
+              <option value="Azul e Dourado (clássico)">Azul e Dourado (clássico)</option>
+              <option value="Personalizável">-- Personalizável --</option>
+            </select>
+            <div id="container-cores-thumb-custom" class="custom-input-container hidden">
+              <input type="text" id="input-cores-thumb-custom" class="form-control mt-2" placeholder="Descreva as cores predominantes...">
+            </div>
+          </div>
+
+          <!-- Combobox: Elementos Visuais Chave -->
+          <div class="form-group form-group-full">
+            <label for="select-elementos-thumb">
+              Elementos Visuais Chave
+              <span class="tooltip-wrapper" data-tooltip="Selecione os elementos visuais que devem se destacar na thumbnail.">?</span>
+            </label>
+            <select id="select-elementos-thumb" class="form-control">
+              <option value="Texto Grande e Impactante" selected>Texto Grande e Impactante</option>
+              <option value="Ilustração Central Única">Ilustração Central Única</option>
+              <option value="Ícones Bíblicos (cruz, Bíblia, etc.)">Ícones Bíblicos (cruz, Bíblia, etc.)</option>
+              <option value="Figuras Humanas Estilizadas">Figuras Humanas Estilizadas</option>
+              <option value="Personalizável">-- Personalizável --</option>
+            </select>
+            <div id="container-elementos-thumb-custom" class="custom-input-container hidden">
+              <input type="text" id="input-elementos-thumb-custom" class="form-control mt-2" placeholder="Descreva os elementos visuais chave...">
+            </div>
+          </div>
+        </div>
+
+        <div class="action-box">
+          <button id="btn-gerar-prompts-thumb" class="btn btn-primary">
+            <span class="spinner hidden"></span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+              <polyline points="21 15 16 10 5 21"></polyline>
+            </svg>
+            <span class="btn-text">Gerar 3 Prompts de Thumbnail com IA (A/B/C)</span>
+          </button>
+        </div>
+
+        <!-- Grid com 3 Prompts A/B/C -->
+        <div class="thumb-outputs-grid mt-4">
+          <!-- Versão A -->
+          <div class="output-card">
+            <div class="output-header">
+              <span class="output-title">Opção A (Texto & Mistério)</span>
+              <button class="btn btn-copy" data-clipboard-target="output-thumb-a">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                Copiar
+              </button>
+            </div>
+            <textarea id="output-thumb-a" class="form-control prompt-output" readonly placeholder="Prompt Thumbnail A gerado pela IA aparecerá aqui..."></textarea>
+          </div>
+
+          <!-- Versão B -->
+          <div class="output-card">
+            <div class="output-header">
+              <span class="output-title">Opção B (Foco Simbólico & Dramático)</span>
+              <button class="btn btn-copy" data-clipboard-target="output-thumb-b">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                Copiar
+              </button>
+            </div>
+            <textarea id="output-thumb-b" class="form-control prompt-output" readonly placeholder="Prompt Thumbnail B gerado pela IA aparecerá aqui..."></textarea>
+          </div>
+
+          <!-- Versão C -->
+          <div class="output-card">
+            <div class="output-header">
+              <span class="output-title">Opção C (Revelação & Contraste)</span>
+              <button class="btn btn-copy" data-clipboard-target="output-thumb-c">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                Copiar
+              </button>
+            </div>
+            <textarea id="output-thumb-c" class="form-control prompt-output" readonly placeholder="Prompt Thumbnail C gerado pela IA aparecerá aqui..."></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 2.4: Prompts para SEO Completo -->
+      <section id="sec-seo" class="section-card tab-content">
+        <div class="section-header">
+          <h2>4. Geração de Prompts para SEO Completo</h2>
+          <p class="section-description">Gere títulos otimizados, tags e hashtags para maximizar a visibilidade do seu vídeo.</p>
+        </div>
+
+        <div class="form-grid">
+          <!-- Input: Tema para SEO -->
+          <div class="form-group form-group-full">
+            <label for="input-tema-seo">
+              Tema do Vídeo para SEO
+              <span class="tooltip-wrapper" data-tooltip="O tema principal do seu vídeo, usado para otimização de SEO.">?</span>
+            </label>
+            <input type="text" id="input-tema-seo" class="form-control" placeholder="O tema do vídeo será preenchido automaticamente.">
+          </div>
+
+          <!-- Textarea: Resumo do Roteiro ou Palavras-chave -->
+          <div class="form-group form-group-full">
+            <label for="textarea-resumo-seo">
+              Roteiro Resumido / Palavras-Chave Principais
+              <span class="tooltip-wrapper" data-tooltip="Forneça um resumo ou palavras-chave para ajudar a IA a gerar um SEO mais preciso.">?</span>
+            </label>
+            <textarea id="textarea-resumo-seo" class="form-control" placeholder="Cole um resumo do roteiro ou as palavras-chave mais importantes aqui."></textarea>
+          </div>
+        </div>
+
+        <div class="action-box">
+          <button id="btn-gerar-prompt-seo" class="btn btn-primary">
+            <span class="spinner hidden"></span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <span class="btn-text">Gerar SEO Completo com IA</span>
+          </button>
+        </div>
+
+        <!-- Output SEO -->
+        <div class="output-card mt-4">
+          <div class="output-header">
+            <span class="output-title">SEO Completo (3 Títulos, Tags e Hashtags)</span>
+            <button class="btn btn-copy" data-clipboard-target="output-prompt-seo">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              Copiar SEO
+            </button>
+          </div>
+          <textarea id="output-prompt-seo" class="form-control prompt-output" readonly placeholder="Os títulos, tags e hashtags gerados pela IA aparecerão aqui..."></textarea>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>Dark Studio Automation Tool • Integração com OpenRouter API • Fórmula Explicador Bíblico</p>
+    </footer>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="js/api.js"></script>
+  <script src="js/prompts.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
