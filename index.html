@@ -778,6 +778,14 @@ textarea.h-180 {
           </svg>
           Carregar Exemplo
         </button>
+        <button id="btn-download-package" class="btn btn-secondary" title="Baixar todo o conteúdo gerado em arquivo .txt">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          Baixar Pacote (.txt)
+        </button>
         <button id="btn-clear-all" class="btn btn-ghost" title="Limpar todos os campos">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="3 6 5 6 21 6"></polyline>
@@ -1133,6 +1141,20 @@ textarea.h-180 {
               <option value="Curiosidade Textual">Curiosidade Textual</option>
               <option value="Ilustração Simbólica">Ilustração Simbólica</option>
               <option value="Cena Bíblica Estilizada">Cena Bíblica Estilizada</option>
+              <option value="Investigação Sombria (Mural de Provas)">Investigação Sombria (Mural de Provas)</option>
+              <option value="Figura Misteriosa Encapuzada">Figura Misteriosa Encapuzada</option>
+              <option value="Pergaminho Antigo & Lupa">Pergaminho Antigo &amp; Lupa</option>
+              <option value="Foto Antiga com Interrogação">Foto Antiga com Interrogação</option>
+              <option value="Mapa & Pista Investigativa">Mapa &amp; Pista Investigativa</option>
+              <option value="Documento Selado/Confidencial">Documento Selado/Confidencial</option>
+              <option value="Suspense Psicológico (Olhar Intenso)">Suspense Psicológico (Olhar Intenso)</option>
+              <option value="Choque e Revelação Extrema">Choque e Revelação Extrema</option>
+              <option value="Curiosidade Intrigada (Quem, o quê?)">Curiosidade Intrigada (Quem, o quê?)</option>
+              <option value="Olhar Desafiador / Confronto">Olhar Desafiador / Confronto</option>
+              <option value="Golias vs Davi (Confronto Épico)">Golias vs Davi (Confronto Épico)</option>
+              <option value="Bem vs Mal (Luz e Trevas)">Bem vs Mal (Luz e Trevas)</option>
+              <option value="Fato Chocante (Você Sabia Que...)">Fato Chocante (Você Sabia Que...)</option>
+              <option value="História Oculta / Conspiração Antiga">História Oculta / Conspiração Antiga</option>
               <option value="Personalizável">-- Personalizável --</option>
             </select>
             <div id="container-estilo-thumb-custom" class="custom-input-container hidden">
@@ -1443,20 +1465,28 @@ Roteiro:
 ${roteiro}`;
   },
 
-  generateThumbnailPrompts({ tema, estilo, cores, elementos }) {
+  generateThumbnailPrompts({ tema, estilo, cores, elementos, styleRef }) {
+    const styleRefLine = styleRef ? `\n- Referência Visual Técnica (en): ${styleRef}` : '';
     return `Crie 3 prompts distintos para uma IA de geração de imagens (como Midjourney, DALL-E 3) para thumbnails de YouTube sobre '${tema}'. Cada prompt deve ser para um teste A/B/C, seguindo o estilo do canal 'Explicador Bíblico' (texto grande, imagens simbólicas, cores sóbrias/dramáticas, composição clara, gerando curiosidade).
 
 Diretrizes Escolhidas pelo Usuário:
-- Estilo: ${estilo}
+- Estilo: ${estilo}${styleRefLine}
 - Cores: ${cores}
 - Elementos: ${elementos}
 
-Forneça os 3 prompts com as seguintes estruturas:
-Opção A (Texto & Mistério): Foco em texto impactante e um elemento visual sutil de mistério. Inclua indicação de texto grande.
-Opção B (Foco Simbólico & Dramático): Imagem simbólica central com cores dramáticas e pouco texto.
-Opção C (Revelação & Contraste): Elemento visual que sugere uma revelação ou contraste, com texto provocativo.
+Os 3 prompts visuais devem ser escritos em INGLÊS e incluir a proporção '--ar 16:9' no final de cada um.
 
-IMPORTANTE: Os 3 prompts visuais devem ser escritos em INGLÊS e incluir a proporção '--ar 16:9' no final de cada um. Forneça o resultado rotulando claramente Opção A, Opção B e Opção C.`;
+FORMATO DE RESPOSTA OBRIGATÓRIO — use exatamente estes marcadores, cada um em sua própria linha isolada:
+
+[[OPCAO_A]]
+(Texto & Mistério): Prompt com foco em texto impactante e elemento visual sutil de mistério. Inclua indicação de texto grande.
+[[OPCAO_B]]
+(Foco Simbólico & Dramático): Prompt com imagem simbólica central, cores dramáticas e pouco texto.
+[[OPCAO_C]]
+(Revelação & Contraste): Prompt com elemento visual que sugere revelação ou contraste, com texto provocativo.
+[[FIM]]
+
+Substitua as descrições entre parênteses acima pelos prompts reais e completos em inglês para cada opção, mantendo os marcadores exatamente como estão.`;
   },
 
   generateSeoPrompt({ tema, resumo, idioma }) {
@@ -1466,6 +1496,59 @@ ${resumo || tema}
 Os títulos devem seguir a fórmula do canal 'Explicador Bíblico' (impacto, curiosidade, CAPS LOCK estratégico, números) e ser no idioma ${idioma || 'Português (Brasil)'}.`;
   }
 };
+
+/**
+ * Mapa de referências visuais técnicas em inglês para cada estilo de thumbnail.
+ * Usado tanto no prompt enviado à IA quanto nos templates de fallback (modo sem API).
+ */
+const THUMBNAIL_STYLE_REFS = {
+  'Impacto Visual Dramático': 'dramatic impact composition, bold text overlay, intense cinematic lighting, high contrast dark background, hyperrealistic 8K photography, powerful visual presence',
+  'Curiosidade Textual': 'curiosity-driven text-heavy thumbnail design, bold typography with question mark elements, dark background with gold accents, intrigue and suspense aesthetic',
+  'Ilustração Simbólica': 'symbolic biblical illustration, spiritual iconography, hand-painted historical art style, rich chiaroscuro lighting, deep symbolism, detailed painterly style',
+  'Cena Bíblica Estilizada': 'stylized biblical scene, epic historical painting aesthetic, divine lighting rays, ancient Middle Eastern setting, cinematic biblical epic style, 8K hyperrealistic',
+  'Investigação Sombria (Mural de Provas)': 'dark investigation corkboard, red string connections between evidence, newspaper clippings and photographs, dramatic overhead spotlight, dark sepia and crimson tones, hyperrealistic 8K cinematic photography, conspiracy thriller aesthetic',
+  'Figura Misteriosa Encapuzada': 'mysterious hooded figure emerging from darkness, dramatic back-light rim lighting, thick atmospheric fog, deep shadow contrast, cinematic noir style, biblical mysterious entity silhouette',
+  'Pergaminho Antigo & Lupa': 'ancient scroll with magnifying glass revealing hidden text, warm candlelight illumination, aged parchment texture, gold and brown tones, hyperrealistic scholarly detail, discovery aesthetic',
+  'Foto Antiga com Interrogação': 'vintage sepia photograph with glowing golden question mark overlay, cracked aged texture, dramatic vignette effect, historical monochrome photography with gold accent highlights',
+  'Mapa & Pista Investigativa': 'ancient hand-drawn biblical map with marked locations, compass rose, cryptic annotations in old script, torch-lit warm atmosphere, aged parchment texture, adventure thriller investigative aesthetic',
+  'Documento Selado/Confidencial': 'aged classified document with red CONFIDENTIAL stamp and wax seal, dramatic spotlight on dark background, thriller aesthetic, forbidden ancient knowledge visual, deteriorated paper texture',
+  'Suspense Psicológico (Olhar Intenso)': 'extreme close-up of intense piercing eyes emerging from shadow, dramatic chiaroscuro lighting, psychological tension atmosphere, cinematic dark psychological thriller, minimal composition',
+  'Choque e Revelação Extrema': 'split-moment shocking revelation visual, dramatic golden light burst from darkness, high contrast cinematic shock frame, maximum visual impact and surprise, 8K hyperrealistic',
+  'Curiosidade Intrigada (Quem, o quê?)': 'large glowing golden question mark integrated into biblical imagery, deep dark background, curiosity-evoking mysterious composition, who-what-why visual storytelling, dramatic spotlight',
+  'Olhar Desafiador / Confronto': 'bold challenging direct frontal gaze into camera, powerful confrontational composition, dramatic studio chiaroscuro lighting, deep shadows, high intensity confrontational energy, cinematic portrait',
+  'Golias vs Davi (Confronto Épico)': 'epic scale contrast between towering giant warrior and small young figure, dramatic ancient battlefield lighting, biblical epic cinematic wideshot, heroic underdog composition, dust and fire atmosphere',
+  'Bem vs Mal (Luz e Trevas)': 'dramatic split composition dividing divine golden light and deep abyss shadow, heaven vs darkness contrast, hyperrealistic cinematic theological battle visual, light and dark duality',
+  'Fato Chocante (Você Sabia Que...)': 'bold shocking fact reveal thumbnail design, large impactful text with biblical symbolic imagery integration, high-energy dramatic composition, did-you-know visual formula, vibrant contrast',
+  'História Oculta / Conspiração Antiga': 'hidden ancient symbols revealed under UV light effect, mysterious underground archives atmosphere, gold glowing inscriptions on dark stone, ancient conspiracy thriller aesthetic, forbidden history visual'
+};
+
+/**
+ * Parser robusto para resposta de thumbnails A/B/C — fallback em cascata de 3 estratégias.
+ * @param {string} text - Resposta bruta da IA
+ * @returns {{ a: string, b: string, c: string, fallback: null|'partial'|'full' }}
+ */
+function parseThumbnailResponse(text) {
+  // Estratégia 1: Marcadores exatos [[OPCAO_X]] (formato solicitado à IA)
+  const markerRegex = /\[\[OPCAO_A\]\]([\s\S]*?)\[\[OPCAO_B\]\]([\s\S]*?)\[\[OPCAO_C\]\]([\s\S]*?)(?:\[\[FIM\]\]|$)/i;
+  const markerMatch = text.match(markerRegex);
+
+  if (markerMatch && markerMatch[1].trim() && markerMatch[2].trim() && markerMatch[3].trim()) {
+    return { a: markerMatch[1].trim(), b: markerMatch[2].trim(), c: markerMatch[3].trim(), fallback: null };
+  }
+
+  // Estratégia 2: Fallback — split pelo formato antigo ("Opção B" / "Opção C")
+  const partsA = text.split(/(?:Opção B|Conceito B|Option B)\b/i);
+  if (partsA.length >= 2) {
+    const promptA = partsA[0].replace(/(?:Opção A|Conceito A|Option A)\b[:\s]*/i, '').trim();
+    const partsBC = partsA[1].split(/(?:Opção C|Conceito C|Option C)\b/i);
+    const promptB = partsBC[0].trim();
+    const promptC = partsBC[1] ? partsBC[1].trim() : '';
+    return { a: promptA, b: promptB, c: promptC, fallback: 'partial' };
+  }
+
+  // Estratégia 3: Último recurso — tudo no campo A, campos B e C vazios
+  return { a: text.trim(), b: '', c: '', fallback: 'full' };
+}
 
 /**
  * Módulo de Interface do Usuário (UI Helper)
@@ -1636,6 +1719,101 @@ const UI = {
 };
 
 /**
+ * Módulo AutoSave — Rede de segurança contra perda acidental de dados.
+ * Salva sessão no localStorage com debounce e restaura automaticamente ao carregar a página.
+ */
+const AutoSave = {
+  SESSION_KEY: 'dark_studio_session_v1',
+  DEBOUNCE_DELAY: 600,
+  _debounceTimer: null,
+
+  // Todos os campos monitorados (exceto API Key e Modelo, já gerenciados à parte)
+  FIELD_IDS: [
+    'select-tema', 'input-tema-custom',
+    'select-idioma', 'input-idioma-custom',
+    'select-estilo-roteiro',
+    'select-tom', 'input-tom-custom',
+    'select-gancho', 'input-gancho-custom',
+    'input-ideia-escolhida',
+    'textarea-roteiro-gerado', 'textarea-resumo-seo',
+    'select-estilo-thumb', 'input-estilo-thumb-custom',
+    'select-cores-thumb', 'input-cores-thumb-custom',
+    'select-elementos-thumb', 'input-elementos-thumb-custom',
+    'input-tema-thumb', 'input-tema-seo',
+    'output-prompt-ideias', 'output-prompt-roteiro',
+    'output-prompt-keywords', 'output-prompt-imagens-ia',
+    'output-thumb-a', 'output-thumb-b', 'output-thumb-c',
+    'output-prompt-seo'
+  ],
+
+  save() {
+    const session = {};
+    this.FIELD_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) session[id] = el.value;
+    });
+    try {
+      localStorage.setItem(this.SESSION_KEY, JSON.stringify(session));
+    } catch (e) {
+      console.warn('AutoSave: não foi possível salvar no localStorage.', e);
+    }
+  },
+
+  restore() {
+    try {
+      const raw = localStorage.getItem(this.SESSION_KEY);
+      if (!raw) return false;
+      const session = JSON.parse(raw);
+      const hasContent = Object.values(session).some(v => v && v.trim() !== '');
+      if (!hasContent) return false;
+
+      // 1ª passagem: define todos os valores silenciosamente
+      this.FIELD_IDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && session[id] !== undefined) {
+          el.value = session[id];
+        }
+      });
+
+      // 2ª passagem: dispara eventos de change nos selects para mostrar/ocultar campos custom
+      this.FIELD_IDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.tagName === 'SELECT' && session[id] !== undefined) {
+          el.dispatchEvent(new Event('change'));
+        }
+      });
+
+      return true;
+    } catch (e) {
+      console.warn('AutoSave: erro ao restaurar sessão.', e);
+      return false;
+    }
+  },
+
+  clear() {
+    try {
+      localStorage.removeItem(this.SESSION_KEY);
+    } catch (e) {
+      console.warn('AutoSave: erro ao limpar sessão.', e);
+    }
+  },
+
+  debouncedSave() {
+    clearTimeout(this._debounceTimer);
+    this._debounceTimer = setTimeout(() => this.save(), this.DEBOUNCE_DELAY);
+  },
+
+  setupDebounce() {
+    this.FIELD_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const eventType = (el.tagName === 'SELECT') ? 'change' : 'input';
+      el.addEventListener(eventType, () => this.debouncedSave());
+    });
+  }
+};
+
+/**
  * Controlador Principal
  */
 document.addEventListener('DOMContentLoaded', () => {
@@ -1708,10 +1886,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const aiResponse = await OpenRouterAPI.generateContent(promptText);
         if (outputEl) outputEl.value = aiResponse;
         UI.showToast(successMessage || 'Conteúdo gerado com sucesso via OpenRouter!');
+        AutoSave.save();
         return aiResponse;
       } else {
         if (outputEl) outputEl.value = promptText;
         UI.showToast('Prompt gerado! Insira sua API Key no topo para gerar diretamente com IA.', 'warning');
+        AutoSave.save();
         return promptText;
       }
     } catch (err) {
@@ -1801,8 +1981,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const estilo = UI.getValue('select-estilo-thumb', 'input-estilo-thumb-custom');
     const cores = UI.getValue('select-cores-thumb', 'input-cores-thumb-custom');
     const elementos = UI.getValue('select-elementos-thumb', 'input-elementos-thumb-custom');
+    const styleRef = THUMBNAIL_STYLE_REFS[estilo] || '';
 
-    const promptText = PromptEngine.generateThumbnailPrompts({ tema, estilo, cores, elementos });
+    const promptText = PromptEngine.generateThumbnailPrompts({ tema, estilo, cores, elementos, styleRef });
     const btn = document.getElementById('btn-gerar-prompts-thumb');
     const hasApiKey = Boolean(OpenRouterAPI.getApiKey());
 
@@ -1811,29 +1992,28 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       if (hasApiKey) {
         const aiResponse = await OpenRouterAPI.generateContent(promptText);
+        const parsed = parseThumbnailResponse(aiResponse);
 
-        const partsA = aiResponse.split(/Opção B|Conceito B/i);
-        const promptA = partsA[0] || aiResponse;
-        let promptB = '';
-        let promptC = '';
+        document.getElementById('output-thumb-a').value = parsed.a;
+        document.getElementById('output-thumb-b').value = parsed.b;
+        document.getElementById('output-thumb-c').value = parsed.c;
 
-        if (partsA[1]) {
-          const partsBC = partsA[1].split(/Opção C|Conceito C/i);
-          promptB = partsBC[0] || '';
-          promptC = partsBC[1] || '';
+        if (parsed.fallback === 'full') {
+          UI.showToast('⚠️ A IA não usou os marcadores esperados. Conteúdo completo no campo A — distribua manualmente entre B e C.', 'warning');
+        } else if (parsed.fallback === 'partial') {
+          UI.showToast('3 Prompts gerados (formato alternativo detectado). Verifique os campos.', 'warning');
+        } else {
+          UI.showToast('3 Prompts de Thumbnail gerados via IA!');
         }
-
-        document.getElementById('output-thumb-a').value = promptA.trim();
-        document.getElementById('output-thumb-b').value = promptB ? ('Opção B' + promptB).trim() : aiResponse;
-        document.getElementById('output-thumb-c').value = promptC ? ('Opção C' + promptC).trim() : aiResponse;
-
-        UI.showToast('3 Prompts de Thumbnail gerados via IA!');
+        AutoSave.save();
       } else {
-        document.getElementById('output-thumb-a').value = `Option A (Text & Mystery): Cinematic YouTube thumbnail for "${tema}". High contrast dark aesthetic, large bold title text "A VERDADE REVELADA", single dramatic symbolic item in gold spotlight, subtle ancient textures, Explicador Bíblico channel style --ar 16:9`;
-        document.getElementById('output-thumb-b').value = `Option B (Symbolic & Dramatic): Dramatic historical digital painting thumbnail for "${tema}". Dark red and sepia color scheme, central ancient icon with intense rim lighting, text "O FIM TRÁGICO" --ar 16:9`;
-        document.getElementById('output-thumb-c').value = `Option C (Revelation & Contrast): Mysterious YouTube thumbnail about "${tema}". Dividing background with ancient scroll vs shadow, bold title "NÃO FOI COMO PENSAVA", maximum visual curiosity --ar 16:9`;
+        const styleAppend = styleRef ? `, ${styleRef}` : '';
+        document.getElementById('output-thumb-a').value = `Option A (Text & Mystery): Cinematic YouTube thumbnail for "${tema}". High contrast dark aesthetic, large bold title text "A VERDADE REVELADA", single dramatic symbolic item in gold spotlight, subtle ancient textures${styleAppend}, Explicador Bíblico channel style --ar 16:9`;
+        document.getElementById('output-thumb-b').value = `Option B (Symbolic & Dramatic): Dramatic historical digital painting thumbnail for "${tema}". Dark red and sepia color scheme, central ancient icon with intense rim lighting${styleAppend}, text "O FIM TRÁGICO" --ar 16:9`;
+        document.getElementById('output-thumb-c').value = `Option C (Revelation & Contrast): Mysterious YouTube thumbnail about "${tema}". Dividing background with ancient scroll vs shadow${styleAppend}, bold title "NÃO FOI COMO PENSAVA", maximum visual curiosity --ar 16:9`;
 
         UI.showToast('3 Prompts de Thumbnail gerados (Modo Modelo)! Insira a API Key no topo para gerar via IA.', 'warning');
+        AutoSave.save();
       }
     } catch (err) {
       UI.showToast(err.message, 'error');
@@ -1900,9 +2080,81 @@ Desenvolvimento: Para entender essa aparente contradição histórica, precisamo
       document.getElementById('select-idioma').value = 'Português (Brasil)';
       document.querySelectorAll('.custom-input-container').forEach(el => el.classList.add('hidden'));
       syncTema();
+      AutoSave.clear();
       UI.showToast('Todos os campos foram limpos.', 'warning');
     }
   });
+
+  // === BAIXAR PACOTE .TXT ===
+  document.getElementById('btn-download-package').addEventListener('click', () => {
+    const tema = UI.getValue('select-tema', 'input-tema-custom') || 'sem-tema';
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const dataBr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+
+    // Gera slug: remove acentos, caracteres especiais, troca espaços por hífens
+    const slug = tema
+      .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .trim()
+      .replace(/\s+/g, '-');
+
+    const getVal = (id) => {
+      const el = document.getElementById(id);
+      return (el && el.value.trim()) ? el.value.trim() : '(não gerado)';
+    };
+
+    const lines = [
+      `=== ${tema.toUpperCase()} ===`,
+      `Gerado em: ${dataBr}`,
+      '',
+      '--- IDEIA ESCOLHIDA ---',
+      getVal('input-ideia-escolhida'),
+      '',
+      '--- ROTEIRO COMPLETO ---',
+      getVal('output-prompt-roteiro'),
+      '',
+      '--- KEYWORDS DE MÍDIA ---',
+      getVal('output-prompt-keywords'),
+      '',
+      '--- PROMPTS IA VISUAL ---',
+      getVal('output-prompt-imagens-ia'),
+      '',
+      '--- THUMBNAIL A ---',
+      getVal('output-thumb-a'),
+      '',
+      '--- THUMBNAIL B ---',
+      getVal('output-thumb-b'),
+      '',
+      '--- THUMBNAIL C ---',
+      getVal('output-thumb-c'),
+      '',
+      '--- SEO (Títulos, Tags e Hashtags) ---',
+      getVal('output-prompt-seo'),
+    ];
+
+    const content = lines.join('\n');
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `dark-studio_${slug}_${dateStr}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    UI.showToast('Pacote .txt baixado com sucesso!');
+  });
+
+  // === AUTOSAVE: Restaurar sessão anterior ao carregar e configurar debounce ===
+  const sessionRestored = AutoSave.restore();
+  if (sessionRestored) {
+    // Sincroniza tema após restauração (os campos thumb/seo já foram restaurados)
+    syncTema();
+    UI.showToast('Sessão anterior restaurada automaticamente.', 'warning');
+  }
+  AutoSave.setupDebounce();
 });
   </script>
 </body>
