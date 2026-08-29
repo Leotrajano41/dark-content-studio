@@ -628,6 +628,12 @@ textarea.h-180 {
   display: none !important;
 }
 
+/* Utilitário genérico: garante que QUALQUER elemento com .hidden fique oculto
+   (cards de áudio/legenda da Etapa 5, etc.). !important para vencer estilos inline. */
+.hidden {
+  display: none !important;
+}
+
 .action-box {
   display: flex;
   justify-content: flex-end;
