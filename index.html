@@ -610,6 +610,24 @@ textarea.h-180 {
   to { transform: rotate(360deg); }
 }
 
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 0.825rem;
+}
+
+.readonly-indicator {
+  user-select: none;
+  cursor: default;
+}
+
+.audio-notice {
+  transition: var(--transition);
+}
+
+.audio-notice.hidden {
+  display: none !important;
+}
+
 .action-box {
   display: flex;
   justify-content: flex-end;
@@ -858,6 +876,10 @@ textarea.h-180 {
       <button class="nav-tab" data-target="sec-seo">
         <span class="tab-step">4</span>
         <span class="tab-label">SEO & Títulos</span>
+      </button>
+      <button class="nav-tab" data-target="sec-audio">
+        <span class="tab-step">5</span>
+        <span class="tab-label">Narração & Legendas</span>
       </button>
     </nav>
 
@@ -1313,6 +1335,124 @@ textarea.h-180 {
         </div>
       </section>
 
+      <!-- SEÇÃO 2.5: Narração & Legendas Automatizadas (OpenAI TTS & AssemblyAI) -->
+      <section id="sec-audio" class="section-card tab-content">
+        <div class="section-header">
+          <h2>5. Narração & Legendas Automatizadas</h2>
+          <p class="section-description">Gere a locução do seu roteiro em áudio MP3 com IA neural (OpenAI TTS) e transcreva legendas sincronizadas em formato .SRT (AssemblyAI).</p>
+        </div>
+
+        <div class="form-grid">
+          <!-- Dropdown: Narrador (Voz) -->
+          <div class="form-group">
+            <label for="select-voz-audio">
+              Narrador / Voz (OpenAI TTS)
+              <span class="tooltip-wrapper" data-tooltip="Selecione a voz neural da OpenAI para narrar seu roteiro.">?</span>
+            </label>
+            <select id="select-voz-audio" class="form-control">
+              <option value="onyx" selected>Onyx (Grave e Sério)</option>
+              <option value="echo">Echo (Neutro e Claro)</option>
+              <option value="fable">Fable (Caloroso e Expressivo)</option>
+              <option value="ash">Ash (Jovem e Dinâmico)</option>
+              <option value="sage">Sage (Calmo e Reflexivo)</option>
+              <option value="alloy">Alloy (Versátil e Balanceado)</option>
+              <option value="nova">Nova (Energética e Marcante)</option>
+              <option value="shimmer">Suave (Shimmer)</option>
+            </select>
+          </div>
+
+          <!-- Indicador de Tom Reutilizado -->
+          <div class="form-group">
+            <label>
+              Tom da Narração (Definido na Etapa 1)
+              <span class="tooltip-wrapper" data-tooltip="O tom definido na Etapa 1 instrui a IA sobre o estilo interpretativo e suspense da narração.">?</span>
+            </label>
+            <div id="display-tom-audio" class="form-control readonly-indicator" style="display: flex; align-items: center; color: var(--accent-gold); font-weight: 500; background: rgba(229, 184, 105, 0.05); border-color: rgba(229, 184, 105, 0.25);">
+              🎙️ Tom da narração: <span id="span-tom-audio" style="margin-left: 6px; color: #ffffff;">Investigativo e Curioso</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ações de Narração -->
+        <div class="action-box" style="margin-top: 20px;">
+          <button id="btn-gerar-audio" class="btn btn-primary">
+            <span class="spinner hidden"></span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="23"></line>
+              <line x1="8" y1="23" x2="16" y2="23"></line>
+            </svg>
+            <span class="btn-text">🎙️ Gerar Narração (Áudio)</span>
+          </button>
+        </div>
+
+        <!-- Mensagem de progresso para geração de áudio -->
+        <div id="audio-loading-notice" class="audio-notice hidden" style="margin-top: 16px; padding: 14px 18px; background: rgba(229, 184, 105, 0.1); border: 1px dashed var(--accent-gold); border-radius: var(--radius-md); font-size: 0.9rem; color: #f1c40f; display: flex; align-items: center; gap: 12px;">
+          <span class="spinner" style="border-top-color: var(--accent-gold);"></span>
+          <span>Gerando narração, isso pode levar até 1 minuto para roteiros longos... Aguarde!</span>
+        </div>
+
+        <!-- Player de Áudio e Ação para Legendas -->
+        <div id="card-audio-player" class="output-card mt-4 hidden">
+          <div class="output-header">
+            <span class="output-title">Áudio da Narração (MP3)</span>
+            <button id="btn-download-audio" class="btn btn-secondary btn-sm">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Baixar Narração (.mp3)
+            </button>
+          </div>
+          <div style="padding: 20px; background: rgba(0, 0, 0, 0.25); display: flex; flex-direction: column; gap: 16px;">
+            <audio id="audio-player-element" controls style="width: 100%; border-radius: var(--radius-sm); outline: none;"></audio>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+              <span id="audio-file-info" style="font-size: 0.85rem; color: var(--text-muted);">Áudio gerado com sucesso via OpenAI TTS (gpt-4o-mini-tts)</span>
+              <button id="btn-gerar-legenda" class="btn btn-primary">
+                <span class="spinner hidden"></span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+                <span class="btn-text">📝 Gerar Legenda (.srt)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mensagem de progresso para Legendas AssemblyAI -->
+        <div id="legendas-loading-notice" class="audio-notice hidden" style="margin-top: 16px; padding: 14px 18px; background: rgba(59, 130, 246, 0.1); border: 1px dashed #3b82f6; border-radius: var(--radius-md); font-size: 0.9rem; color: #93c5fd; display: flex; align-items: center; gap: 12px;">
+          <span class="spinner" style="border-top-color: #3b82f6;"></span>
+          <span>Transcrevendo áudio e sincronizando timestamps via AssemblyAI... Aguarde alguns segundos.</span>
+        </div>
+
+        <!-- Output Legenda (.SRT) -->
+        <div id="card-legenda-output" class="output-card mt-4 hidden">
+          <div class="output-header">
+            <span class="output-title">Legenda Sincronizada (.SRT)</span>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-copy" data-clipboard-target="output-legenda-srt">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                Copiar
+              </button>
+              <button id="btn-download-srt" class="btn btn-secondary btn-sm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Baixar Legenda (.srt)
+              </button>
+            </div>
+          </div>
+          <textarea id="output-legenda-srt" class="form-control prompt-output" readonly placeholder="O conteúdo formatado do arquivo .srt aparecerá aqui..." style="min-height: 220px; font-family: var(--font-mono);"></textarea>
+        </div>
+      </section>
+
     </main>
 
     <!-- Footer -->
@@ -1743,7 +1883,8 @@ const AutoSave = {
     'output-prompt-ideias', 'output-prompt-roteiro',
     'output-prompt-keywords', 'output-prompt-imagens-ia',
     'output-thumb-a', 'output-thumb-b', 'output-thumb-c',
-    'output-prompt-seo'
+    'output-prompt-seo',
+    'select-voz-audio', 'output-legenda-srt'
   ],
 
   save() {
@@ -1782,6 +1923,13 @@ const AutoSave = {
           el.dispatchEvent(new Event('change'));
         }
       });
+
+      // Se havia legenda salva, exibe o card de legenda
+      const legendaOutput = document.getElementById('output-legenda-srt');
+      const cardLegenda = document.getElementById('card-legenda-output');
+      if (legendaOutput && legendaOutput.value.trim() && cardLegenda) {
+        cardLegenda.classList.remove('hidden');
+      }
 
       return true;
     } catch (e) {
@@ -1856,6 +2004,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const inputIdeiaEscolhida = document.getElementById('input-ideia-escolhida');
   const textareaRoteiroGerado = document.getElementById('textarea-roteiro-gerado');
 
+  // Estado de áudio e legendas da sessão atual
+  let currentAudioBlob = null;
+  let currentAudioUrl = null;
+  let currentSrtContent = '';
+  let audioGeneratedInSession = false;
+  let srtGeneratedInSession = false;
+
   function syncTema() {
     const temaAtual = UI.getValue('select-tema', 'input-tema-custom');
     if (inputTemaThumb && (!inputTemaThumb.value || inputTemaThumb.dataset.autoSynced === 'true')) {
@@ -1868,11 +2023,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function syncTomAudio() {
+    const tomAtual = UI.getValue('select-tom', 'input-tom-custom') || 'Investigativo e Curioso';
+    const spanTom = document.getElementById('span-tom-audio');
+    if (spanTom) {
+      spanTom.textContent = tomAtual;
+    }
+  }
+
   selectTema.addEventListener('change', syncTema);
   if (inputTemaCustom) inputTemaCustom.addEventListener('input', syncTema);
   if (inputTemaThumb) inputTemaThumb.addEventListener('input', () => inputTemaThumb.dataset.autoSynced = 'false');
   if (inputTemaSeo) inputTemaSeo.addEventListener('input', () => inputTemaSeo.dataset.autoSynced = 'false');
   syncTema();
+
+  const selectTom = document.getElementById('select-tom');
+  const inputTomCustom = document.getElementById('input-tom-custom');
+  if (selectTom) selectTom.addEventListener('change', syncTomAudio);
+  if (inputTomCustom) inputTomCustom.addEventListener('input', syncTomAudio);
+  syncTomAudio();
 
   async function executeApiCall(btnId, promptText, outputTextareaId, successMessage) {
     const btn = document.getElementById(btnId);
@@ -2037,12 +2206,185 @@ document.addEventListener('DOMContentLoaded', () => {
     );
   });
 
+  // =========================================================================
+  // ETAPA 5: NARRAÇÃO & LEGENDAS (OpenAI TTS + AssemblyAI)
+  // =========================================================================
+
+  const btnGerarAudio = document.getElementById('btn-gerar-audio');
+  const btnDownloadAudio = document.getElementById('btn-download-audio');
+  const btnGerarLegenda = document.getElementById('btn-gerar-legenda');
+  const btnDownloadSrt = document.getElementById('btn-download-srt');
+  const cardAudioPlayer = document.getElementById('card-audio-player');
+  const cardLegendaOutput = document.getElementById('card-legenda-output');
+  const audioPlayerEl = document.getElementById('audio-player-element');
+  const audioLoadingNotice = document.getElementById('audio-loading-notice');
+  const legendasLoadingNotice = document.getElementById('legendas-loading-notice');
+  const outputLegendaSrt = document.getElementById('output-legenda-srt');
+
+  // Gerar Narração (Áudio MP3)
+  btnGerarAudio.addEventListener('click', async () => {
+    const roteiro = (textareaRoteiroGerado.value.trim() || document.getElementById('output-prompt-roteiro').value.trim());
+    if (!roteiro) {
+      UI.showToast('Gere o roteiro completo na Etapa 1 antes de narrar!', 'warning');
+      return;
+    }
+
+    const voz = document.getElementById('select-voz-audio').value || 'onyx';
+    const tom = UI.getValue('select-tom', 'input-tom-custom') || 'Investigativo e Curioso';
+
+    UI.setButtonLoading(btnGerarAudio, true);
+    if (audioLoadingNotice) audioLoadingNotice.classList.remove('hidden');
+
+    try {
+      const response = await fetch('/api/narrar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ texto: roteiro, voz, tom })
+      });
+
+      if (response.status === 404 || response.status === 405) {
+        throw new Error('Esta funcionalidade requer que a ferramenta esteja rodando via Vercel (dark-content-studio.vercel.app). Não está disponível na versão do GitHub Pages.');
+      }
+
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        throw new Error(errJson.error || `Erro na geração de áudio (HTTP ${response.status})`);
+      }
+
+      const audioBlob = await response.blob();
+      currentAudioBlob = audioBlob;
+
+      if (currentAudioUrl) URL.revokeObjectURL(currentAudioUrl);
+      currentAudioUrl = URL.createObjectURL(audioBlob);
+
+      if (audioPlayerEl) {
+        audioPlayerEl.src = currentAudioUrl;
+      }
+
+      if (cardAudioPlayer) cardAudioPlayer.classList.remove('hidden');
+      audioGeneratedInSession = true;
+
+      UI.showToast('Narração gerada com sucesso! Você pode ouvir e baixar o arquivo .mp3.');
+      AutoSave.save();
+    } catch (err) {
+      console.error('Erro ao gerar áudio:', err);
+      UI.showToast(err.message, 'error');
+    } finally {
+      UI.setButtonLoading(btnGerarAudio, false);
+      if (audioLoadingNotice) audioLoadingNotice.classList.add('hidden');
+    }
+  });
+
+  // Baixar Narração (.mp3)
+  btnDownloadAudio.addEventListener('click', () => {
+    if (!currentAudioBlob) {
+      UI.showToast('Nenhum áudio gerado nesta sessão para download.', 'warning');
+      return;
+    }
+
+    const tema = UI.getValue('select-tema', 'input-tema-custom') || 'sem-tema';
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const slug = tema
+      .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .trim()
+      .replace(/\s+/g, '-');
+
+    const url = URL.createObjectURL(currentAudioBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `dark-studio_narracao_${slug}_${dateStr}.mp3`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    UI.showToast('Download da narração (.mp3) iniciado!');
+  });
+
+  // Gerar Legenda (.srt via AssemblyAI)
+  btnGerarLegenda.addEventListener('click', async () => {
+    if (!currentAudioBlob) {
+      UI.showToast('Gere o áudio da narração primeiro antes de gerar a legenda!', 'warning');
+      return;
+    }
+
+    UI.setButtonLoading(btnGerarLegenda, true);
+    if (legendasLoadingNotice) legendasLoadingNotice.classList.remove('hidden');
+
+    try {
+      const response = await fetch('/api/legendas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'audio/mpeg' },
+        body: currentAudioBlob
+      });
+
+      if (response.status === 404 || response.status === 405) {
+        throw new Error('Esta funcionalidade requer que a ferramenta esteja rodando via Vercel (dark-content-studio.vercel.app). Não está disponível na versão do GitHub Pages.');
+      }
+
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        throw new Error(errJson.error || `Erro na transcrição de legendas (HTTP ${response.status})`);
+      }
+
+      const srtText = await response.text();
+      currentSrtContent = srtText;
+      srtGeneratedInSession = true;
+
+      if (outputLegendaSrt) outputLegendaSrt.value = srtText;
+      if (cardLegendaOutput) cardLegendaOutput.classList.remove('hidden');
+
+      UI.showToast('Legenda (.srt) sincronizada e gerada com sucesso via AssemblyAI!');
+      AutoSave.save();
+    } catch (err) {
+      console.error('Erro ao gerar legenda:', err);
+      UI.showToast(err.message, 'error');
+    } finally {
+      UI.setButtonLoading(btnGerarLegenda, false);
+      if (legendasLoadingNotice) legendasLoadingNotice.classList.add('hidden');
+    }
+  });
+
+  // Baixar Legenda (.srt)
+  btnDownloadSrt.addEventListener('click', () => {
+    const srtText = (outputLegendaSrt ? outputLegendaSrt.value.trim() : '') || currentSrtContent;
+    if (!srtText) {
+      UI.showToast('Nenhuma legenda gerada para download.', 'warning');
+      return;
+    }
+
+    const tema = UI.getValue('select-tema', 'input-tema-custom') || 'sem-tema';
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const slug = tema
+      .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .trim()
+      .replace(/\s+/g, '-');
+
+    const blob = new Blob([srtText], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `dark-studio_legendas_${slug}_${dateStr}.srt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    UI.showToast('Download das legendas (.srt) iniciado!');
+  });
+
+  // === PRESET DEMONSTRATIVO ===
   document.getElementById('btn-load-preset').addEventListener('click', () => {
     selectTema.value = 'Fins Trágicos Bíblicos';
     document.getElementById('select-idioma').value = 'Português (Brasil)';
     document.getElementById('select-estilo-roteiro').value = 'Vídeo Longo (aprox. 18-20 minutos)';
     document.getElementById('select-tom').value = 'Investigativo e Curioso';
     document.getElementById('select-gancho').value = 'Pergunta Intrigante';
+    document.getElementById('select-voz-audio').value = 'onyx';
 
     document.querySelectorAll('.custom-input-container').forEach(el => el.classList.add('hidden'));
 
@@ -2060,6 +2402,7 @@ Desenvolvimento: Para entender essa aparente contradição histórica, precisamo
     document.getElementById('textarea-resumo-seo').value = 'Vídeo focado no estudo comparativo do fim de Judas Iscariotes entre os textos de Mateus 27 e Atos 1, abordando o remorso, as 30 moedas de prata e o contexto histórico de Jerusalém no Século I.';
 
     syncTema();
+    syncTomAudio();
 
     document.getElementById('btn-gerar-prompt-ideias').click();
     document.getElementById('btn-gerar-prompt-roteiro').click();
@@ -2070,6 +2413,7 @@ Desenvolvimento: Para entender essa aparente contradição histórica, precisamo
     UI.showToast('Exemplo demonstrativo carregado!');
   });
 
+  // === LIMPAR TUDO ===
   document.getElementById('btn-clear-all').addEventListener('click', () => {
     if (confirm('Deseja limpar todos os campos e conteúdos gerados?')) {
       document.querySelectorAll('input[type="text"]').forEach(i => {
@@ -2078,8 +2422,26 @@ Desenvolvimento: Para entender essa aparente contradição histórica, precisamo
       document.querySelectorAll('textarea').forEach(t => t.value = '');
       selectTema.value = 'Fins Trágicos Bíblicos';
       document.getElementById('select-idioma').value = 'Português (Brasil)';
+      document.getElementById('select-tom').value = 'Investigativo e Curioso';
+      document.getElementById('select-voz-audio').value = 'onyx';
       document.querySelectorAll('.custom-input-container').forEach(el => el.classList.add('hidden'));
+
+      // Reseta estado de áudio e legendas
+      if (currentAudioUrl) URL.revokeObjectURL(currentAudioUrl);
+      currentAudioBlob = null;
+      currentAudioUrl = null;
+      currentSrtContent = '';
+      audioGeneratedInSession = false;
+      srtGeneratedInSession = false;
+
+      if (audioPlayerEl) audioPlayerEl.src = '';
+      if (cardAudioPlayer) cardAudioPlayer.classList.add('hidden');
+      if (cardLegendaOutput) cardLegendaOutput.classList.add('hidden');
+      if (audioLoadingNotice) audioLoadingNotice.classList.add('hidden');
+      if (legendasLoadingNotice) legendasLoadingNotice.classList.add('hidden');
+
       syncTema();
+      syncTomAudio();
       AutoSave.clear();
       UI.showToast('Todos os campos foram limpos.', 'warning');
     }
@@ -2134,6 +2496,12 @@ Desenvolvimento: Para entender essa aparente contradição histórica, precisamo
       getVal('output-prompt-seo'),
     ];
 
+    if (audioGeneratedInSession || srtGeneratedInSession) {
+      lines.push('');
+      lines.push('--- RECURSOS DE ÁUDIO & LEGENDAS (ETAPA 5) ---');
+      lines.push('🎙️ Narração e legenda geradas nesta sessão — lembre-se de baixá-las também nos botões da Etapa 5.');
+    }
+
     const content = lines.join('\n');
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -2150,8 +2518,9 @@ Desenvolvimento: Para entender essa aparente contradição histórica, precisamo
   // === AUTOSAVE: Restaurar sessão anterior ao carregar e configurar debounce ===
   const sessionRestored = AutoSave.restore();
   if (sessionRestored) {
-    // Sincroniza tema após restauração (os campos thumb/seo já foram restaurados)
+    // Sincroniza tema e tom após restauração
     syncTema();
+    syncTomAudio();
     UI.showToast('Sessão anterior restaurada automaticamente.', 'warning');
   }
   AutoSave.setupDebounce();
