@@ -1,12 +1,10 @@
 {
   "functions": {
     "api/narrar.js": {
-      "runtime": "nodejs18.x",
       "memory": 1024,
       "maxDuration": 60
     },
     "api/legendas.js": {
-      "runtime": "nodejs18.x",
       "memory": 512,
       "maxDuration": 60
     }
