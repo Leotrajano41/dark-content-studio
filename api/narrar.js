@@ -142,6 +142,54 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Método não permitido. Use POST.' });
   }
 
+/**
+ * Limpa artefatos de formatação, marcadores de seção e rótulos estruturais
+ * do roteiro antes de enviar para a síntese de voz (TTS).
+ *
+ * @param {string} texto
+ * @returns {string}
+ */
+function limparTextoParaNarracao(texto) {
+  if (!texto || typeof texto !== 'string') return '';
+
+  let limpo = texto;
+
+  // 1. Remove cabeçalho inicial de roteiro (ex: "**Roteiro: ...**" ou "# Roteiro ...")
+  limpo = limpo.replace(/^\s*(?:#+\s*)?(?:\*{0,2}Roteiro:\s*.*?\*{0,2}\s*\n+)+/im, '');
+
+  // 2. Remove qualquer marcador entre colchetes, com ou sem asteriscos ao redor:
+  // ex: **[Hook (0-15s)]**, [Hook (0-15s)], **[Ponto 1: Contexto (1:00-5:00)]**, [Conclusão (tempo)]
+  limpo = limpo.replace(/\*{0,2}\[[^\]]*\]\*{0,2}/g, '');
+
+  // 3. Remove marcadores de cabeçalho sem colchetes em linhas isoladas ou com tempo
+  // ex: HOOK (0-15s):, INTRODUÇÃO (0-45s):, PONTO 1: Título, CONCLUSÃO (tempo):
+  limpo = limpo.replace(/^\s*(?:HOOK|INTRODUÇÃO|PONTO\s*\d+|CONCLUSÃO|CTA|GANCHO(?:S)?(?:\s+INTERNO(?:S)?)?|CHAMADA(?:\s+PARA\s+AÇÃO)?)\s*(?:\([^)]*\))?:?\s*$/gmi, '');
+  limpo = limpo.replace(/^\s*(?:HOOK|INTRODUÇÃO|PONTO\s*\d+|CONCLUSÃO)\s*\([^)]*\)\s*:?\s*/gmi, '');
+  limpo = limpo.replace(/^\s*PONTO\s*\d+\s*:\s*[^\n]+/gmi, '');
+
+  // 4. Remove rótulos internos estruturais mantendo o texto que vem depois:
+  // "Afirmação:", "Desenvolvimento:", "Evidências/Referências:", "Análise/Impacto:", etc.
+  limpo = limpo.replace(/(?:Afirmação|Desenvolvimento|Evidências\/Referências|Evidências|Referências|Análise\/Impacto|Análise|Impacto|Ganchos Internos|CTAs Orgânicas|Chamada para Ação|CTA)\s*:\s*/gi, '');
+
+  // 5. Remove marcadores de negrito markdown (**texto** vira texto) e itálico (*texto* vira texto)
+  limpo = limpo.replace(/\*\*([^*]+)\*\*/g, '$1');
+  limpo = limpo.replace(/\*([^*]+)\*/g, '$1');
+  limpo = limpo.replace(/__([^_]+)__/g, '$1');
+  limpo = limpo.replace(/_([^_]+)_/g, '$1');
+
+  // 6. Remove marcadores de listas ou tópicos no início de linha (- ou * ou 1.)
+  limpo = limpo.replace(/^\s*[-*]\s+/gm, '');
+
+  // 7. Normaliza quebras de linha e espaços extras
+  limpo = limpo
+    .split('\n')
+    .map(l => l.trim())
+    .filter(l => l.length > 0)
+    .join('\n\n');
+
+  return limpo.trim();
+}
+
   // 1. Validação da API Key
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -159,12 +207,15 @@ module.exports = async function handler(req, res) {
     });
   }
 
+  // Limpeza de texto: remove artefatos de roteiro antes de narrar
+  const textoHigienizado = limparTextoParaNarracao(texto);
+
   // Vozes válidas da OpenAI TTS
   const validVoices = ['alloy', 'ash', 'coral', 'echo', 'fable', 'nova', 'onyx', 'sage', 'shimmer'];
   const selectedVoice = validVoices.includes(voz) ? voz : 'alloy';
 
   const instruction = TOM_INSTRUCTIONS[tom] || DEFAULT_INSTRUCTION;
-  const chunks = splitTextIntoChunks(texto.trim());
+  const chunks = splitTextIntoChunks(textoHigienizado);
 
   if (chunks.length === 0) {
     return res.status(400).json({
