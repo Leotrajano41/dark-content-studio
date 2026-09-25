@@ -234,8 +234,10 @@ function limparTextoParaNarracao(texto) {
     const CONCORRENCIA_MAX = 2;
     console.log(`[narrar] Iniciando geração: ${chunks.length} pedaço(s) com concorrência máxima de ${CONCORRENCIA_MAX}...`);
 
-    // Função para chamar TTS de 1 pedaço com timeout e retry
-    async function sintetizarChunkComRetry(chunk, index, maxTentativas = 2) {
+    // Função para chamar TTS de 1 pedaço com timeout generoso (95s) e até 3 tentativas
+    async function sintetizarChunkComRetry(chunk, index, maxTentativas = 3) {
+      const retryDelays = [0, 1000, 3000]; // 1s antes da 2ª tentativa, 3s antes da 3ª tentativa
+
       for (let tentativa = 1; tentativa <= maxTentativas; tentativa++) {
         const tChunkStart = Date.now();
         console.log(`[narrar] Pedaço ${index + 1}/${chunks.length} enviado (Tentativa ${tentativa}/${maxTentativas} — ${chunk.length} chars)`);
@@ -243,7 +245,7 @@ function limparTextoParaNarracao(texto) {
         try {
           const ttsResponse = await fetch('https://api.openai.com/v1/audio/speech', {
             method: 'POST',
-            signal: AbortSignal.timeout(55000), // Timeout de 55s para evitar travamento de socket
+            signal: AbortSignal.timeout(95000), // Timeout generoso de 95s para margem ampla da OpenAI
             headers: {
               Authorization: `Bearer ${apiKey}`,
               'Content-Type': 'application/json',
@@ -260,7 +262,7 @@ function limparTextoParaNarracao(texto) {
           if (!ttsResponse.ok) {
             const errBody = await ttsResponse.json().catch(() => ({}));
             const errMsg = errBody?.error?.message || `Erro HTTP ${ttsResponse.status} da OpenAI TTS`;
-            console.error(`[narrar] Falha no pedaço ${index + 1} (tentativa ${tentativa}):`, errMsg);
+            console.error(`[narrar] Falha no pedaço ${index + 1} (tentativa ${tentativa}/${maxTentativas}):`, errMsg);
             if (tentativa === maxTentativas) {
               throw new Error(`Falha ao gerar narração (pedaço ${index + 1} de ${chunks.length}): ${errMsg}`);
             }
@@ -273,13 +275,16 @@ function limparTextoParaNarracao(texto) {
           }
         } catch (fetchErr) {
           const isTimeout = fetchErr.name === 'TimeoutError' || fetchErr.message.includes('timeout');
-          console.warn(`[narrar] Pedaço ${index + 1} erro na tentativa ${tentativa} (${isTimeout ? 'Timeout' : fetchErr.message})`);
+          console.warn(`[narrar] Pedaço ${index + 1} erro na tentativa ${tentativa}/${maxTentativas} (${isTimeout ? 'Timeout 95s' : fetchErr.message})`);
           if (tentativa === maxTentativas) {
             throw new Error(`Falha no pedaço ${index + 1} após ${maxTentativas} tentativas: ${fetchErr.message}`);
           }
-          // Breve pausa antes do retry
-          await new Promise(r => setTimeout(r, 1000));
         }
+
+        // Espaçamento crescente antes da próxima tentativa (1s, 3s)
+        const delayMs = retryDelays[tentativa] || 3000;
+        console.log(`[narrar] Aguardando ${delayMs / 1000}s antes da tentativa ${tentativa + 1}...`);
+        await new Promise(r => setTimeout(r, delayMs));
       }
     }
 
