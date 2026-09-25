@@ -227,13 +227,14 @@ function limparTextoParaNarracao(texto) {
     `[narrar] Iniciando: ${chunks.length} pedaço(s) | voz="${selectedVoice}" | tom="${tom}"`
   );
 
-  // 3. Geração do áudio: chama OpenAI TTS para cada pedaço e acumula os buffers
+  // 3. Geração do áudio: processamento em PARALELO via Promise.all
   try {
-    const audioBuffers = [];
+    const t0 = Date.now();
+    console.log(`[narrar] Iniciando geração paralela de ${chunks.length} pedaço(s) com OpenAI TTS...`);
 
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i];
-      console.log(`[narrar] Pedaço ${i + 1}/${chunks.length} — ${chunk.length} chars`);
+    const chunkPromises = chunks.map(async (chunk, index) => {
+      const tChunkStart = Date.now();
+      console.log(`[narrar] Pedaço ${index + 1}/${chunks.length} enviado (${chunk.length} chars)`);
 
       const ttsResponse = await fetch('https://api.openai.com/v1/audio/speech', {
         method: 'POST',
@@ -251,23 +252,32 @@ function limparTextoParaNarracao(texto) {
       });
 
       if (!ttsResponse.ok) {
-        // Tenta extrair mensagem de erro da OpenAI
         const errBody = await ttsResponse.json().catch(() => ({}));
         const errMsg = errBody?.error?.message || `Erro HTTP ${ttsResponse.status} da OpenAI TTS`;
-        console.error(`[narrar] Falha no pedaço ${i + 1}:`, errMsg);
-        return res.status(502).json({
-          error: `Falha ao gerar narração (pedaço ${i + 1} de ${chunks.length}): ${errMsg}`,
-        });
+        console.error(`[narrar] Falha no pedaço ${index + 1}:`, errMsg);
+        throw new Error(`Falha ao gerar narração (pedaço ${index + 1} de ${chunks.length}): ${errMsg}`);
       }
 
       const arrayBuffer = await ttsResponse.arrayBuffer();
       const chunkBuffer = Buffer.from(arrayBuffer);
-      audioBuffers.push(chunkBuffer);
-      console.log(`[narrar] Pedaço ${i + 1} OK — ${chunkBuffer.length} bytes`);
-    }
+      const elapsed = ((Date.now() - tChunkStart) / 1000).toFixed(1);
+      console.log(`[narrar] Pedaço ${index + 1}/${chunks.length} OK em ${elapsed}s — ${chunkBuffer.length} bytes`);
+
+      return { index, buffer: chunkBuffer };
+    });
+
+    // Aguarda todos os pedaços em paralelo
+    const results = await Promise.all(chunkPromises);
+
+    // Garante ordenação estrita dos pedaços pelo índice antes da concatenação
+    results.sort((a, b) => a.index - b.index);
+    const audioBuffers = results.map(r => r.buffer);
+
+    const totalSeconds = ((Date.now() - t0) / 1000).toFixed(1);
+    const totalBytes = audioBuffers.reduce((acc, b) => acc + b.length, 0);
+    console.log(`[narrar] Concluído em paralelo: ${chunks.length} pedaços em ${totalSeconds}s | Total: ${(totalBytes / (1024 * 1024)).toFixed(2)} MB`);
 
     // 4. Concatenação direta de buffers MP3
-    // Válido pois todos os pedaços foram gerados com os mesmos parâmetros (voz, formato, modelo)
     const finalAudio = Buffer.concat(audioBuffers);
     console.log(`[narrar] Áudio final concatenado: ${finalAudio.length} bytes`);
 

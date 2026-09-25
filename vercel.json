@@ -2,11 +2,11 @@
   "functions": {
     "api/narrar.js": {
       "memory": 1024,
-      "maxDuration": 60
+      "maxDuration": 300
     },
     "api/legendas.js": {
       "memory": 512,
-      "maxDuration": 60
+      "maxDuration": 300
     },
     "api/validar-biblia.js": {
       "memory": 1024,
