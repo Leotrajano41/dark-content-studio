@@ -961,8 +961,10 @@ textarea.h-180 {
               <span class="tooltip-wrapper" data-tooltip="Defina a duração aproximada do roteiro para adaptar a profundidade do conteúdo.">?</span>
             </label>
             <select id="select-estilo-roteiro" class="form-control">
-              <option value="Vídeo Curto (aprox. 1 minuto)">Vídeo Curto (aprox. 1 minuto)</option>
-              <option value="Vídeo Longo (aprox. 18-20 minutos)" selected>Vídeo Longo (aprox. 18-20 minutos)</option>
+              <option value="YouTube Longo (18-20 minutos)" selected>YouTube Longo (18-20 minutos)</option>
+              <option value="YouTube Médio (5-8 minutos)">YouTube Médio (5-8 minutos)</option>
+              <option value="Shorts/Reels — YouTube, Instagram, Facebook (50-60 segundos)">Shorts/Reels — YouTube, Instagram, Facebook (50-60 segundos)</option>
+              <option value="Shorts/Reels Estendido — YouTube, Instagram, Facebook (até 3 minutos)">Shorts/Reels Estendido — YouTube, Instagram, Facebook (até 3 minutos)</option>
             </select>
           </div>
 
@@ -1528,7 +1530,8 @@ const OpenRouterAPI = {
               content: promptText
             }
           ],
-          temperature: 0.7
+          temperature: 0.7,
+          max_tokens: 8192
         })
       });
 
@@ -1565,6 +1568,42 @@ const OpenRouterAPI = {
 };
 
 /**
+ * Configurações de Duração e Metas Explícitas de Palavras por Formato
+ * Base: 150 palavras por minuto de narração natural
+ */
+const SCRIPT_DURATION_CONFIGS = {
+  'YouTube Longo (18-20 minutos)': {
+    nome: 'YouTube Longo (18-20 minutos)',
+    palavrasMin: 2700,
+    palavrasMax: 3000,
+    limite85: Math.round(2700 * 0.85), // 2295
+    duracaoTexto: '18 a 20 minutos'
+  },
+  'YouTube Médio (5-8 minutos)': {
+    nome: 'YouTube Médio (5-8 minutos)',
+    palavrasMin: 750,
+    palavrasMax: 1200,
+    limite85: Math.round(750 * 0.85), // 638
+    duracaoTexto: '5 a 8 minutos'
+  },
+  'Shorts/Reels — YouTube, Instagram, Facebook (50-60 segundos)': {
+    nome: 'Shorts/Reels — YouTube, Instagram, Facebook (50-60 segundos)',
+    palavrasMin: 130,
+    palavrasMax: 160,
+    limite85: Math.round(130 * 0.85), // 111
+    duracaoTexto: '50 a 60 segundos'
+  },
+  'Shorts/Reels Estendido — YouTube, Instagram, Facebook (até 3 minutos)': {
+    nome: 'Shorts/Reels Estendido — YouTube, Instagram, Facebook (até 3 minutos)',
+    palavrasMin: 400,
+    palavrasMax: 450,
+    limite85: Math.round(400 * 0.85), // 340
+    duracaoTexto: 'até 3 minutos'
+  }
+};
+window.SCRIPT_DURATION_CONFIGS = SCRIPT_DURATION_CONFIGS;
+
+/**
  * Motor de Prompts Internos - Fórmula Explicador Bíblico
  */
 const PromptEngine = {
@@ -1577,21 +1616,95 @@ Forneça as 10 ideias numeradas (1 a 10) com Títulos que utilizem a fórmula: P
   },
 
   generateScriptPrompt({ ideia, estiloRoteiro, tomVoz, tipoGancho, idioma }) {
-    const duracaoText = estiloRoteiro.includes("1 minuto") ? "aproximadamente 1 minuto (vídeo curto)" : "aproximadamente 18-20 minutos (vídeo longo)";
+    const estilo = estiloRoteiro || 'YouTube Longo (18-20 minutos)';
+    let instrucoesDuracaoEFormato = '';
 
-    return `Atuando como roteirista profissional para canais 'dark' no YouTube, crie um roteiro completo para um vídeo sobre '${ideia}'. 
+    if (estilo.includes('18-20') || estilo.includes('Longo')) {
+      instrucoesDuracaoEFormato = `FORMATO: YouTube Longo (18-20 minutos de narração contínua)
+META OBRIGATÓRIA DE PALAVRAS: RIGOROSAMENTE ENTRE 2.700 E 3.000 PALAVRAS NO TOTAL.
+(Baseado na velocidade média de narração de 150 palavras por minuto: 18 min = 2.700 palavras, 20 min = 3.000 palavras).
 
-O roteiro deve ter um estilo de ${estiloRoteiro} (aprox. ${duracaoText}) e seguir a estrutura e o estilo de narrativa do canal 'Explicador Bíblico'. O tom deve ser ${tomVoz} e o gancho inicial ${tipoGancho}. 
+DIRETRIZ CRÍTICA DE EXTENSÃO E VOLUME:
+- Modelos de IA costumam resumir o texto. NESTE FORMATO É ESTRITAMENTE PROIBIDO RESUMIR OU CONDENSAR.
+- O texto final gerado DEVE conter entre 2.700 e 3.000 palavras corridas.
+- Para atingir essa meta com substância e sem enrolação, divida o documentário em EXATAMENTE 7 a 8 PONTOS PRINCIPAIS aprofundados.
+- Cada um dos 7 a 8 pontos DEVE conter múltiplos parágrafos longos e densos (META OBRIGATÓRIA: MÍNIMO DE 350 A 450 PALAVRAS POR PONTO).
+- NUNCA escreva apenas uma frase curta de Afirmação e uma de Desenvolvimento. Traga contextualização histórica minuciosa, desdobramentos teológicos, evidências bíblicas/arqueológicas completas, citações textuais analisadas e reflexões profundas.
 
-Inclua obrigatoriamente:
-- Hook (0-15s): Uma frase impactante.
-- Introdução (0-45s): Contextualização e promessa do conteúdo.
-- Pontos Enumerados: Divida o conteúdo em 3-7 pontos principais, cada um com Afirmação, Desenvolvimento, Evidências/Referências (se aplicável), e Análise/Impacto.
-- CTAs Orgânicas: Sugestões de onde inserir chamadas para ação (like, inscrição, compartilhamento) com um motivo claro.
-- Ganchos Internos: Frases para manter a retenção ao longo do vídeo.
-- Conclusão: Síntese da mensagem e CTA final. 
+ESTRUTURA DETALHADA DO ROTEIRO:
+- Hook (0-15s): Frase/pergunta enigmática de alto impacto que paralisa o espectador, baseada no gancho: ${tipoGancho}.
+- Introdução Imersiva (0-45s / ~150 palavras): Estabelece o enigma histórico/bíblico, o peso do tema e a promessa de revelar o que a teologia tradicional e a história debatem.
+- Corpo do Documentário (7 a 8 Pontos Extensos - 350 a 450 palavras cada):
+  Para CADA ponto de 1 a 7/8, escreva uma narrativa rica contendo:
+  * Afirmação provocativa e misteriosa
+  * Contextualização histórica, geográfica e arqueológica aprofundada
+  * Análise textual e bíblica minuciosa com citações e confrontação de fatos
+  * Desenvolvimento reflexivo com teorias de acadêmicos, controvérsias e implicações espirituais
+- Ganchos de Retenção e CTAs Orgânicas: Inseridos de forma natural entre os blocos para manter a audiência presa durante os 20 minutos.
+- Conclusão Filosófica e Desfecho (~180 palavras): Síntese de toda a jornada, reflexão transformadora e chamada marcante com CTA final.
 
-O roteiro deve ser apenas o texto a ser falado, sem dicas de edição ou legendas, e no idioma ${idioma}.`;
+ATENÇÃO: NÃO finalize o texto antes de atingir a meta de 2.700 a 3.000 palavras.`;
+
+    } else if (estilo.includes('5-8') || estilo.includes('Médio')) {
+      instrucoesDuracaoEFormato = `FORMATO: YouTube Médio (5-8 minutos de narração)
+META OBRIGATÓRIA DE PALAVRAS: ENTRE 750 E 1.200 PALAVRAS NO TOTAL.
+(Baseado na velocidade média de narração de 150 palavras por minuto para preencher 5 a 8 minutos).
+
+DIRETRIZES DE PROFUNDIDADE E EXTENSÃO:
+- Os pontos devem ser um pouco mais enxutos que no formato longo, mas AINDA com desenvolvimento real e substancial (não apenas 1 frase por seção).
+- Divida o corpo do roteiro em 3 a 5 pontos principais numerados.
+- Cada ponto deve conter desenvolvimento real (mínimo de 120 a 200 palavras por ponto), trazendo contextualização histórica, explicação clara e reflexão envolvente.
+
+ESTRUTURA DO ROTEIRO:
+- Hook (0-15s): Abertura impactante baseada no tipo de gancho: ${tipoGancho}.
+- Introdução (0-30s): Apresentação ágil do enigma bíblico e promessa de revelação.
+- Pontos Numerados (3 a 5 pontos): Cada um com Afirmação instigante, Desenvolvimento substantivo (120-200 palavras), Referências bíblicas e Análise/Impacto.
+- CTA Orgânica intermediária para engajamento.
+- Conclusão: Síntese dos ensinamentos com reflexão marcante e CTA final.`;
+
+    } else if (estilo.includes('50-60') || (estilo.includes('Shorts') && !estilo.includes('Estendido') && !estilo.includes('3 minutos'))) {
+      instrucoesDuracaoEFormato = `FORMATO: Shorts/Reels — YouTube, Instagram, Facebook (50-60 segundos)
+META OBRIGATÓRIA DE PALAVRAS: RIGOROSAMENTE ENTRE 130 E 160 PALAVRAS NO TOTAL.
+(Baseado no ritmo dinâmico de vídeo vertical de 150 palavras por minuto para exatamente 50 a 60 segundos).
+
+DIRETRIZES DE FORMATO VERTICAL DIRETO (SEM PONTOS NUMERADOS):
+- O roteiro para Shorts deve ser direto, ágil e em TEXTO CORRIDO, sem os tradicionais marcadores de "Pontos" numerados (NÃO use "Ponto 1", "Ponto 2", "Afirmação:", etc.). Formato adequado a vídeo curto vertical.
+- Foco em UMA ÚNICA ideia central bem explicada e reveladora.
+- Hook forte nos primeiros 3 segundos que prenda a atenção imediatamente.
+
+ESTRUTURA DO SHORTS:
+- Hook Imediato (0-3s): Frase de abertura de impacto imediato (tipo de gancho: ${tipoGancho}) que faz a pessoa parar de rolar o feed.
+- Ideia Central (3-45s): Uma história, mistério ou fato bíblico surpreendente narrado de forma contínua, fascinante e sem rodeios.
+- Fechamento e CTA Rápida (45-60s): Revelação final de 1 frase marcante e um convite rápido para seguir/curtir.`;
+
+    } else {
+      // Shorts/Reels Estendido (até 3 minutos)
+      instrucoesDuracaoEFormato = `FORMATO: Shorts/Reels Estendido — YouTube, Instagram, Facebook (até 3 minutos)
+META OBRIGATÓRIA DE PALAVRAS: ENTRE 400 E 450 PALAVRAS NO TOTAL.
+(Baseado na velocidade média de narração de 150 palavras por minuto para preencher 2:40 a 3 minutos).
+
+DIRETRIZES DE FORMATO ESTENDIDO:
+- Formato ágil e dinâmico que mantém alta retenção em vídeos verticais longos.
+- Permite desenvolver 2 a 3 pontos breves além do hook magnético e conclusão (aprox. 80-100 palavras por ponto).
+- Linguagem ágil, misteriosa e conectada.
+
+ESTRUTURA DO ROTEIRO:
+- Hook Magnético (0-5s): Abertura poderosa baseada no gancho: ${tipoGancho}.
+- Introdução Breve (5-20s): Contextualização instigante da premissa.
+- 2 a 3 Pontos Breves: Desenvolvendo a história de forma ágil, com curiosidades e ritmo acelerado.
+- Conclusão e CTA (últimos 15-20s): Fechamento com impacto e convite para comentar e seguir.`;
+    }
+
+    return `Atuando como roteirista profissional para canais 'dark' no YouTube e redes sociais, crie um roteiro completo para um vídeo sobre '${ideia}'.
+
+O roteiro deve seguir a estrutura e o estilo de narrativa do canal 'Explicador Bíblico'.
+O tom de voz deve ser '${tomVoz}' e o gancho inicial '${tipoGancho}'.
+
+${instrucoesDuracaoEFormato}
+
+DIRETRIZES GERAIS DE FINALIZAÇÃO:
+- O roteiro deve conter EXCLUSIVAMENTE o texto a ser falado pelo narrador (sem rubricas técnicas de câmera, sem efeitos sonoros, sem dicas de edição visual e sem legendas).
+- O idioma de todo o texto DEVE ser rigorosamente ${idioma}.`;
   },
 
   generateMediaKeywordsPrompt({ roteiro }) {
@@ -2256,6 +2369,29 @@ document.addEventListener('DOMContentLoaded', () => {
         textareaRoteiroGerado.value = resultText;
       }
 
+      // ITEM 2: Validação de Duração (Contagem de palavras pós-limpeza de narração)
+      const textoParaContagem = typeof limparTextoParaNarracao === 'function'
+        ? limparTextoParaNarracao(resultText)
+        : resultText;
+      const totalPalavras = (textoParaContagem.trim().match(/\S+/g) || []).length;
+      const minutosEstimados = (totalPalavras / 150).toFixed(1);
+
+      const configDuracao = SCRIPT_DURATION_CONFIGS[estiloRoteiro] ||
+        (estiloRoteiro.includes('18-20') ? SCRIPT_DURATION_CONFIGS['YouTube Longo (18-20 minutos)'] :
+         estiloRoteiro.includes('5-8') ? SCRIPT_DURATION_CONFIGS['YouTube Médio (5-8 minutos)'] :
+         estiloRoteiro.includes('3 minutos') ? SCRIPT_DURATION_CONFIGS['Shorts/Reels Estendido — YouTube, Instagram, Facebook (até 3 minutos)'] :
+         SCRIPT_DURATION_CONFIGS['Shorts/Reels — YouTube, Instagram, Facebook (50-60 segundos)']);
+
+      const hasApiKey = Boolean(OpenRouterAPI.getApiKey());
+      if (hasApiKey && configDuracao && totalPalavras < configDuracao.limite85) {
+        setTimeout(() => {
+          UI.showToast(
+            `⚠️ O roteiro gerado ficou com ${totalPalavras} palavras (~${minutosEstimados} min), mais curto que o esperado para ${configDuracao.nome} (meta mínima: ${configDuracao.palavrasMin} palavras). Considere gerar novamente.`,
+            'warning'
+          );
+        }, 1200);
+      }
+
       // ITEM 5: Puxa o roteiro automaticamente para a Etapa 4 (SEO)
       const textareaResumoSeo = document.getElementById('textarea-resumo-seo');
       if (textareaResumoSeo && (!textareaResumoSeo.value.trim() || textareaResumoSeo.dataset.autoSynced === 'true')) {
@@ -2561,7 +2697,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-load-preset').addEventListener('click', () => {
     selectTema.value = 'Fins Trágicos Bíblicos';
     document.getElementById('select-idioma').value = 'Português (Brasil)';
-    document.getElementById('select-estilo-roteiro').value = 'Vídeo Longo (aprox. 18-20 minutos)';
+    document.getElementById('select-estilo-roteiro').value = 'YouTube Longo (18-20 minutos)';
     document.getElementById('select-tom').value = 'Investigativo e Curioso';
     document.getElementById('select-gancho').value = 'Pergunta Intrigante';
     document.getElementById('select-voz-audio').value = 'onyx';
