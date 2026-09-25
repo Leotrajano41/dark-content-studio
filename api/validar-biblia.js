@@ -262,18 +262,95 @@ function validarRoteiroBiblico(texto, idioma = 'pt') {
         substituicao: generalReplacement
       });
     } else {
+function normalizeWords(str) {
+  if (!str) return '';
+  return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\s]/g, '').trim();
+}
+
+/**
+ * Encontra a melhor correspondência dentro do versículo bíblico caso o usuário
+ * tenha citado apenas uma oração/frase do versículo longo.
+ */
+function findBestQuoteMatch(realVerse, quotedText) {
+  if (!realVerse || !quotedText) return realVerse;
+
+  // Se o texto citado for longo (próximo do tamanho do versículo), usa o versículo inteiro
+  if (quotedText.length >= realVerse.length * 0.75) {
+    return realVerse;
+  }
+
+  // 1. Divide o versículo em sentenças/cláusulas lógicas (; . ! ?)
+  const segments = realVerse.split(/(?<=[;\.!\?])\s+/);
+  if (segments.length > 1) {
+    let bestSegment = realVerse;
+    let bestScore = 0;
+
+    for (let i = 0; i < segments.length; i++) {
+      for (let j = i; j < segments.length; j++) {
+        const candidate = segments.slice(i, j + 1).join(' ').trim();
+        const candWords = normalizeWords(candidate).split(/\s+/);
+        const quoteWords = normalizeWords(quotedText).split(/\s+/);
+
+        const overlap = quoteWords.filter(w => candWords.includes(w)).length;
+        const score = overlap / Math.max(candWords.length, quoteWords.length);
+
+        if (score > bestScore && score >= 0.35) {
+          bestScore = score;
+          bestSegment = candidate;
+        }
+      }
+    }
+
+    if (bestScore >= 0.35) {
+      return bestSegment;
+    }
+  }
+
+  // 2. Divide por vírgulas para versículos compostos por orações menores
+  const commaSegments = realVerse.split(/(?<=[,;])\s+/);
+  if (commaSegments.length > 1) {
+    let bestComma = realVerse;
+    let bestCommaScore = 0;
+
+    for (let i = 0; i < commaSegments.length; i++) {
+      for (let j = i; j < Math.min(i + 3, commaSegments.length); j++) {
+        const candidate = commaSegments.slice(i, j + 1).join(' ').trim();
+        const candWords = normalizeWords(candidate).split(/\s+/);
+        const quoteWords = normalizeWords(quotedText).split(/\s+/);
+
+        const overlap = quoteWords.filter(w => candWords.includes(w)).length;
+        const score = overlap / Math.max(candWords.length, quoteWords.length);
+
+        if (score > bestCommaScore && score >= 0.4) {
+          bestCommaScore = score;
+          bestComma = candidate.replace(/[,;]$/, '');
+        }
+      }
+    }
+
+    if (bestCommaScore >= 0.4) {
+      return bestComma;
+    }
+  }
+
+  return realVerse;
+}
+
       // Caso 2: A referência EXISTE. Busca citação correspondente nas proximidades
       const postRefIdx = match.index + match.length;
       const postSnippet = textoCorrigido.slice(postRefIdx, postRefIdx + 300);
 
-      // Procura citação entre aspas logo após a referência
-      const quoteMatch = postSnippet.match(/^[\s,;]*(?:diz|afirma|declara|mostra|onde lemos|que diz)?[:\s]*["“]([^"”]+)["”]/i);
+      // Procura citação entre aspas logo após a referência (com ou sem verbos declarativos)
+      const quoteMatch = postSnippet.match(/^[^"”\n\.]*["“]([^"”]+)["”]/i);
 
       if (quoteMatch) {
         const textoCitado = quoteMatch[1].trim();
-        if (normalizeStr(textoCitado) !== normalizeStr(realText)) {
+        const textoCorretoAlvo = findBestQuoteMatch(realText, textoCitado);
+
+        // Se o texto citado não coincidir com o texto bíblico oficial
+        if (normalizeWords(textoCitado) !== normalizeWords(textoCorretoAlvo)) {
           const quoteFull = quoteMatch[0];
-          const newQuote = quoteFull.replace(quoteMatch[1], realText);
+          const newQuote = quoteFull.replace(quoteMatch[1], textoCorretoAlvo);
           const replaceIdx = postRefIdx;
           textoCorrigido = textoCorrigido.slice(0, replaceIdx) + textoCorrigido.slice(replaceIdx).replace(quoteFull, newQuote);
 
@@ -281,7 +358,7 @@ function validarRoteiroBiblico(texto, idioma = 'pt') {
             tipo: 'CITACAO_CORRIGIDA',
             referencia: match.rawRef,
             textoAnterior: textoCitado,
-            textoCorreto: realText
+            textoCorreto: textoCorretoAlvo
           });
         }
       }
