@@ -227,55 +227,84 @@ function limparTextoParaNarracao(texto) {
     `[narrar] Iniciando: ${chunks.length} pedaço(s) | voz="${selectedVoice}" | tom="${tom}"`
   );
 
-  // 3. Geração do áudio: processamento em PARALELO via Promise.all
+  // 3. Geração do áudio: processamento com CONCORRÊNCIA CONTROLADA (2 chunks simultâneos)
+  // Evita congestionamento de sockets / throttling na OpenAI TTS e garante alta velocidade
   try {
     const t0 = Date.now();
-    console.log(`[narrar] Iniciando geração paralela de ${chunks.length} pedaço(s) com OpenAI TTS...`);
+    const CONCORRENCIA_MAX = 2;
+    console.log(`[narrar] Iniciando geração: ${chunks.length} pedaço(s) com concorrência máxima de ${CONCORRENCIA_MAX}...`);
 
-    const chunkPromises = chunks.map(async (chunk, index) => {
-      const tChunkStart = Date.now();
-      console.log(`[narrar] Pedaço ${index + 1}/${chunks.length} enviado (${chunk.length} chars)`);
+    // Função para chamar TTS de 1 pedaço com timeout e retry
+    async function sintetizarChunkComRetry(chunk, index, maxTentativas = 2) {
+      for (let tentativa = 1; tentativa <= maxTentativas; tentativa++) {
+        const tChunkStart = Date.now();
+        console.log(`[narrar] Pedaço ${index + 1}/${chunks.length} enviado (Tentativa ${tentativa}/${maxTentativas} — ${chunk.length} chars)`);
 
-      const ttsResponse = await fetch('https://api.openai.com/v1/audio/speech', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini-tts',
-          input: chunk,
-          voice: selectedVoice,
-          instructions: instruction,
-          response_format: 'mp3',
-        }),
-      });
+        try {
+          const ttsResponse = await fetch('https://api.openai.com/v1/audio/speech', {
+            method: 'POST',
+            signal: AbortSignal.timeout(55000), // Timeout de 55s para evitar travamento de socket
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o-mini-tts',
+              input: chunk,
+              voice: selectedVoice,
+              instructions: instruction,
+              response_format: 'mp3',
+            }),
+          });
 
-      if (!ttsResponse.ok) {
-        const errBody = await ttsResponse.json().catch(() => ({}));
-        const errMsg = errBody?.error?.message || `Erro HTTP ${ttsResponse.status} da OpenAI TTS`;
-        console.error(`[narrar] Falha no pedaço ${index + 1}:`, errMsg);
-        throw new Error(`Falha ao gerar narração (pedaço ${index + 1} de ${chunks.length}): ${errMsg}`);
+          if (!ttsResponse.ok) {
+            const errBody = await ttsResponse.json().catch(() => ({}));
+            const errMsg = errBody?.error?.message || `Erro HTTP ${ttsResponse.status} da OpenAI TTS`;
+            console.error(`[narrar] Falha no pedaço ${index + 1} (tentativa ${tentativa}):`, errMsg);
+            if (tentativa === maxTentativas) {
+              throw new Error(`Falha ao gerar narração (pedaço ${index + 1} de ${chunks.length}): ${errMsg}`);
+            }
+          } else {
+            const arrayBuffer = await ttsResponse.arrayBuffer();
+            const chunkBuffer = Buffer.from(arrayBuffer);
+            const elapsed = ((Date.now() - tChunkStart) / 1000).toFixed(1);
+            console.log(`[narrar] Pedaço ${index + 1}/${chunks.length} OK em ${elapsed}s — ${chunkBuffer.length} bytes`);
+            return { index, buffer: chunkBuffer };
+          }
+        } catch (fetchErr) {
+          const isTimeout = fetchErr.name === 'TimeoutError' || fetchErr.message.includes('timeout');
+          console.warn(`[narrar] Pedaço ${index + 1} erro na tentativa ${tentativa} (${isTimeout ? 'Timeout' : fetchErr.message})`);
+          if (tentativa === maxTentativas) {
+            throw new Error(`Falha no pedaço ${index + 1} após ${maxTentativas} tentativas: ${fetchErr.message}`);
+          }
+          // Breve pausa antes do retry
+          await new Promise(r => setTimeout(r, 1000));
+        }
       }
+    }
 
-      const arrayBuffer = await ttsResponse.arrayBuffer();
-      const chunkBuffer = Buffer.from(arrayBuffer);
-      const elapsed = ((Date.now() - tChunkStart) / 1000).toFixed(1);
-      console.log(`[narrar] Pedaço ${index + 1}/${chunks.length} OK em ${elapsed}s — ${chunkBuffer.length} bytes`);
+    // Pool de execução com concorrência controlada
+    const results = new Array(chunks.length);
+    let nextIndex = 0;
 
-      return { index, buffer: chunkBuffer };
-    });
+    async function worker() {
+      while (nextIndex < chunks.length) {
+        const i = nextIndex++;
+        results[i] = await sintetizarChunkComRetry(chunks[i], i);
+      }
+    }
 
-    // Aguarda todos os pedaços em paralelo
-    const results = await Promise.all(chunkPromises);
+    const numWorkers = Math.min(CONCORRENCIA_MAX, chunks.length);
+    const workers = Array.from({ length: numWorkers }, () => worker());
+    await Promise.all(workers);
 
-    // Garante ordenação estrita dos pedaços pelo índice antes da concatenação
+    // Garante ordenação estrita dos pedaços pelo índice original
     results.sort((a, b) => a.index - b.index);
     const audioBuffers = results.map(r => r.buffer);
 
     const totalSeconds = ((Date.now() - t0) / 1000).toFixed(1);
     const totalBytes = audioBuffers.reduce((acc, b) => acc + b.length, 0);
-    console.log(`[narrar] Concluído em paralelo: ${chunks.length} pedaços em ${totalSeconds}s | Total: ${(totalBytes / (1024 * 1024)).toFixed(2)} MB`);
+    console.log(`[narrar] Concluído: ${chunks.length} pedaços em ${totalSeconds}s | Total: ${(totalBytes / (1024 * 1024)).toFixed(2)} MB`);
 
     // 4. Concatenação direta de buffers MP3
     const finalAudio = Buffer.concat(audioBuffers);
