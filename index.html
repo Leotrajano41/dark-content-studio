@@ -1074,6 +1074,21 @@ textarea.h-180 {
           </div>
           <textarea id="output-prompt-roteiro" class="form-control prompt-output" readonly placeholder="O roteiro completo gerado pela IA aparecerá aqui..."></textarea>
         </div>
+
+        <!-- Output 2.1: Narração Limpa -->
+        <div class="output-card mt-4">
+          <div class="output-header">
+            <span class="output-title">🎙️ Versão Narração Limpa (Pronta para Locução / Áudio sem Rótulos)</span>
+            <button class="btn btn-copy" data-clipboard-target="output-roteiro-limpo">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              Copiar Narração Limpa
+            </button>
+          </div>
+          <textarea id="output-roteiro-limpo" class="form-control prompt-output" readonly placeholder="A versão limpa (sem [Hook], sem 'Ponto 1', sem rótulos e sem contagens) aparecerá aqui automaticamente..."></textarea>
+        </div>
       </section>
 
       <!-- SEÇÃO 2.2: Prompts para Mídia -->
@@ -1379,6 +1394,15 @@ textarea.h-180 {
               🎙️ Tom da narração: <span id="span-tom-audio" style="margin-left: 6px; color: #ffffff;">Investigativo e Curioso</span>
             </div>
           </div>
+
+          <!-- Campo Exclusivo da Narração Limpa para Locução -->
+          <div class="form-group form-group-full" style="margin-top: 16px;">
+            <label for="textarea-narracao-limpa-audio">
+              Texto da Narração Limpa (Exclusivo para Síntese de Voz / TTS)
+              <span class="tooltip-wrapper" data-tooltip="Este é o texto exato que será falado pela voz neural. Ele é automaticamente higienizado da Etapa 1, sem marcações [Hook], sem 'Ponto 1', sem rótulos e sem contagens.">?</span>
+            </label>
+            <textarea id="textarea-narracao-limpa-audio" class="form-control h-180" placeholder="A versão limpa para locução (sem rótulos ou marcações) gerada na Etapa 1 aparecerá aqui para ser narrada..."></textarea>
+          </div>
         </div>
 
         <!-- Ações de Narração -->
@@ -1523,7 +1547,7 @@ const OpenRouterAPI = {
           messages: [
             {
               role: 'system',
-              content: 'Você é um assistente sênior especialista em produção de conteúdo, roteiros e SEO para canais dark no YouTube, seguindo a estética e fórmula de sucesso do canal Explicador Bíblico.'
+              content: 'You are an expert biblical documentary scriptwriter and YouTube dark channel strategist following the proven formula of "Explicador Bíblico".\n\nCRITICAL MANDATORY RULES FOR ALL GENERATIONS:\n1. HISTORICAL & BIBLICAL TRUTH: Always treat the biblical narrative as literal truth and real history. STRICTLY FORBIDDEN: never use skepticism, never use terms or concepts like "myth", "legend", "debate", "were they real", "scholars suggest", "traditional theology may not reveal", or any translations/equivalents in Portuguese, Spanish, or any other language (e.g., "mito", "lenda", "debate", "se eram reais", "estudiosos sugerem", "a teologia tradicional oculta").\n2. STRICTLY CANONICAL TEXT: Strictly restrict all content to the 66 canonical books of the Bible. STRICTLY FORBIDDEN: never include extra-biblical theories, secular ancient civilizational hypotheses, human evolutionary ancestry theories, or apocryphal/pseudepigraphal books (such as the Book of Enoch / Livro de Enoque).\n3. EXACT SCRIPTURAL TRANSLATIONS: Direct Bible quotations must always be 100% literal from the authorized canonical translation for the target language:\n   - English: King James Version (KJV)\n   - Portuguese: João Ferreira de Almeida (JFA)\n   - Spanish: Reina-Valera 1909 (RVR1909)\n4. STRICT LANGUAGE COMPLIANCE: Always deliver 100% of the output in the requested language.'
             },
             {
               role: 'user',
@@ -1608,103 +1632,151 @@ window.SCRIPT_DURATION_CONFIGS = SCRIPT_DURATION_CONFIGS;
  */
 const PromptEngine = {
 
-  generateIdeasPrompt({ tema, idioma }) {
-    return `Atuando como um especialista em YouTube e SEO para canais 'dark' no nicho de ${tema}, gere 10 ideias de títulos e temas de vídeos que sigam a fórmula de sucesso do canal 'Explicador Bíblico', focando em curiosidade, revelação e quebra de mitos. As ideias devem ser virais e otimizadas para ${idioma}.
+  getLanguageConfig(idioma) {
+    const id = (idioma || '').toLowerCase();
+    if (id.includes('ingl') || id.includes('engl')) {
+      return {
+        name: 'English',
+        code: 'en',
+        bibleTranslation: 'King James Version (KJV)',
+        citationRule: 'Direct scripture quotations MUST be 100% literal from the King James Version (KJV).',
+        titleHookSample: 'The REAL Truth About the Giants (Many Miss This)'
+      };
+    } else if (id.includes('espanh') || id.includes('span')) {
+      return {
+        name: 'Español',
+        code: 'es',
+        bibleTranslation: 'Reina-Valera 1909 (RVR1909)',
+        citationRule: 'Las citas bíblicas directas DEBEN ser 100% literales de la traducción Reina-Valera 1909 (RVR1909).',
+        titleHookSample: 'La REAL Verdad Sobre los Gigantes (Muchos Ignoran Esto)'
+      };
+    } else {
+      return {
+        name: 'Português (Brasil)',
+        code: 'pt',
+        bibleTranslation: 'João Ferreira de Almeida (JFA)',
+        citationRule: 'As citações bíblicas diretas DEVEM ser 100% literais da tradução João Ferreira de Almeida (JFA).',
+        titleHookSample: 'A REAL Verdade Sobre os Gigantes (Muitos Não Sabem)'
+      };
+    }
+  },
 
-Formato de Saída:
-Forneça as 10 ideias numeradas (1 a 10) com Títulos que utilizem a fórmula: Pergunta/Afirmação Impactante + Palavras-Chave Fortes + CAPS LOCK estratégico em termos chamativos + Promessa de Conteúdo Completo.`;
+  generateIdeasPrompt({ tema, idioma }) {
+    const lang = this.getLanguageConfig(idioma);
+
+    return `Act as a senior YouTube content strategist for biblical documentary dark channels following the proven formula of 'Explicador Bíblico'.
+Generate exactly 10 viral video title and theme ideas for a video about: '${tema}'.
+
+CRITICAL MANDATORY GUIDELINES:
+1. STRICT LANGUAGE COMPLIANCE: All 10 titles, themes, and summaries MUST be written 100% in ${lang.name}. Never output in any other language.
+2. BIBLICAL TRUTH (SACRED FACT): Always treat the biblical narrative as literal truth and real sacred history.
+   - STRICTLY FORBIDDEN: Never use skepticism, doubts, or secular speculative framing.
+   - PROHIBITED WORDS/CONCEPTS: Never use terms like "myth", "legend", "debate", "were they real", "scholars suggest", "traditional theology may not reveal", or equivalents in any language ("mito", "lenda", "debate", "se eram reais", "estudiosos sugerem", "a teologia tradicional oculta").
+3. CANONICAL SCRIPTURE ONLY: Restrict all content strictly to the 66 canonical books of the Bible.
+   - STRICTLY FORBIDDEN: Never cite or include extra-biblical theories, secular ancient civilizational speculations, evolutionary human ancestry theories, or apocryphal/pseudepigraphal books (such as the Book of Enoch / Livro de Enoque).
+4. STRICT TITLE FORMATTING RULES (HIGH CTR):
+   - MAXIMUM OF 1 WORD IN CAPS LOCK per title (e.g., "${lang.titleHookSample}").
+   - NEVER write the entire title in uppercase. Never use more than 1 word in ALL CAPS.
+   - Include compelling curiosity hooks, such as "The REAL...", "(Many Miss This)", "(What Scripture Actually Says)" adapted to ${lang.name}.
+
+OUTPUT FORMAT:
+Provide the 10 ideas numbered 1 to 10 in ${lang.name}, with Title (max 1 word in CAPS + curiosity hook) followed by a short 1-2 sentence hook premise.`;
   },
 
   generateScriptPrompt({ ideia, estiloRoteiro, tomVoz, tipoGancho, idioma }) {
+    const lang = this.getLanguageConfig(idioma);
     const estilo = estiloRoteiro || 'YouTube Longo (18-20 minutos)';
     let instrucoesDuracaoEFormato = '';
 
     if (estilo.includes('18-20') || estilo.includes('Longo')) {
-      instrucoesDuracaoEFormato = `FORMATO: YouTube Longo (18-20 minutos de narração contínua)
-META OBRIGATÓRIA DE PALAVRAS: RIGOROSAMENTE ENTRE 2.700 E 3.000 PALAVRAS NO TOTAL.
-(Baseado na velocidade média de narração de 150 palavras por minuto: 18 min = 2.700 palavras, 20 min = 3.000 palavras).
+      instrucoesDuracaoEFormato = `FORMAT: YouTube Long Documentary (18-20 minutes of continuous narration)
+MANDATORY WORD COUNT TARGET: STRICTLY BETWEEN 2,700 AND 3,000 WORDS IN TOTAL.
+(Based on standard speech rate of 150 words per minute: 18 min = 2,700 words, 20 min = 3,000 words).
 
-DIRETRIZ CRÍTICA DE EXTENSÃO E VOLUME:
-- Modelos de IA costumam resumir o texto. NESTE FORMATO É ESTRITAMENTE PROIBIDO RESUMIR OU CONDENSAR.
-- O texto final gerado DEVE conter entre 2.700 e 3.000 palavras corridas.
-- Para atingir essa meta com substância e sem enrolação, divida o documentário em EXATAMENTE 7 a 8 PONTOS PRINCIPAIS aprofundados.
-- Cada um dos 7 a 8 pontos DEVE conter múltiplos parágrafos longos e densos (META OBRIGATÓRIA: MÍNIMO DE 350 A 450 PALAVRAS POR PONTO).
-- NUNCA escreva apenas uma frase curta de Afirmação e uma de Desenvolvimento. Traga contextualização histórica minuciosa, desdobramentos teológicos, evidências bíblicas/arqueológicas completas, citações textuais analisadas e reflexões profundas.
+DEPTH AND VOLUME DIRECTIVES:
+- It is STRICTLY FORBIDDEN to summarize, abbreviate, or deliver a short outline.
+- The script MUST be long, dense, and deeply immersive.
+- Divide the body into EXACTLY 7 to 8 MAJOR NUMBERED SECTIONS.
+- Each section MUST contain multiple dense paragraphs (MANDATORY MINIMUM: 350 TO 450 WORDS PER SECTION).
+- Never write just a single sentence per section. Provide deep historical and geographical biblical context, literal Scripture exposition, theological significance, and profound reflections.
 
-ESTRUTURA DETALHADA DO ROTEIRO:
-- Hook (0-15s): Frase/pergunta enigmática de alto impacto que paralisa o espectador, baseada no gancho: ${tipoGancho}.
-- Introdução Imersiva (0-45s / ~150 palavras): Estabelece o enigma histórico/bíblico, o peso do tema e a promessa de revelar o que a teologia tradicional e a história debatem.
-- Corpo do Documentário (7 a 8 Pontos Extensos - 350 a 450 palavras cada):
-  Para CADA ponto de 1 a 7/8, escreva uma narrativa rica contendo:
-  * Afirmação provocativa e misteriosa
-  * Contextualização histórica, geográfica e arqueológica aprofundada
-  * Análise textual e bíblica minuciosa com citações e confrontação de fatos
-  * Desenvolvimento reflexivo com teorias de acadêmicos, controvérsias e implicações espirituais
-- Ganchos de Retenção e CTAs Orgânicas: Inseridos de forma natural entre os blocos para manter a audiência presa durante os 20 minutos.
-- Conclusão Filosófica e Desfecho (~180 palavras): Síntese de toda a jornada, reflexão transformadora e chamada marcante com CTA final.
+REQUIRED SCRIPT STRUCTURE:
+- Hook (0-15s): Magnetic opening statement/question that halts the viewer, based on the hook type: ${tipoGancho}.
+- Immersive Introduction (0-45s / ~150 words): Establishes the solemn gravity of the biblical account and the promise of what Scripture reveals.
+- Body of Documentary (7 to 8 Major Points - 350 to 450 words each):
+  For EACH point:
+  * Provocative and reverent premise
+  * Deep biblical and historical contextualization within the canonical narrative
+  * Detailed textual scripture analysis with exact verbatim quotes
+  * Faithful theological reflection on the implications for faith and human obedience to God
+- Retention Hooks and Organic CTAs: Naturally woven between sections to sustain attention.
+- Conclusion and Climax (~180 words): Solemn synthesis of the biblical truth and final call to action.
 
-ATENÇÃO: NÃO finalize o texto antes de atingir a meta de 2.700 a 3.000 palavras.`;
+ATTENTION: Do NOT stop writing until reaching the target of 2,700 to 3,000 words.`;
 
     } else if (estilo.includes('5-8') || estilo.includes('Médio')) {
-      instrucoesDuracaoEFormato = `FORMATO: YouTube Médio (5-8 minutos de narração)
-META OBRIGATÓRIA DE PALAVRAS: ENTRE 750 E 1.200 PALAVRAS NO TOTAL.
-(Baseado na velocidade média de narração de 150 palavras por minuto para preencher 5 a 8 minutos).
+      instrucoesDuracaoEFormato = `FORMAT: YouTube Medium Video (5-8 minutes of narration)
+MANDATORY WORD COUNT TARGET: STRICTLY BETWEEN 750 AND 1,200 WORDS IN TOTAL.
+(Based on 150 words per minute to fill 5 to 8 minutes).
 
-DIRETRIZES DE PROFUNDIDADE E EXTENSÃO:
-- Os pontos devem ser um pouco mais enxutos que no formato longo, mas AINDA com desenvolvimento real e substancial (não apenas 1 frase por seção).
-- Divida o corpo do roteiro em 3 a 5 pontos principais numerados.
-- Cada ponto deve conter desenvolvimento real (mínimo de 120 a 200 palavras por ponto), trazendo contextualização histórica, explicação clara e reflexão envolvente.
+DEPTH AND VOLUME DIRECTIVES:
+- Divide into 3 to 5 clear points with real substance (minimum 120 to 200 words per point).
+- Never summarize sections in a single sentence.
 
-ESTRUTURA DO ROTEIRO:
-- Hook (0-15s): Abertura impactante baseada no tipo de gancho: ${tipoGancho}.
-- Introdução (0-30s): Apresentação ágil do enigma bíblico e promessa de revelação.
-- Pontos Numerados (3 a 5 pontos): Cada um com Afirmação instigante, Desenvolvimento substantivo (120-200 palavras), Referências bíblicas e Análise/Impacto.
-- CTA Orgânica intermediária para engajamento.
-- Conclusão: Síntese dos ensinamentos com reflexão marcante e CTA final.`;
+STRUCTURE:
+- Hook (0-15s): Strong opening hook based on: ${tipoGancho}.
+- Introduction (0-30s): Quick context and promise of revelation.
+- Numbered Points (3 to 5 points): Assertion, biblical development, exact scripture quotes, and spiritual impact.
+- Mid-video organic CTA.
+- Conclusion: Memorable reflection and final CTA.`;
 
     } else if (estilo.includes('50-60') || (estilo.includes('Shorts') && !estilo.includes('Estendido') && !estilo.includes('3 minutos'))) {
-      instrucoesDuracaoEFormato = `FORMATO: Shorts/Reels — YouTube, Instagram, Facebook (50-60 segundos)
-META OBRIGATÓRIA DE PALAVRAS: RIGOROSAMENTE ENTRE 130 E 160 PALAVRAS NO TOTAL.
-(Baseado no ritmo dinâmico de vídeo vertical de 150 palavras por minuto para exatamente 50 a 60 segundos).
+      instrucoesDuracaoEFormato = `FORMAT: Vertical Video (Shorts / Reels / TikTok - 50 to 60 seconds)
+MANDATORY WORD COUNT TARGET: STRICTLY BETWEEN 130 AND 160 WORDS IN TOTAL.
+(Based on dynamic pace of 150 words per minute for exactly 50-60 seconds).
 
-DIRETRIZES DE FORMATO VERTICAL DIRETO (SEM PONTOS NUMERADOS):
-- O roteiro para Shorts deve ser direto, ágil e em TEXTO CORRIDO, sem os tradicionais marcadores de "Pontos" numerados (NÃO use "Ponto 1", "Ponto 2", "Afirmação:", etc.). Formato adequado a vídeo curto vertical.
-- Foco em UMA ÚNICA ideia central bem explicada e reveladora.
-- Hook forte nos primeiros 3 segundos que prenda a atenção imediatamente.
-
-ESTRUTURA DO SHORTS:
-- Hook Imediato (0-3s): Frase de abertura de impacto imediato (tipo de gancho: ${tipoGancho}) que faz a pessoa parar de rolar o feed.
-- Ideia Central (3-45s): Uma história, mistério ou fato bíblico surpreendente narrado de forma contínua, fascinante e sem rodeios.
-- Fechamento e CTA Rápida (45-60s): Revelação final de 1 frase marcante e um convite rápido para seguir/curtir.`;
+DIRECT RUNNING TEXT FORMAT (NO NUMBERED POINTS):
+- No "Point 1", "Point 2", "Assertion:" or section labels.
+- Fast, continuous running narrative focused on ONE powerful biblical truth.
+- Immediate hook in the first 3 seconds based on: ${tipoGancho}.
+- Fast closing and 1-sentence CTA.`;
 
     } else {
-      // Shorts/Reels Estendido (até 3 minutos)
-      instrucoesDuracaoEFormato = `FORMATO: Shorts/Reels Estendido — YouTube, Instagram, Facebook (até 3 minutos)
-META OBRIGATÓRIA DE PALAVRAS: ENTRE 400 E 450 PALAVRAS NO TOTAL.
-(Baseado na velocidade média de narração de 150 palavras por minuto para preencher 2:40 a 3 minutos).
+      // Shorts Estendido (até 3 minutos)
+      instrucoesDuracaoEFormato = `FORMAT: Extended Short (up to 3 minutes)
+MANDATORY WORD COUNT TARGET: STRICTLY BETWEEN 400 AND 450 WORDS IN TOTAL.
+(2:40 to 3 minutes at 150 words per minute).
 
-DIRETRIZES DE FORMATO ESTENDIDO:
-- Formato ágil e dinâmico que mantém alta retenção em vídeos verticais longos.
-- Permite desenvolver 2 a 3 pontos breves além do hook magnético e conclusão (aprox. 80-100 palavras por ponto).
-- Linguagem ágil, misteriosa e conectada.
-
-ESTRUTURA DO ROTEIRO:
-- Hook Magnético (0-5s): Abertura poderosa baseada no gancho: ${tipoGancho}.
-- Introdução Breve (5-20s): Contextualização instigante da premissa.
-- 2 a 3 Pontos Breves: Desenvolvendo a história de forma ágil, com curiosidades e ritmo acelerado.
-- Conclusão e CTA (últimos 15-20s): Fechamento com impacto e convite para comentar e seguir.`;
+STRUCTURE:
+- Hook (0-5s): Magnetic opening.
+- Quick Introduction (5-20s).
+- 2 to 3 dynamic narrative blocks (80-100 words each).
+- Strong conclusion and follow CTA.`;
     }
 
-    return `Atuando como roteirista profissional para canais 'dark' no YouTube e redes sociais, crie um roteiro completo para um vídeo sobre '${ideia}'.
+    return `Act as a senior documentary scriptwriter for biblical YouTube channels following the proven formula of 'Explicador Bíblico'.
+Create a complete narration script about: '${ideia}'.
+Tone of voice: '${tomVoz}'.
+Opening hook style: '${tipoGancho}'.
 
-O roteiro deve seguir a estrutura e o estilo de narrativa do canal 'Explicador Bíblico'.
-O tom de voz deve ser '${tomVoz}' e o gancho inicial '${tipoGancho}'.
+MANDATORY BIBLICAL AND CONTENT RULES (NON-NEGOTIABLE):
+1. 100% LANGUAGE COMPLIANCE: The entire script MUST be written 100% in ${lang.name}.
+2. BIBLICAL TRUTH (SACRED FACT):
+   - Always treat the biblical narrative as literal truth and real history.
+   - PROHIBITED WORDS/CONCEPTS: Never use skepticism, doubts, or terms like "myth", "legend", "debate", "were they real", "scholars suggest", "traditional theology may not reveal", or equivalents in any language ("mito", "lenda", "debate", "se eram reais", "estudiosos sugerem", "a teologia tradicional oculta").
+3. STRICTLY CANONICAL TEXT:
+   - Restrict the entire script to the 66 canonical books of the Bible.
+   - STRICTLY FORBIDDEN: Never cite or include extra-biblical theories, secular ancient civilizational speculations, evolutionary human ancestry theories, or apocryphal/pseudepigraphal books (such as the Book of Enoch / Livro de Enoque).
+4. LITERAL SCRIPTURE QUOTATIONS:
+   - ${lang.citationRule}
+   - When quoting scripture (e.g. Genesis 6:1-4, Numbers 13:33, Deuteronomy 3:11), quote the literal, exact text word-for-word from ${lang.bibleTranslation}.
 
 ${instrucoesDuracaoEFormato}
 
-DIRETRIZES GERAIS DE FINALIZAÇÃO:
-- O roteiro deve conter EXCLUSIVAMENTE o texto a ser falado pelo narrador (sem rubricas técnicas de câmera, sem efeitos sonoros, sem dicas de edição visual e sem legendas).
-- O idioma de todo o texto DEVE ser rigorosamente ${idioma}.`;
+FINAL DIRECTIVES:
+- The script must contain EXCLUSIVELY the words to be spoken by the narrator.
+- No camera directions, no sound effect cues, no visual editing notes.
+- Language: 100% in ${lang.name}.`;
   },
 
   generateMediaKeywordsPrompt({ roteiro }) {
@@ -1753,22 +1825,25 @@ Substitua as descrições entre parênteses acima pelos prompts reais e completo
   },
 
   generateSeoPrompt({ tema, resumo, idioma }) {
-    return `Atuando como especialista em SEO e títulos de alta conversão (CTR) para o YouTube seguindo a fórmula do canal 'Explicador Bíblico', gere 3 opções de títulos otimizados, uma lista de tags relevantes (15-20) e 5-7 hashtags para um vídeo sobre '${tema}' com base no seguinte resumo/roteiro: 
+    const lang = this.getLanguageConfig(idioma);
+
+    return `Act as a senior YouTube SEO and title strategist following the proven formula of the channel 'Explicador Bíblico'.
+Generate exactly 3 high-converting title options, a list of relevant tags (15-20), and 5-7 hashtags for a biblical video about '${tema}' based on the following script/summary:
 ${resumo || tema}
 
-DIRETRIZES DE SAÍDA OBRIGATÓRIAS:
-1. TÍTULOS SEMPRE EM INGLÊS:
-Gere exatamente 3 opções de títulos de alto impacto SEMPRE EM INGLÊS, independentemente do idioma configurado para o roteiro.
-Siga rigorosamente o padrão viral do canal de referência 'Explicador Bíblico':
-- Uso de CAPS LOCK estratégico em palavras-chave dramáticas (ex: "The Tragic END of...", "Every FALSE god...", "The Hidden TRUTH About...").
-- Formatos comprovados: "The Tragic END of [Subject] Explained", "Every [Category] in the Bible Explained in [X] Minutes", "The Untold STORY of [Subject]", ou variações instigantes nesse estilo.
-- Inclusão de promessa de tempo específico quando cabível (ex: "in 16 Minutes", "in 18 Minutes", "in 20 Minutes").
-
-2. TAGS (15-20 tags):
-Gere tags altamente relevantes em formato misto/bilíngue estratégico (combinando termos em Inglês e Português) para maximizar o alcance do algoritmo global do YouTube e das buscas em ambos os idiomas. Separadas por vírgula.
-
-3. HASHTAGS (5-7 hashtags):
-Gere de 5 a 7 hashtags de alto volume e relevância (#BiblicalHistory #ExplicadorBiblico #BibleMysteries etc.).`;
+MANDATORY OUTPUT GUIDELINES:
+1. STRICT LANGUAGE COMPLIANCE:
+   - All 3 title options, tags, and hashtags MUST be 100% in ${lang.name}. Never output titles in English if the requested language is Portuguese or Spanish, and vice-versa.
+2. STRICT TITLE FORMATTING RULES (HIGH CTR):
+   - MAXIMUM OF 1 WORD IN CAPS LOCK per title (e.g. "${lang.titleHookSample}").
+   - NEVER write the whole title in uppercase. Never use more than 1 word in ALL CAPS.
+   - Include irresistible curiosity hooks (e.g. "The REAL...", "(Many Miss This)", "(What the Bible Actually Says)" in ${lang.name}).
+3. BIBLICAL TRUTH AND CANONICAL INTEGRITY:
+   - Treat the biblical account as literal fact and truth. Never use words like "myth", "legend", "debate", "were they real", "scholars suggest".
+4. TAGS (15-20 tags):
+   - Highly relevant search tags separated by commas in ${lang.name}.
+5. HASHTAGS (5-7 hashtags):
+   - 5 to 7 high-impact hashtags in ${lang.name} (#BibleTruth #BiblicalHistory, etc.).`;
   }
 };
 window.PromptEngine = PromptEngine;
@@ -2016,10 +2091,11 @@ const AutoSave = {
     'select-cores-thumb', 'input-cores-thumb-custom',
     'select-elementos-thumb', 'input-elementos-thumb-custom',
     'input-tema-thumb', 'input-tema-seo',
-    'output-prompt-ideias', 'output-prompt-roteiro',
+    'output-prompt-ideias', 'output-prompt-roteiro', 'output-roteiro-limpo',
     'output-prompt-keywords', 'output-prompt-imagens-ia',
     'output-thumb-a', 'output-thumb-b', 'output-thumb-c',
     'output-prompt-seo',
+    'textarea-narracao-limpa-audio',
     'select-voz-audio', 'output-legenda-srt'
   ],
 
@@ -2107,33 +2183,45 @@ function limparTextoParaNarracao(texto) {
 
   let limpo = texto;
 
-  // 1. Remove cabeçalho inicial de roteiro (ex: "**Roteiro: ...**" ou "# Roteiro ...")
-  limpo = limpo.replace(/^\s*(?:#+\s*)?(?:\*{0,2}Roteiro:\s*.*?\*{0,2}\s*\n+)+/im, '');
+  // 1. Remove cabeçalho inicial de roteiro (ex: "**Roteiro: ...**", "# Script ...", "**Guion: ...**")
+  limpo = limpo.replace(/^\s*(?:#+\s*)?(?:\*{0,2}(?:Roteiro|Script|Guión|Guion):\s*.*?\*{0,2}\s*\n+)+/im, '');
 
-  // 2. Remove qualquer marcador entre colchetes, com ou sem asteriscos ao redor:
-  // ex: **[Hook (0-15s)]**, [Hook (0-15s)], **[Ponto 1: Contexto (1:00-5:00)]**, [Conclusão (tempo)]
-  limpo = limpo.replace(/\*{0,2}\[[^\]]*\]\*{0,2}/g, '');
+  // 2. Remove qualquer marcador entre colchetes, com ou sem asteriscos e dois pontos ao redor:
+  // ex: **[Hook (0-15s)]:**, [Hook], [Ponto 1: Contexto], [Point 1: The Nephilim], [Conclusion], etc.
+  limpo = limpo.replace(/\*{0,2}\[[^\]]*\]\*{0,2}\s*:?/g, '');
 
-  // 3. Remove marcadores de cabeçalho sem colchetes em linhas isoladas ou com tempo
-  // ex: HOOK (0-15s):, INTRODUÇÃO (0-45s):, PONTO 1: Título, CONCLUSÃO (tempo):
-  limpo = limpo.replace(/^\s*(?:HOOK|INTRODUÇÃO|PONTO\s*\d+|CONCLUSÃO|CTA|GANCHO(?:S)?(?:\s+INTERNO(?:S)?)?|CHAMADA(?:\s+PARA\s+AÇÃO)?)\s*(?:\([^)]*\))?:?\s*$/gmi, '');
-  limpo = limpo.replace(/^\s*(?:HOOK|INTRODUÇÃO|PONTO\s*\d+|CONCLUSÃO)\s*\([^)]*\)\s*:?\s*/gmi, '');
-  limpo = limpo.replace(/^\s*PONTO\s*\d+\s*:\s*[^\n]+/gmi, '');
+  // 3. Remove contagens de palavras e metas entre parênteses ou colchetes:
+  // ex: (350-450 words), (130-160 palavras), (word count: 400), (meta: ...), (approx. 400 words)
+  limpo = limpo.replace(/\(\s*(?:approx\.?|aproximadamente)?\s*\d+(?:\s*[-–a]\s*\d+)?\s*(?:palavras|words|palabras)\s*\)/gi, '');
+  limpo = limpo.replace(/\(\s*(?:word count|contagem de palavras|recuento de palabras)\s*:[^)]+\)/gi, '');
+  limpo = limpo.replace(/\(\s*meta:?[^)]+\)/gi, '');
 
-  // 4. Remove rótulos internos estruturais mantendo o texto que vem depois:
-  // "Afirmação:", "Desenvolvimento:", "Evidências/Referências:", "Análise/Impacto:", etc.
-  limpo = limpo.replace(/(?:Afirmação|Desenvolvimento|Evidências\/Referências|Evidências|Referências|Análise\/Impacto|Análise|Impacto|Ganchos Internos|CTAs Orgânicas|Chamada para Ação|CTA)\s*:\s*/gi, '');
+  // 4. Remove marcadores de cabeçalho sem colchetes em linhas isoladas ou com tempo
+  // ex: HOOK (0-15s):, INTRODUÇÃO (0-45s):, PONTO 1: Título, POINT 1:, PUNTO 1:, CONCLUSÃO:, CONCLUSION:
+  limpo = limpo.replace(/^\s*(?:#+\s*)?(?:HOOK|GANCHO|INTRODUÇÃO|INTRODUCCION|INTRODUCCIÓN|INTRODUCTION|PONTO\s*\d+|POINT\s*\d+|PUNTO\s*\d+|CONCLUSÃO|CONCLUSION|CONCLUSIÓN|CTA|GANCHO(?:S)?(?:\s+INTERNO(?:S)?)?|INTERNAL\s+HOOKS?|CHAMADA(?:\s+PARA\s+AÇÃO)?|CALL\s+TO\s+ACTION)\s*(?:\([^)]*\))?:?\s*$/gmi, '');
+  limpo = limpo.replace(/^\s*(?:HOOK|GANCHO|INTRODUÇÃO|INTRODUCCION|INTRODUCCIÓN|INTRODUCTION|PONTO\s*\d+|POINT\s*\d+|PUNTO\s*\d+|CONCLUSÃO|CONCLUSION|CONCLUSIÓN)\s*\([^)]*\)\s*:?\s*/gmi, '');
+  limpo = limpo.replace(/^\s*(?:#+\s*)?(?:PONTO|POINT|PUNTO)\s*\d+\s*:\s*[^\n]+/gmi, '');
 
-  // 5. Remove marcadores de negrito markdown (**texto** vira texto) e itálico (*texto* vira texto)
+  // 5. Remove rótulos internos estruturais mantendo o texto que vem depois:
+  // "Assertion:", "Afirmação:", "Development:", "Desenvolvimento:", "Evidence/References:", "Analysis/Impact:", etc.
+  limpo = limpo.replace(/(?:Afirmação|Assertion|Afirmación|Desenvolvimento|Development|Desarrollo|Evidências\/Referências|Evidências|Evidencias\/Referencias|Evidencias|Evidence\/References|Evidence|Referências|Referencias|References|Análise\/Impacto|Análise|Análisis\/Impacto|Análisis|Analysis\/Impact|Analysis|Impacto|Impact|Ganchos Internos|Internal Hooks|CTAs Orgânicas|Organic CTAs|Chamada para Ação|Call to Action|CTA|Hook|Introdução|Introduction|Introducción|Conclusão|Conclusion|Conclusión)\s*:\s*/gi, '');
+
+  // 6. Remove marcadores de negrito markdown (**texto** vira texto) e itálico (*texto* vira texto)
+  limpo = limpo.replace(/^#+\s+/gm, '');
   limpo = limpo.replace(/\*\*([^*]+)\*\*/g, '$1');
   limpo = limpo.replace(/\*([^*]+)\*/g, '$1');
   limpo = limpo.replace(/__([^_]+)__/g, '$1');
   limpo = limpo.replace(/_([^_]+)_/g, '$1');
 
-  // 6. Remove marcadores de listas ou tópicos no início de linha (- ou * ou 1.)
-  limpo = limpo.replace(/^\s*[-*]\s+/gm, '');
+  // 7. Remove marcadores de listas ou tópicos no início de linha (- ou * ou • ou 1.)
+  limpo = limpo.replace(/^\s*[-*•]\s+/gm, '');
+  limpo = limpo.replace(/^\s*\d+\.\s+/gm, '');
 
-  // 7. Normaliza quebras de linha e espaços extras
+  // 8. Remove linhas residuais que contenham apenas palavras estruturais isoladas ou pontuação solta (: ou -)
+  limpo = limpo.replace(/^\s*(?:Hook|Introduction|Point \d+|Assertion|Development|Evidence|Analysis|Impact|Conclusion|Call to Action|Ponto \d+|Afirmação|Desenvolvimento|Evidências|Análise|Impacto|Conclusão|Punto \d+|Afirmación|Desarrollo)\s*$/gmi, '');
+  limpo = limpo.replace(/^\s*[:\-–]\s*$/gm, '');
+
+  // 9. Normaliza quebras de linha e espaços extras
   limpo = limpo
     .split('\n')
     .map(l => l.trim())
@@ -2369,11 +2457,23 @@ document.addEventListener('DOMContentLoaded', () => {
         textareaRoteiroGerado.value = resultText;
       }
 
-      // ITEM 2: Validação de Duração (Contagem de palavras pós-limpeza de narração)
-      const textoParaContagem = typeof limparTextoParaNarracao === 'function'
+      // ITEM 5 (Requisito Narração Limpa): Gera a versão limpa sem marcadores nem rótulos
+      const textoLimpo = typeof limparTextoParaNarracao === 'function'
         ? limparTextoParaNarracao(resultText)
         : resultText;
-      const totalPalavras = (textoParaContagem.trim().match(/\S+/g) || []).length;
+
+      const outputRoteiroLimpoEl = document.getElementById('output-roteiro-limpo');
+      if (outputRoteiroLimpoEl) {
+        outputRoteiroLimpoEl.value = textoLimpo;
+      }
+
+      const textareaNarracaoLimpa = document.getElementById('textarea-narracao-limpa-audio');
+      if (textareaNarracaoLimpa) {
+        textareaNarracaoLimpa.value = textoLimpo;
+      }
+
+      // ITEM 2: Validação de Duração (Contagem de palavras pós-limpeza de narração)
+      const totalPalavras = (textoLimpo.trim().match(/\S+/g) || []).length;
       const minutosEstimados = (totalPalavras / 150).toFixed(1);
 
       const configDuracao = SCRIPT_DURATION_CONFIGS[estiloRoteiro] ||
@@ -2402,7 +2502,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ITEM 5: Sincronização automática entre Roteiro e SEO
+  // ITEM 5: Sincronização automática entre Roteiro e SEO / Narração Limpa
   const textareaResumoSeo = document.getElementById('textarea-resumo-seo');
   if (textareaResumoSeo) {
     if (!textareaResumoSeo.value.trim()) {
@@ -2419,6 +2519,17 @@ document.addEventListener('DOMContentLoaded', () => {
       if (elSeo && (!elSeo.value.trim() || elSeo.dataset.autoSynced === 'true')) {
         elSeo.value = textareaRoteiroGerado.value;
         elSeo.dataset.autoSynced = 'true';
+      }
+      // Sincroniza versão limpa se o campo ainda não sofreu edição independente
+      const outputLimpoEl = document.getElementById('output-roteiro-limpo');
+      const textareaNarracaoLimpa = document.getElementById('textarea-narracao-limpa-audio');
+      if (typeof limparTextoParaNarracao === 'function') {
+        const novoLimpo = limparTextoParaNarracao(textareaRoteiroGerado.value);
+        if (outputLimpoEl) outputLimpoEl.value = novoLimpo;
+        if (textareaNarracaoLimpa && (!textareaNarracaoLimpa.value.trim() || textareaNarracaoLimpa.dataset.autoSynced === 'true')) {
+          textareaNarracaoLimpa.value = novoLimpo;
+          textareaNarracaoLimpa.dataset.autoSynced = 'true';
+        }
       }
     });
   }
@@ -2536,14 +2647,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Gerar Narração (Áudio MP3)
   btnGerarAudio.addEventListener('click', async () => {
-    const roteiroBruto = (textareaRoteiroGerado.value.trim() || document.getElementById('output-prompt-roteiro').value.trim());
-    if (!roteiroBruto) {
-      UI.showToast('Gere o roteiro completo na Etapa 1 antes de narrar!', 'warning');
+    // ITEM 5: Usar SÓ a versão "Narração Limpa" na etapa de narração
+    const textareaNarracaoLimpa = document.getElementById('textarea-narracao-limpa-audio');
+    const outputLimpoEl = document.getElementById('output-roteiro-limpo');
+
+    let textoNarracao = (textareaNarracaoLimpa?.value.trim() || outputLimpoEl?.value.trim());
+
+    if (!textoNarracao) {
+      // Fallback: se os campos limpos estiverem vazios, limpa o roteiro bruto disponível
+      const roteiroBruto = (textareaRoteiroGerado?.value.trim() || document.getElementById('output-prompt-roteiro')?.value.trim());
+      if (roteiroBruto) {
+        textoNarracao = limparTextoParaNarracao(roteiroBruto);
+        if (textareaNarracaoLimpa) textareaNarracaoLimpa.value = textoNarracao;
+        if (outputLimpoEl) outputLimpoEl.value = textoNarracao;
+      }
+    }
+
+    if (!textoNarracao) {
+      UI.showToast('Gere o roteiro completo na Etapa 1 ou insira o texto na Narração Limpa antes de narrar!', 'warning');
       return;
     }
 
-    // ITEM 1: Limpeza de texto antes da síntese de voz (TTS)
-    const roteiro = limparTextoParaNarracao(roteiroBruto);
+    // Higienização final garantida sem marcações ou rótulos
+    const roteiro = limparTextoParaNarracao(textoNarracao);
 
     const voz = document.getElementById('select-voz-audio').value || 'onyx';
     const tom = UI.getValue('select-tom', 'input-tom-custom') || 'Investigativo e Curioso';
