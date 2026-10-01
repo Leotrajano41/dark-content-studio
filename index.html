@@ -2314,13 +2314,13 @@ function validarECorrigirAspas(texto) {
 }
 
 /**
- * AJUSTE: Garante que o convite de inscrição seja sempre o ÚLTIMO parágrafo,
- * sem absolutamente nada depois dele.
+ * PONTO 2: Garante que o convite de inscrição seja sempre o ÚLTIMO parágrafo,
+ * sem absolutamente nada depois dele. Se o roteiro final estiver sem convite, gera um no fim.
  */
-function garantirCtaNoUltimoParagrafo(texto) {
+function garantirCtaNoUltimoParagrafo(texto, idioma = 'pt') {
   if (!texto || typeof texto !== 'string') return texto;
   const paragrafos = texto.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
-  if (paragrafos.length <= 1) return texto;
+  if (paragrafos.length === 0) return texto;
 
   const ctaRegex = /\b(?:subscrib(?:e|ing)|inscreva-se|inscrever|join\s+(?:this\s+)?channel|follow\s+(?:this\s+)?channel|acompanhe\s+este\s+canal|suscr[ií]bete|suscribir)\b/i;
 
@@ -2331,14 +2331,198 @@ function garantirCtaNoUltimoParagrafo(texto) {
     }
   }
 
-  // Se o CTA existe e NÃO é o último parágrafo, move ele para o final absoluto
-  if (ctaIndex !== -1 && ctaIndex < paragrafos.length - 1) {
+  const id = (idioma || '').toLowerCase();
+  const ctaPadrao = id.includes('ingl') || id.includes('en')
+    ? 'If you seek to understand the Scriptures in their true historical and canonical depth, subscribe to this channel and continue this journey through the sacred record.'
+    : (id.includes('espanh') || id.includes('es'))
+      ? 'Si deseas comprender las Escrituras en su verdadera profundidad histórica y bíblica, suscríbete al canal y acompaña nuestros próximos estudios sobre el registro sagrado.'
+      : 'Se você deseja compreender as Escrituras em sua verdadeira profundidade histórica e bíblica, inscreva-se no canal e continue acompanhando este estudo detalhado do relato sagrado.';
+
+  if (ctaIndex === -1) {
+    // Se o roteiro final ficou sem convite, gera no final
+    paragrafos.push(ctaPadrao);
+  } else if (ctaIndex < paragrafos.length - 1) {
+    // Se o CTA existe e NÃO é o último parágrafo, move ele para o final absoluto
     const ctaParagrafo = paragrafos.splice(ctaIndex, 1)[0];
     paragrafos.push(ctaParagrafo);
   }
 
   return paragrafos.join('\n\n');
 }
+window.garantirCtaNoUltimoParagrafo = garantirCtaNoUltimoParagrafo;
+
+/**
+ * PONTO 5: Limitar a no máximo 2 vezes no roteiro cada uma de:
+ * 'historical reality', 'the Scripture treats', 'Holy Scripture records', 'biblical record'.
+ * Faz isso REGENERANDO a frase via LLM, nunca com troca automática/cega de palavras.
+ */
+async function limitarRepeticaoExpressoes(texto, idioma, modelo) {
+  if (!texto || typeof texto !== 'string') return texto;
+
+  const regras = [
+    {
+      nome: 'historical reality',
+      regex: /\b(?:the\s+)?historical\s+reality\b|\brealidade\s+hist[oó]rica\b|\brealidad\s+hist[oó]rica\b/i
+    },
+    {
+      nome: 'the Scripture treats',
+      regex: /\b(?:the\s+)?scripture\s+treats(?:\s+this|\s+these)?\b|\ba\s+escritura\s+trata\b|\bla\s+escritura\s+trata\b/i
+    },
+    {
+      nome: 'Holy Scripture records',
+      regex: /\bholy\s+scripture\s+(?:records?|tells?|declares?|relates?)\b|\bas\s+sagradas\s+escrituras\s+(?:registram|revelam|declaram)\b|\blas\s+sagradas\s+escrituras\s+(?:registran|declaran)\b/i
+    },
+    {
+      nome: 'biblical record',
+      regex: /\b(?:the\s+)?biblical\s+record\b|\bo\s+registro\s+b[ií]blico\b|\bel\s+registro\s+b[ií]blico\b/i
+    }
+  ];
+
+  const lang = (typeof PromptEngine !== 'undefined' && PromptEngine.getLanguageConfig)
+    ? PromptEngine.getLanguageConfig(idioma)
+    : { name: 'English' };
+
+  let paragrafos = texto.split(/\n\s*\n/);
+  const contadores = {
+    'historical reality': 0,
+    'the Scripture treats': 0,
+    'Holy Scripture records': 0,
+    'biblical record': 0
+  };
+
+  for (let pIdx = 0; pIdx < paragrafos.length; pIdx++) {
+    let p = paragrafos[pIdx];
+    const sentencas = p.match(/[^.!?]+(?:[.!?]+["']?|$)/g) || [p];
+    let pModificado = false;
+
+    for (let sIdx = 0; sIdx < sentencas.length; sIdx++) {
+      let sent = sentencas[sIdx];
+      let sentTrim = sent.trim();
+      if (!sentTrim) continue;
+
+      for (const regra of regras) {
+        if (regra.regex.test(sentTrim)) {
+          contadores[regra.nome]++;
+          if (contadores[regra.nome] > 2) {
+            console.log(`[Repetição de Expressão] "${regra.nome}" apareceu ${contadores[regra.nome]} vezes. Regenerando frase via LLM:`, sentTrim);
+            const promptReescrita = `Act as an expert biblical script editor. The following sentence from a documentary in ${lang.name} contains the overused repetitive expression "${regra.nome}":
+"${sentTrim}"
+
+Rewrite ONLY this sentence so it conveys the same historical context naturally WITHOUT using "${regra.nome}" or any of: "historical reality", "the Scripture treats", "Holy Scripture records", "biblical record".
+Maintain seamless narrative connection with this surrounding paragraph:
+"${p}"
+
+Output EXCLUSIVELY the rewritten sentence, without quotes or explanations.`;
+
+            try {
+              const respostaReescrita = await OpenRouterAPI.generateContent(
+                promptReescrita,
+                modelo,
+                SCRIPT_SYSTEM_PROMPT
+              );
+              if (respostaReescrita && respostaReescrita.trim()) {
+                const limpaReescrita = respostaReescrita.trim().replace(/^["']|["']$/g, '');
+                sentencas[sIdx] = limpaReescrita;
+                sentTrim = limpaReescrita;
+                pModificado = true;
+              }
+            } catch (eReg) {
+              console.warn('[Repetição de Expressão] Falha na regeneração da frase:', eReg);
+            }
+          }
+        }
+      }
+    }
+
+    if (pModificado) {
+      paragrafos[pIdx] = sentencas.join(' ').replace(/[^\S\r\n]{2,}/g, ' ').replace(/[^\S\r\n]+([.,;:!?])/g, '$1').trim();
+    }
+  }
+
+  return paragrafos.join('\n\n');
+}
+window.limitarRepeticaoExpressoes = limitarRepeticaoExpressoes;
+
+/**
+ * PONTO 1: Checagem Final de Integridade Pós-Revisão
+ * Detecta:
+ * - fragmentos de citação duplicados;
+ * - frases sem verbo ou com palavras faltando;
+ * - palavras repetidas em sequência ("The the");
+ * - frase cortada no meio (parágrafo terminando sem pontuação final);
+ * - espaço antes de aspas de fechamento (ex: 'with him. "').
+ * Se encontrar anomalia estrutural, regenera cirurgicamente a frase/parágrafo afetado.
+ */
+async function executarChecagemFinalIntegridade(texto, idioma, modelo) {
+  if (!texto || typeof texto !== 'string') return texto;
+
+  const lang = (typeof PromptEngine !== 'undefined' && PromptEngine.getLanguageConfig)
+    ? PromptEngine.getLanguageConfig(idioma)
+    : { name: 'English' };
+
+  let limpo = texto;
+
+  // 1. Correções sintáticas imediatas e determinísticas:
+  // Remove espaço antes de aspas de fechamento (ex: 'with him. "' -> 'with him."')
+  limpo = limpo.replace(/([.,;:!?])\s+(["])(?=\s|$|[A-Z])/g, '$1$2');
+
+  // Remove palavras repetidas em sequência (ex: "The the" -> "The")
+  limpo = limpo.replace(/\b(the|that|in|of|and|to|for|is|are|a|o|que|em|de|e|para|la|el|en|y)\s+\1\b/gi, '$1');
+
+  // 2. Análise por parágrafos para detectar anomalias que exigem regeneração
+  let paragrafos = limpo.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+
+  for (let pIdx = 0; pIdx < paragrafos.length; pIdx++) {
+    let p = paragrafos[pIdx];
+
+    // Detecta fragmentos duplicados ou aspas quebradas
+    const temFragmentoDuplicado = /"\s*(?:the\s+sons\s+of\s+God|and\s+they|which\s+come|unto\s+them|os\s+filhos\s+de\s+Deus|los\s+hijos\s+de\s+Dios)"\s*(?=[A-Z0-9])/i.test(p) ||
+                                  /(["])\s*[a-z][^.!?]{2,30}["']?\s+[A-Z]/.test(p);
+
+    // Detecta frases com palavras faltando ou repetições truncadas (ex: "underscores their they were known")
+    const temPalavrasQuebradas = /\b(?:their\s+they|them\s+they|there\s+they|underscores\s+their\s+they|of\s+of|with\s+with)\b/i.test(p);
+
+    // Detecta parágrafo cortado no meio (sem pontuação final [.!?]"?$ e com mais de 20 palavras)
+    const semPontuacaoFinal = !/[.!?]["']?$/.test(p) && (p.match(/\S+/g) || []).length > 20;
+
+    if (temFragmentoDuplicado || temPalavrasQuebradas || semPontuacaoFinal) {
+      console.log(`[Integridade Final] Anomalia detectada no Parágrafo ${pIdx + 1}:`, {
+        temFragmentoDuplicado,
+        temPalavrasQuebradas,
+        semPontuacaoFinal,
+        trecho: p.slice(0, 90) + '...'
+      });
+
+      const promptFix = `Act as an expert biblical script copy-editor. The following paragraph from a documentary in ${lang.name} contains a corrupted quotation fragment, repeated/missing words, or an incomplete ending:
+"""
+${p}
+"""
+
+Task: Rewrite ONLY this paragraph, cleaning up quotation marks, fixing corrupted fragments, and ensuring complete, pristine grammatical sentences. Keep all biblical references and quotes accurate to the official translation.
+Output EXCLUSIVELY the corrected paragraph, without markdown blocks or explanations.`;
+
+      try {
+        const pCorrigido = await OpenRouterAPI.generateContent(
+          promptFix,
+          modelo,
+          SCRIPT_SYSTEM_PROMPT
+        );
+        if (pCorrigido && pCorrigido.trim()) {
+          paragrafos[pIdx] = pCorrigido.trim().replace(/^```(?:markdown)?\s*/i, '').replace(/\s*```$/i, '').trim();
+        }
+      } catch (eFix) {
+        console.warn('[Integridade Final] Falha ao regenerar parágrafo com anomalia:', eFix);
+      }
+    }
+  }
+
+  limpo = paragrafos.join('\n\n');
+  limpo = limpo.replace(/([.,;:!?])\s+(["])(?=\s|$|[A-Z])/g, '$1$2');
+  limpo = limpo.replace(/\b(the|that|in|of|and|to|for|is|are|a|o|que|em|de|e|para|la|el|en|y)\s+\1\b/gi, '$1');
+
+  return limpo;
+}
+window.executarChecagemFinalIntegridade = executarChecagemFinalIntegridade;
 
 /**
  * ITEM 2 (Ajustes Finais): Checagem de Repetição de Versículos Bíblicos por Extenso
@@ -2464,8 +2648,9 @@ CHECK ACROSS THE ENTIRE SCRIPT FOR EXACTLY THESE 7 CATEGORIES:
    - RULE: Any biblical event must remain ONLY in its designated home section.
    - For any repeated occurrence in other sections, provide the exact duplicate sentence/phrase as "fraseOriginal" and set "fraseCorrigida" to either an empty string "" to delete it, or to a smooth transition sentence that does NOT re-narrate the event.
 2. CONCLUSÃO PREMATURA: Any premature conclusion, summary wrap-up, or final sign-off found in Sections 1 through 6.
-   - RULE: A conclusion, summary of the whole history, or closing call can ONLY exist in Section 7.
-   - Mark premature concluding sentences in earlier sections to be removed ("") or replaced with forward-looking narrative momentum.
+   - RULE: A conclusion or summary of the history can ONLY exist in Section 7.
+   - STRICT EXCEPTION FOR THE FINAL PARAGRAPH: The VERY LAST paragraph of Section 7 MUST contain the channel subscription call ("subscribe to this channel..."). You are STRICTLY FORBIDDEN from deleting, altering, or removing the channel subscription call in the final paragraph. It is NOT a premature conclusion!
+   - For Sections 1 through 6, mark premature concluding sentences to be removed ("") or replaced with forward-looking narrative momentum.
 3. SILÊNCIO REPETIDO: Phrases stating that the Bible is silent, does not explain, or offers no further details (e.g. "Scripture remains silent", "the biblical text does not elaborate", "the inspired record leaves unaddressed").
    - RULE: Allowed at most ONCE in the ENTIRE script.
    - If stated more than once, mark subsequent occurrences to be removed ("") or replaced.
@@ -2473,7 +2658,13 @@ CHECK ACROSS THE ENTIRE SCRIPT FOR EXACTLY THESE 7 CATEGORIES:
    - Example: In Numbers 13:33, replacing "which come of the Nephilim" with the exact KJV text "which come of the giants".
    - Fix all literal quotes to match the exact wording of the official Bible translation.
 5. CRONOLOGIA: Erroneous, impossible, or contradictory dates, centuries, historical intervals, or time spans (e.g. claiming an event happened 40 years later when centuries elapsed).
-6. AFIRMAÇÃO ALÉM DO TEXTO: Claims attributed to Scripture that the cited verse does not say (e.g. asserting that the sons of God all drowned in the Flood, when Genesis 7 does not make that statement).
+6. AFIRMAÇÃO ALÉM DO TEXTO: Statements attributed to Scripture that the cited verse or passage does not actually state.
+   RIGOROUSLY CHECK AND CORRECT:
+   a) Dates, calendar years, or seasons not given in the Bible (e.g. "in the spring of the year 30 AD", "in 28 AD" — Scripture does not give Julian calendar years).
+   b) Unrecorded events or time intervals (e.g. "One hundred and twenty years passed. The ark stood complete." — Genesis 6:3 gives 120 years as a divine decree for mankind, not that 120 years passed constructing the ark).
+   c) Unindicated eyewitness claims (e.g. claiming "John witnessed these events firsthand" for scenes where the Gospel of John does not record him as an eyewitness).
+   d) Invented scenes, actions, or psychological feelings presented as factual (e.g. a creaking door, "his heart raced with dread", nervous pacing). Short atmospheric context is allowed, but NEVER invent physical actions, words, or emotional reactions not recorded in Scripture.
+   e) Interpretations presented as undisputed fact (e.g. the identity of the "sons of God"): must be framed with scholarly restraint like "many understand...", never as undisputed biblical dogma.
 7. FRASE QUEBRADA / ASPAS: Sentences with missing words, ungrammatical phrasing, broken fragments, or mismatched quotation marks.
 
 MANDATORY OUTPUT FORMAT:
@@ -2744,7 +2935,12 @@ CRITICAL MANDATORY GUIDELINES:
    - PROHIBITED WORDS/CONCEPTS: Never use terms like "myth", "legend", "debate", "were they real", "scholars suggest", "traditional theology may not reveal", or equivalents in any language ("mito", "lenda", "debate", "se eram reais", "estudiosos sugerem", "a teologia tradicional oculta").
 3. CANONICAL SCRIPTURE ONLY: Restrict all content strictly to the 66 canonical books of the Bible.
    - STRICTLY FORBIDDEN: Never cite or include extra-biblical theories, secular ancient civilizational speculations, evolutionary human ancestry theories, or apocryphal/pseudepigraphal books (such as the Book of Enoch / Livro de Enoque).
-4. MANDATORY TITLE VARIETY & FORMATTING (HIGH CTR - ITEM 5):
+4. STRICT BIBLICAL FIDELITY & FACTUAL ACCURACY:
+   - Every hook premise and title must be 100% faithful to what canonical Scripture actually states.
+   - NEVER attribute false events, misattributed trials, or unscriptural actions to biblical figures (e.g. Nicodemus questioned the Pharisees in John 7:50-51, but that was NOT Jesus' trial before the Sanhedrin).
+5. ZERO FORBIDDEN CLICHÉS & BUZZWORDS:
+   - STRICTLY FORBIDDEN to use words such as: "profound", "navigated", "navigate", "delve", "dive deep", "shrouded in mystery", "debate", "stark", "fabric", "enigmatic", "fascinating", "journey through", "annals", or equivalents in ${lang.name}.
+6. MANDATORY TITLE VARIETY & FORMATTING (HIGH CTR - ITEM 5):
    - MAXIMUM OF 1 WORD IN CAPS LOCK per title (e.g., "${lang.titleHookSample}").
    - NEVER write an entire title in uppercase. Never use more than 1 word in ALL CAPS.
    - DIVERSIFY TITLE STRUCTURES INTENTIONALLY across the 10 ideas!
@@ -2891,7 +3087,7 @@ Every biblical documentary MUST follow this precise 7-part narrative progression
 - SECTION 4: Turning Point / Conflict (The decisive crisis, divine confrontation, critical turning point, or divine decree).
 - SECTION 5: Consequence (The immediate historical and scriptural outcomes of the turning point/conflict).
 - SECTION 6: Later Unfolding / Aftermath (Subsequent biblical references, later historical witness, or long-term scriptural impact across generations).
-- SECTION 7: Conclusion + Subscription Call (Solemn theological reflection on divine sovereignty, final synthesis of eternal truth, and channel subscription invite as the very last paragraph).
+- SECTION 7: Conclusion + Subscription Call (Solemn concluding reflection on divine sovereignty and enduring biblical truth. AT MOST 2 SHORT PARAGRAPHS plus the final channel subscription sentence. STRICTLY FORBIDDEN: repeating or re-summarizing earlier video scenes/chapters, and STRICTLY FORBIDDEN: homiletic preaching or repetitive rhetorical devices like 'The narrative does not shift. The vocabulary does not change...').
 
 CRITICAL ALLOCATION OF EXCLUSIVE EVENTS AND VERSES (ZERO REPETITION):
 1. For EACH of the 7 sections, you MUST list:
@@ -3022,7 +3218,11 @@ CRITICAL RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
 2. ZERO PREMATURE CONCLUSION (SECTIONS 1 TO 6):
    ${!isLast ? `- STRICTLY PROHIBITED to conclude, wrap up, summarize the entire history, or provide a closing sign-off in this section.
    - Concluding is EXCLUSIVELY RESERVED for Section 7.
-   - Section ${secaoNumero} must end with natural forward narrative momentum carrying the listener into the next historical stage.` : `- MANDATORY FINAL CLIMAX & CTA: Deliver a solemn, awe-inspiring synthesis of what Scripture reveals about the sovereign victory of the Creator, ending with a reverent call to subscribe to the channel as the VERY LAST sentence and paragraph.`}
+   - Section ${secaoNumero} must end with natural forward narrative momentum carrying the listener into the next historical stage.` : `- SECTION 7 RULES (CONCISE CONCLUSION & SUBSCRIPTION CALL):
+   * MAXIMUM OF 2 SHORT PARAGRAPHS plus the channel subscription invite as the very last sentence.
+   * STRICTLY PROHIBITED from repeating the summary of earlier chapters or re-listing scenes.
+   * STRICTLY PROHIBITED from preaching homilies or sermonizing with repetitive rhetoric (e.g. "The narrative does not shift. The vocabulary does not change...").
+   * Focus strictly on the sovereign victory of the Creator and eternal scriptural truth, ending with a reverent call to subscribe to the channel as the VERY LAST paragraph and sentence.`}
 3. ZERO BACKSTAGE / META-LANGUAGE & ZERO INTERNAL LABELS:
    - STRICTLY FORBIDDEN to use presentation or backstage phrases like "in the next section", "as we transition", "we will explore", "as we continue our exploration", "moving ahead", "as the narrative unfolds". Speak directly as an ancient chronicle without stepping out of the story.
    - STRICTLY FORBIDDEN to utter internal architectural labels like "Canonical Boundary", "Opening Hook", "Section", "Point", "Outline", "Role" in the spoken text.
@@ -3791,13 +3991,48 @@ document.addEventListener('DOMContentLoaded', () => {
     const idioma = UI.getValue('select-idioma', 'input-idioma-custom');
     const promptText = PromptEngine.generateIdeasPrompt({ tema, idioma });
 
-    await executeApiCall(
+    const rawIdeias = await executeApiCall(
       'btn-gerar-prompt-ideias',
       promptText,
       'output-prompt-ideias',
       '10 Ideias virais geradas com sucesso!',
       OpenRouterAPI.getModelIdeas()
     );
+
+    // Sanitização pós-geração de termos proibidos nas ideias (Ponto 6)
+    if (rawIdeias && typeof rawIdeias === 'string') {
+      const termosProibidosIdeias = [
+        /\bprofound\b/gi,
+        /\bnavigated\b/gi,
+        /\bnavigate\b/gi,
+        /\bdelve\b/gi,
+        /\bdive\s+deep\b/gi,
+        /\bshrouded\s+in\s+mystery\b/gi,
+        /\bdebate\b/gi,
+        /\bstark\b/gi,
+        /\bfabric\b/gi,
+        /\benigmatic\b/gi,
+        /\bjourney\s+through\b/gi,
+        /\bannals\b/gi,
+        /\bprofundo\b/gi,
+        /\bprofunda\b/gi,
+        /\bmergulh(?:e|ar|ando)\b/gi,
+        /\benigm[aá]tico\b/gi
+      ];
+      let ideiasLimpas = rawIdeias;
+      let houveTroca = false;
+      for (const rx of termosProibidosIdeias) {
+        if (rx.test(ideiasLimpas)) {
+          houveTroca = true;
+          ideiasLimpas = ideiasLimpas.replace(rx, '');
+        }
+      }
+      if (houveTroca) {
+        ideiasLimpas = ideiasLimpas.replace(/[^\S\r\n]{2,}/g, ' ').trim();
+        const outEl = document.getElementById('output-prompt-ideias');
+        if (outEl) outEl.value = ideiasLimpas;
+      }
+    }
   });
 
 /**
@@ -4081,7 +4316,7 @@ Output EXCLUSIVELY the final 2 paragraphs.`;
     scriptFinal = limitarDeclaracoesDeSilencioBiblico(scriptFinal);
   }
   if (typeof garantirCtaNoUltimoParagrafo === 'function') {
-    scriptFinal = garantirCtaNoUltimoParagrafo(scriptFinal);
+    scriptFinal = garantirCtaNoUltimoParagrafo(scriptFinal, idioma);
   }
   if (typeof validarECorrigirAspas === 'function') {
     scriptFinal = validarECorrigirAspas(scriptFinal);
@@ -4165,12 +4400,30 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
     }
 
     if (resultText && hasApiKey) {
-      // ITEM 3: Limitar Frases de Reforço de Historicidade no máximo 2 vezes no total
+      // 1. Validação Bíblica KJV / Almeida / RVR1909 (Módulo de Validação Bíblica roda ANTES da revisão)
+      resultText = await validarRoteiroComBiblia(resultText, idioma);
+
+      // 2. Limitador de "canonical" (máximo 2 vezes no roteiro inteiro)
+      if (typeof limitarTermosCanonicos === 'function') {
+        resultText = limitarTermosCanonicos(resultText);
+      }
+
+      // 3. Limitador de "silêncio da Bíblia" (máximo 1 vez no roteiro inteiro)
+      if (typeof limitarDeclaracoesDeSilencioBiblico === 'function') {
+        resultText = limitarDeclaracoesDeSilencioBiblico(resultText);
+      }
+
+      // 4. PONTO 5: Limitar Expressões Repetitivas (máx 2 vezes cada via regeneração por LLM)
+      if (typeof limitarRepeticaoExpressoes === 'function') {
+        resultText = await limitarRepeticaoExpressoes(resultText, idioma, modeloRoteiro);
+      }
+
+      // 5. Limitar Frases de Reforço de Historicidade no máximo 2 vezes no total
       if (typeof limitarFrasesHistoricas === 'function') {
         resultText = limitarFrasesHistoricas(resultText);
       }
 
-      // ITEM 3: Checagem de Repetição de Versículos Bíblicos por Extenso (máx 1 vez)
+      // 6. Checagem de Repetição de Versículos Bíblicos por Extenso (máx 1 vez)
       if (typeof verificarERegenerarVersiculosRepetidos === 'function') {
         const repRes = await verificarERegenerarVersiculosRepetidos(resultText, idioma, modeloRoteiro);
         resultText = repRes.texto;
@@ -4179,7 +4432,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
         }
       }
 
-      // ITEM 1, 5 & 6: Filtro Pós-Geração Automático com Contexto Vizinho e Relatório na Tela
+      // 7. Filtro Pós-Geração Automático com Contexto Vizinho e Relatório na Tela
       const filtroRes = await aplicarFiltroTermosProibidos(resultText, idioma, modeloRoteiro);
       resultText = filtroRes.texto;
 
@@ -4203,7 +4456,12 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
         UI.showToast(`Filtro pós-geração: ${filtroRes.totalCorrigidos} termo(s) proibido(s) corrigido(s) automaticamente.`);
       }
 
-      // PARTE 1: ETAPA DE REVISÃO AUTOMÁTICA (LLM-as-a-reviewer)
+      // 8. Garante convite de inscrição no último parágrafo antes de auditar
+      if (typeof garantirCtaNoUltimoParagrafo === 'function') {
+        resultText = garantirCtaNoUltimoParagrafo(resultText, idioma);
+      }
+
+      // 9. PARTE 1: ETAPA DE REVISÃO AUTOMÁTICA (LLM-as-a-reviewer com texto integral e KJV pré-validados)
       if (typeof executarRevisaoAutomaticaRoteiro === 'function') {
         const progressoSecaoEl = document.getElementById('progresso-geracao-secoes');
         const progressoTextoEl = document.getElementById('texto-progresso-secao');
@@ -4227,25 +4485,23 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
           console.warn('[Revisão Automática] Falha durante a auditoria do roteiro:', eRev);
         }
       }
-    }
 
-    if (resultText) {
-      // ITEM 3: Validação Bíblica Automática e Silenciosa (PT / EN / ES)
-      resultText = await validarRoteiroComBiblia(resultText, idioma);
+      // 10. PONTO 1: CHECAGEM FINAL DE INTEGRIDADE PÓS-REVISÃO
+      // Detecta fragmentos duplicados, palavras faltando, 'The the', frase cortada e espaço antes de aspas
+      if (typeof executarChecagemFinalIntegridade === 'function') {
+        resultText = await executarChecagemFinalIntegridade(resultText, idioma, modeloRoteiro);
+      }
 
-      // Pós-processamento de garantia em resultText: termos canônicos (máx 2), silêncio único, CTA no final e aspas válidas
-      if (typeof limitarTermosCanonicos === 'function') {
-        resultText = limitarTermosCanonicos(resultText);
-      }
-      if (typeof limitarDeclaracoesDeSilencioBiblico === 'function') {
-        resultText = limitarDeclaracoesDeSilencioBiblico(resultText);
-      }
+      // 11. PONTO 2: Garante convite de inscrição no último parágrafo (se o revisor tiver apagado, anexa no fim)
       if (typeof garantirCtaNoUltimoParagrafo === 'function') {
-        resultText = garantirCtaNoUltimoParagrafo(resultText);
+        resultText = garantirCtaNoUltimoParagrafo(resultText, idioma);
       }
+
+      // 12. Validação e correção automática de aspas abertas/fechadas
       if (typeof validarECorrigirAspas === 'function') {
         resultText = validarECorrigirAspas(resultText);
       }
+    }
 
       const outputRoteiroEl = document.getElementById('output-prompt-roteiro');
       if (outputRoteiroEl) outputRoteiroEl.value = resultText;
