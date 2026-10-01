@@ -1074,11 +1074,34 @@ textarea.h-180 {
           </button>
         </div>
 
+        <!-- Indicador de Progresso da Geração em Seções (Item 2) -->
+        <div id="progresso-geracao-secoes" class="hidden" style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(99, 102, 241, 0.4); border-radius: 8px; padding: 14px 18px; margin-top: 18px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span id="texto-progresso-secao" style="font-weight: 600; color: #e2e8f0; font-size: 0.95rem;">⚡ Iniciando geração estruturada em 7 seções...</span>
+            <span id="contador-progresso-secao" style="font-size: 0.85rem; color: #a5b4fc; font-weight: 700;">Passo 0/7</span>
+          </div>
+          <div style="width: 100%; height: 6px; background: rgba(255, 255, 255, 0.1); border-radius: 9999px; overflow: hidden;">
+            <div id="barra-progresso-secao" style="width: 0%; height: 100%; background: linear-gradient(90deg, #6366f1, #a855f7); transition: width 0.3s ease;"></div>
+          </div>
+        </div>
+
+        <!-- Relatório do Filtro Pós-Geração (Item 1 & Item 6) -->
+        <div id="relatorio-filtro-geracao" class="hidden" style="background: rgba(16, 185, 129, 0.12); border: 1px solid #10b981; color: #d1fae5; padding: 14px 18px; border-radius: 8px; margin-top: 18px; font-size: 0.92rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+            <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #34d399;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+              <span>Relatório do Filtro Pós-Geração</span>
+            </div>
+            <span id="badge-filtro-status" style="background: #10b981; color: #064e3b; padding: 2px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.78rem;">100% LIMPO</span>
+          </div>
+          <div id="relatorio-filtro-conteudo" style="line-height: 1.5; color: #e2e8f0; margin-top: 6px;"></div>
+        </div>
+
         <!-- Alerta de Termos Proibidos / Sensíveis Persistentes (Item 3) -->
-        <div id="alerta-termos-proibidos" class="hidden" style="background: rgba(234, 179, 8, 0.15); border: 1px solid #eab308; color: #fef08a; padding: 12px 16px; border-radius: 8px; margin-top: 20px; font-size: 0.92rem;">
+        <div id="alerta-termos-proibidos" class="hidden" style="background: rgba(234, 179, 8, 0.15); border: 1px solid #eab308; color: #fef08a; padding: 12px 16px; border-radius: 8px; margin-top: 16px; font-size: 0.92rem;">
           <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; margin-bottom: 4px;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-            <span>Atenção: Termos sensíveis ou clichês proibidos detectados no roteiro</span>
+            <span>Atenção: Termos sensíveis ou clichês proibidos que persistiram</span>
           </div>
           <div id="alerta-termos-proibidos-msg" style="margin-top: 4px; line-height: 1.4;"></div>
         </div>
@@ -1643,7 +1666,7 @@ const OpenRouterAPI = {
 window.OpenRouterAPI = OpenRouterAPI;
 
 /**
- * REGRAS DE CONTEÚDO E STORYTELLING BÍBLICO (Item 2) - System Prompt Exclusivo para Geração de Roteiro
+ * REGRAS DE CONTEÚDO E STORYTELLING BÍBLICO (Item 2 & Ajustes Finais) - System Prompt Exclusivo para Geração de Roteiro
  */
 const SCRIPT_SYSTEM_PROMPT = `You are a master biblical documentary storyteller and narrator following the proven formula of the YouTube dark channel 'Explicador Bíblico'.
 
@@ -1658,27 +1681,70 @@ ABSOLUTE CANONICAL & STORYTELLING RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
    - At least 80% of the entire script MUST focus directly on the specific subject promised in the title.
    - STRICTLY FORBIDDEN to shift into generic devotional application ("giants in your life", "battling personal giants", "your daily struggles", "facing the giants in our hearts") anywhere before the final 2-minute conclusion.
    - STRICTLY FORBIDDEN to repeat the exact same biblical story in more than one section (e.g. do NOT tell the story of David and Goliath or the spies of Numbers 13 in multiple sections; tell each canonical account once).
-4. FACT VS INTERPRETATION & STRICT CANONICAL TRUTH (ITEM 4 & ITEM 2):
+4. ABSOLUTE CANONICAL FIDELITY & SCRIPTURAL ACCURACY (ITEM 4):
+   - NEVER contradict explicit canonical Scripture (e.g., Genesis 7:23 explicitly states that only Noah and those with him in the ark remained alive; 1 Samuel 17:47 affirms that the battle is the LORD's).
+   - When the Bible does not detail a specific mechanism (such as how post-Flood giant lineages like the Anakim or Og of Bashan arose after the Flood), state this truth honestly in ONE single sentence and move forward.
+   - STRICTLY FORBIDDEN to invent speculative survival theories ("perhaps some survived", "increasingly human", "did not perish in the waters").
+   - NEVER fabricate connections not in Scripture (e.g. NEVER associate giants with Jericho, as Joshua 6 makes no mention of giants in Jericho).
+5. BATTLES & DESTRUCTION (ITEM 5):
+   - Narrate ancient biblical battles (e.g., Og of Bashan in Deuteronomy 3, the Anakim in Joshua, the Philistine giants in 2 Samuel 21) strictly through literal canonical quotes.
+   - STRICTLY FORBIDDEN to evaluate, philosophize, or justify the destruction or wiping out of peoples.
+   - PROHIBITED PHRASES: "eliminated", "hunted down", "not an injustice", "populations were", "rightfully destroyed".
+6. REPETITION & HISTORICITY LIMITS (ITEM 3):
+   - Quoting the exact same verse by extenso is allowed at most ONCE in the entire script.
+   - Narrate each biblical battle or historical episode in only ONE section.
+   - Formulas reinforcing biblical reality (e.g. "not legends or myths", "historical fact", "the Scripture treats this as") must appear at most TWICE in the ENTIRE script.
+7. FACT VS INTERPRETATION & STRICT CANONICAL TRUTH (ITEM 4 & ITEM 2):
    - State as sacred historical FACT ONLY what the literal canonical text explicitly declares, always backed by verbatim scripture quotes (KJV for English, João Ferreira de Almeida for Portuguese, Reina-Valera 1909 for Spanish).
-   - MAXIMUM OF 3 PHRASES of the type "many understand this passage as...", "interpreters view this as...", or "theological tradition notes..." in the ENTIRE script. The rest must be narrated with the full authority of the canonical biblical text.
+   - MAXIMUM OF 3 PHRASES of the type "many understand this passage as...", "interpreters view this as...", or "theological tradition notes..." in the ENTIRE script.
    - STRICTLY FORBIDDEN to call the biblical account a "metaphor", "symbol", "symbolic", "cautionary tale", or "narrative device".
-   - STRICTLY FORBIDDEN: Any language of genetic, biological, or racial purity/corruption (e.g. NEVER use "genetic", "bloodline", "hybrid", "pure humans", "gene pool", or equivalents).
-   - STRICTLY FORBIDDEN: Justifications for the destruction or ethnic wiping out of entire peoples.
-   - STRICTLY FORBIDDEN: Any content or lore derived from the Book of Enoch (1 Enoch), Jasher, or Jubilees (such as angels teaching metallurgy, astrology, naming fallen angels like Azazel/Semyaza, or corrupting human seed), EVEN IF the Book of Enoch is not explicitly named.
-   - STRICTLY FORBIDDEN: Fabricating numbers, measurements, or historical facts that the 66 canonical biblical books do not contain.
-   - STRICTLY FORBIDDEN: Immediate temporal markers such as "tonight", "this morning", "today in this video", "esta noite", "esta manhã".
-5. FORBIDDEN CLICHÉS & AI PHRASES (ITEM 6):
-   - STRICTLY FORBIDDEN: "what if I told you", "in the annals", "embark", "journey through", "delve", "dive deep", "enigmatic", "the very fabric", "challenge everything you thought", "testament to", "tapestry", "stark reminder", "serves as a reminder", "insurmountable", "unwavering", "glimmer of hope", "quintessential", "navigate", "profound", "multifaceted".
-6. LITERAL SCRIPTURE FIDELITY & LANGUAGE COMPLIANCE:
+   - STRICTLY FORBIDDEN: Any language of genetic, biological, or racial purity/corruption ("genetic", "bloodline", "hybrid", "pure humans", "gene pool").
+   - STRICTLY FORBIDDEN: Any content derived from the Book of Enoch (1 Enoch), Jasher, or Jubilees (angels teaching metallurgy, astrology, naming Watchers/Azazel/Semyaza).
+   - STRICTLY FORBIDDEN: Immediate temporal markers ("tonight", "this morning", "today in this video").
+8. FORBIDDEN CLICHÉS & AI PHRASES (ITEM 1, ITEM 5 & ITEM 6):
+   - STRICTLY FORBIDDEN: "tonight", "this morning", "profound", "fabric", "stark", "debate", "shrouded in mystery", "figuratively", "loomed large", "captivated minds", "what if I told you", "in the annals", "embark", "journey through", "delve", "dive deep", "enigmatic", "the very fabric", "challenge everything you thought", "testament to", "tapestry", "stark reminder", "serves as a reminder", "insurmountable", "unwavering", "glimmer of hope", "quintessential", "navigate", "multifaceted", "eliminated", "hunted down", "not an injustice", "populations were", "perhaps some survived", "increasingly human", "did not perish in the waters".
+9. LITERAL SCRIPTURE FIDELITY & LANGUAGE COMPLIANCE:
    - Scripture quotes must be literal and verbatim from the target language's authorized Bible version (English: KJV).
    - Deliver 100% of the script in the selected content language.`;
 
 /**
- * FILTRO AUTOMÁTICO PÓS-GERAÇÃO (Item 3 & Item 6)
- * Lista de clichês e termos proibidos monitorados
+ * FILTRO AUTOMÁTICO PÓS-GERAÇÃO (Item 1, Item 5 & Item 6)
+ * Lista de clichês e termos proibidos monitorados rigorosamente
  */
 const FORBIDDEN_TERMS = [
-  // Clichês de IA / YouTube (Item 3 & Item 6)
+  // Palavras soltas proibidas (Item 1 & Item 5)
+  { term: 'tonight', pattern: /\btonight\b/i },
+  { term: 'esta noite', pattern: /\besta\s+noite\b/i },
+  { term: 'this morning', pattern: /\bthis\s+morning\b/i },
+  { term: 'esta manhã', pattern: /\besta\s+manh[aã]\b/i },
+  { term: 'profound', pattern: /\bprofound(?:ly)?\b/i },
+  { term: 'profundo', pattern: /\bprofund[oa]s?\b/i },
+  { term: 'fabric', pattern: /\bfabric\b/i },
+  { term: 'stark', pattern: /\bstark(?:ly)?\b/i },
+  { term: 'debate', pattern: /\bdebates?\b/i },
+  { term: 'shrouded in mystery', pattern: /\bshrouded\s+in\s+mystery\b/i },
+  { term: 'envolto em mistério', pattern: /\benvolto\s+em\s+mist[eé]rio\b/i },
+  { term: 'figuratively', pattern: /\bfigurative(?:ly)?\b/i },
+  { term: 'figurativamente', pattern: /\bfigurad(?:o|amente)\b/i },
+  { term: 'loomed large', pattern: /\bloomed?\s+large\b/i },
+  { term: 'pairava grande', pattern: /\bpairav(?:a|am)\s+grande\b/i },
+  { term: 'captivated minds', pattern: /\bcaptivat(?:ed?|ing)\s+(?:the\s+)?minds?\b/i },
+  { term: 'cativou mentes', pattern: /\bcativ(?:ou|am|ando)\s+(?:as\s+)?mentes\b/i },
+
+  // Batalhas e justificativas de destruição (Item 5)
+  { term: 'eliminated', pattern: /\beliminat(?:ed?|ing|es|ion)\b/i },
+  { term: 'hunted down', pattern: /\bhunt(?:ed?|ing)\s+down\b/i },
+  { term: 'not an injustice', pattern: /\bnot\s+an\s+injustice\b/i },
+  { term: 'não foi uma injustiça', pattern: /\bn[aã]o\s+(?:foi|era)\s+uma\s+injusti[cç]a\b/i },
+  { term: 'populations were', pattern: /\bpopulations?\s+were\b/i },
+  { term: 'populações foram', pattern: /\bpopula[çc][õo]es\s+foram\b/i },
+
+  // Especulações pós-dilúvio proibidas (Item 4)
+  { term: 'perhaps some survived', pattern: /\bperhaps\s+(?:some|they)\s+survived\b/i },
+  { term: 'increasingly human', pattern: /\bincreasingly\s+human\b/i },
+  { term: 'did not perish in the waters', pattern: /\bdid\s+not\s+perish\s+(?:in|beneath)\s+(?:the\s+)?waters?\b/i },
+
+  // Clichês clássicos de IA
   { term: 'what if I told you', pattern: /\bwhat\s+if\s+i\s+told\s+you\b/i },
   { term: 'in the annals', pattern: /\bin\s+the\s+annals\b/i },
   { term: 'nos anais', pattern: /\bnos\s+anais\b/i },
@@ -1699,8 +1765,6 @@ const FORBIDDEN_TERMS = [
   { term: 'testemunho de', pattern: /\btestemunho\s+de\b/i },
   { term: 'tapestry', pattern: /\btapestry\b/i },
   { term: 'tapeçaria', pattern: /\btape[cç]aria\b/i },
-
-  // Novos clichês adicionados (Item 6 & Ajustes Finais)
   { term: 'stark reminder', pattern: /\bstark\s+reminder\b/i },
   { term: 'lembrete gritante', pattern: /\blembrete\s+(?:gritante|severo|duro)\b/i },
   { term: 'serves as a reminder', pattern: /\bserve[sd]?\s+as\s+a\s+reminder\b/i },
@@ -1714,24 +1778,10 @@ const FORBIDDEN_TERMS = [
   { term: 'quintessential', pattern: /\bquintessential\b/i },
   { term: 'quintessencial', pattern: /\bquintessencia(?:l|is)\b/i },
   { term: 'navigate', pattern: /\bnavigat(?:e|es|ing|ed)\b/i },
-  { term: 'profound', pattern: /\bprofound(?:ly)?\b/i },
-  { term: 'profundo', pattern: /\bprofund[oa]s?\b/i },
   { term: 'multifaceted', pattern: /\bmultifaceted\b/i },
   { term: 'multifacetado', pattern: /\bmultifacetad[oa]s?\b/i },
 
-  // Palavras soltas e clichês proibidos (Ajustes Finais Solicitados)
-  { term: 'debate', pattern: /\bdebates?\b/i },
-  { term: 'stark', pattern: /\bstark(?:ly)?\b/i },
-  { term: 'shrouded in mystery', pattern: /\bshrouded\s+in\s+mystery\b/i },
-  { term: 'envolto em mistério', pattern: /\benvolto\s+em\s+mist[eé]rio\b/i },
-  { term: 'figuratively', pattern: /\bfigurative(?:ly)?\b/i },
-  { term: 'figurativamente', pattern: /\bfigurad(?:o|amente)\b/i },
-  { term: 'loomed large', pattern: /\bloomed?\s+large\b/i },
-  { term: 'pairava grande', pattern: /\bpairav(?:a|am)\s+grande\b/i },
-  { term: 'captivated minds', pattern: /\bcaptivat(?:ed?|ing)\s+(?:the\s+)?minds?\b/i },
-  { term: 'cativou mentes', pattern: /\bcativ(?:ou|am|ando)\s+(?:as\s+)?mentes\b/i },
-
-  // Aberturas e termos proibidos (Item 1 & Item 4)
+  // Aberturas e termos proibidos
   { term: 'the biblical narrative includes', pattern: /\bthe\s+biblical\s+narrative\s+includes\b/i },
   { term: 'a narrativa bíblica inclui', pattern: /\ba\s+narrativa\s+b[ií]blica\s+inclui\b/i },
   { term: 'metaphor', pattern: /\bmetaphor(?:s|ical|ically)?\b/i },
@@ -1756,12 +1806,6 @@ const FORBIDDEN_TERMS = [
   { term: 'humanos puros', pattern: /\bhumanos?\s+puros?\b/i },
   { term: 'gene pool', pattern: /\bgene\s+pools?\b/i },
 
-  // Marcadores de tempo imediato (Item 2)
-  { term: 'tonight', pattern: /\btonight\b/i },
-  { term: 'esta noite', pattern: /\besta\s+noite\b/i },
-  { term: 'this morning', pattern: /\bthis\s+morning\b/i },
-  { term: 'esta manhã', pattern: /\besta\s+manh[aã]\b/i },
-
   // Ceticismo & Livros apócrifos proibidos
   { term: 'myth', pattern: /\bmyths?\b/i },
   { term: 'mito', pattern: /\bmitos?\b/i },
@@ -1775,17 +1819,68 @@ const FORBIDDEN_TERMS = [
 ];
 
 /**
- * Função de Varredura e Regeneração Automática de Parágrafos (Item 3 & Item 6)
- * Varre o roteiro por termos proibidos e clichês. Se encontrar, regenera apenas
- * os parágrafos afetados (máximo de 2 tentativas por parágrafo).
+ * Função de Substituição Determinística de Segurança (Fallback de Alta Confiança)
+ * Se após as tentativas da IA algum termo persistir, substitui por equivalente neutro canônico.
+ */
+function sanitizarTermosDeterministicamente(texto) {
+  if (!texto) return texto;
+  let s = texto;
+  s = s.replace(/\btonight\b/gi, 'in this account');
+  s = s.replace(/\besta noite\b/gi, 'neste relato');
+  s = s.replace(/\bthis morning\b/gi, 'in this passage');
+  s = s.replace(/\besta manh[aã]\b/gi, 'nesta passagem');
+  s = s.replace(/\bprofound(?:ly)?\b/gi, 'solemn');
+  s = s.replace(/\bprofund[oa]s?\b/gi, 'solene');
+  s = s.replace(/\bfabric\b/gi, 'reality');
+  s = s.replace(/\bstark\b/gi, 'striking');
+  s = s.replace(/\bshrouded in mystery\b/gi, 'marked by silence in Scripture');
+  s = s.replace(/\bfiguratively\b/gi, 'visibly');
+  s = s.replace(/\bloomed large\b/gi, 'stood prominent');
+  s = s.replace(/\bcaptivated minds\b/gi, 'drawn attention');
+  s = s.replace(/\bthe very fabric\b/gi, 'the reality');
+  s = s.replace(/\btapestry\b/gi, 'chronicle');
+  s = s.replace(/\bwhat if I told you\b/gi, 'Scripture reveals that');
+  s = s.replace(/\bin the annals\b/gi, 'in the biblical record');
+  s = s.replace(/\bembark(?:s|ing|ed)?\b/gi, 'proceed');
+  s = s.replace(/\bjourney through\b/gi, 'examine');
+  s = s.replace(/\bdelv(?:e|es|ing|ed)?\b/gi, 'examine');
+  s = s.replace(/\bdive deep\b/gi, 'look closely');
+  s = s.replace(/\benigmatic\b/gi, 'ancient');
+  s = s.replace(/\btestament to\b/gi, 'witness of');
+  s = s.replace(/\bstark reminder\b/gi, 'solemn warning');
+  s = s.replace(/\bserve[sd]? as a reminder\b/gi, 'bears witness');
+  s = s.replace(/\binsurmountable\b/gi, 'formidable');
+  s = s.replace(/\bunwavering\b/gi, 'steadfast');
+  s = s.replace(/\bglimmer of hope\b/gi, 'divine grace');
+  s = s.replace(/\bquintessential\b/gi, 'defining');
+  s = s.replace(/\bnavigat(?:e|es|ing|ed)\b/gi, 'walk through');
+  s = s.replace(/\bmultifaceted\b/gi, 'detailed');
+  s = s.replace(/\beliminat(?:ed?|ing|es|ion)\b/gi, 'defeated');
+  s = s.replace(/\bhunt(?:ed?|ing)\s+down\b/gi, 'pursued');
+  s = s.replace(/\bnot an injustice\b/gi, 'according to God\'s decree');
+  s = s.replace(/\bpopulations were\b/gi, 'the cities were');
+  s = s.replace(/\bperhaps some survived\b/gi, 'Scripture does not explain this mechanism');
+  s = s.replace(/\bincreasingly human\b/gi, 'in physical stature');
+  s = s.replace(/\bdid not perish in the waters\b/gi, 'was recorded in Scripture');
+  return s;
+}
+
+/**
+ * Função de Varredura e Regeneração com Contexto Vizinho (Item 1 & Item 6)
+ * Varre o roteiro por termos proibidos. Se encontrar, regenera com contexto vizinho.
  */
 async function aplicarFiltroTermosProibidos(roteiro, idioma, modelo) {
-  if (!roteiro || typeof roteiro !== 'string') return { texto: roteiro, termosPersistentes: [], modificado: false };
+  if (!roteiro || typeof roteiro !== 'string') {
+    return { texto: roteiro, totalDetectados: 0, totalCorrigidos: 0, termosPersistentes: [], termosCorrigidosLista: [], modificado: false };
+  }
 
-  // Divide em blocos/parágrafos
   const paragrafos = roteiro.split(/\n\s*\n/);
   let modificado = false;
   let termosPersistentes = [];
+  let termosCorrigidosLista = [];
+  let totalDetectados = 0;
+  let totalCorrigidos = 0;
+
   const lang = (typeof PromptEngine !== 'undefined' && PromptEngine.getLanguageConfig)
     ? PromptEngine.getLanguageConfig(idioma)
     : { name: 'English' };
@@ -1796,29 +1891,41 @@ async function aplicarFiltroTermosProibidos(roteiro, idioma, modelo) {
 
     if (termosEncontrados.length === 0) continue;
 
+    totalDetectados += termosEncontrados.length;
+    termosEncontrados.forEach(t => termosCorrigidosLista.push(t.term));
     console.log(`[Filtro Pós-Geração] Parágrafo ${pIdx + 1} contém termos proibidos:`, termosEncontrados.map(t => t.term));
 
-    // Regenera automaticamente só o parágrafo afetado (máx. 2 tentativas)
+    // Contexto vizinho (Item 6)
+    const prevContext = pIdx > 0 ? paragrafos[pIdx - 1].trim().slice(0, 300) : '(Beginning of the section)';
+    const nextContext = pIdx < paragrafos.length - 1 ? paragrafos[pIdx + 1].trim().slice(0, 300) : '(End of the section)';
+
     let tentativas = 0;
     while (termosEncontrados.length > 0 && tentativas < 2) {
       tentativas++;
       try {
         const rewritePrompt = `Act as an expert biblical documentary script editor.
-Rewrite the following single paragraph from a biblical documentary script to strictly eliminate every prohibited cliché, forbidden term, or skepticism.
+Rewrite the following target paragraph from a biblical documentary script to strictly eliminate every prohibited cliché and forbidden term, maintaining seamless narrative coherence with surrounding context.
 
-ORIGINAL PARAGRAPH:
+PREVIOUS PARAGRAPH (CONTEXT ONLY — DO NOT DUPLICATE ITS WORDS):
+"""${prevContext}"""
+
+TARGET PARAGRAPH TO REWRITE:
 """${paragrafo}"""
+
+NEXT PARAGRAPH (CONTEXT ONLY — DO NOT DUPLICATE ITS WORDS):
+"""${nextContext}"""
 
 PROHIBITED TERMS DETECTED:
 ${termosEncontrados.map(t => `"${t.term}"`).join(', ')}
 
-MANDATORY EDITING RULES:
-1. Rephrase the paragraph completely to eliminate all clichés ("what if I told you", "in the annals", "embark", "journey through", "delve", "dive deep", "enigmatic", "the very fabric", "challenge everything you thought", "testament to", "tapestry", "stark reminder", "serves as a reminder", "insurmountable", "unwavering", "glimmer of hope", "quintessential", "navigate", "profound", "multifaceted") and any forbidden genetic/racial concepts ("genetic", "bloodline", "hybrid", "pure humans", "gene pool").
-2. NEVER use weak openings like "The biblical narrative includes...". NEVER use generic devotional applications ("giants in your life"). NEVER call the biblical account a "metaphor", "symbol", "cautionary tale", or "narrative device".
-3. State as sacred fact ONLY what canonical Scripture says, with literal quotes where applicable. Frame secondary interpretations as "many understand this passage as...".
-4. Do NOT use temporal markers like "tonight" or "this morning".
-5. Keep the exact same narrative tone, historical depth, storytelling power, and content language (${lang.name}).
-6. Output EXCLUSIVELY the rewritten paragraph text. Do NOT include greetings, preamble, quotes around the paragraph, or commentary.`;
+MANDATORY RULES:
+1. ELIMINATE PROHIBITED TERMS: Completely rephrase without using: ${termosEncontrados.map(t => `"${t.term}"`).join(', ')}.
+2. NEVER use "tonight", "this morning", "profound", "fabric", "stark", "debate", "shrouded in mystery", "figuratively", "loomed large", "captivated minds".
+3. STRICT BIBLICAL FIDELITY: Never contradict canonical Scripture (e.g. Genesis 7:23: only Noah and his family in the ark remained alive). If Scripture does not detail how giants appear after the Flood, state this in ONE honest sentence and move on. NEVER speculate ("perhaps some survived", "increasingly human", "did not perish in the waters").
+4. BATTLES & SOLEMN RESTRAINT: Narrate battles strictly from biblical citation without evaluating or justifying the destruction of peoples. Never use "eliminated", "hunted down", "not an injustice", "populations were".
+5. NO DUPLICATION: Flow naturally from the previous paragraph into the next without repeating sentences from either.
+6. Keep the exact same historical narrative tone and language (${lang.name}).
+7. Output EXCLUSIVELY the rewritten paragraph text. Do NOT include commentary, quotes around the paragraph, or preamble.`;
 
         const novoParagrafo = await OpenRouterAPI.generateContent(
           rewritePrompt,
@@ -1829,11 +1936,26 @@ MANDATORY EDITING RULES:
         if (novoParagrafo && novoParagrafo.trim()) {
           paragrafo = novoParagrafo.trim().replace(/^["']|["']$/g, '');
           modificado = true;
-          termosEncontrados = FORBIDDEN_TERMS.filter(f => f.pattern.test(paragrafo));
+          const novosTermos = FORBIDDEN_TERMS.filter(f => f.pattern.test(paragrafo));
+          if (novosTermos.length < termosEncontrados.length) {
+            totalCorrigidos += (termosEncontrados.length - novosTermos.length);
+          }
+          termosEncontrados = novosTermos;
         }
       } catch (err) {
         console.warn(`[Filtro Pós-Geração] Falha ao regenerar parágrafo ${pIdx + 1}:`, err);
         break;
+      }
+    }
+
+    // Se ainda restou algum termo após a IA, aplica a sanitização determinística segura
+    if (termosEncontrados.length > 0) {
+      const parSanitizado = sanitizarTermosDeterministicamente(paragrafo);
+      if (parSanitizado !== paragrafo) {
+        paragrafo = parSanitizado;
+        modificado = true;
+        totalCorrigidos += termosEncontrados.length;
+        termosEncontrados = FORBIDDEN_TERMS.filter(f => f.pattern.test(paragrafo));
       }
     }
 
@@ -1848,7 +1970,104 @@ MANDATORY EDITING RULES:
   }
 
   const textoFinal = paragrafos.join('\n\n');
-  return { texto: textoFinal, termosPersistentes, modificado };
+  const res = { texto: textoFinal, totalDetectados, totalCorrigidos, termosPersistentes, termosCorrigidosLista, modificado };
+
+  // Atualiza relatório visual no DOM se estiver disponível no browser
+  if (typeof atualizarRelatorioFiltroNaTela === 'function') {
+    atualizarRelatorioFiltroNaTela(res);
+  }
+
+  return res;
+}
+
+/**
+ * ITEM 1: Atualização Visual do Relatório do Filtro Pós-Geração no DOM
+ */
+function atualizarRelatorioFiltroNaTela(filtroRes) {
+  const container = document.getElementById('relatorio-filtro-geracao');
+  const badge = document.getElementById('badge-filtro-status');
+  const conteudo = document.getElementById('relatorio-filtro-conteudo');
+  if (!container || !conteudo) return;
+
+  container.classList.remove('hidden');
+
+  const { totalDetectados = 0, totalCorrigidos = 0, termosPersistentes = [], termosCorrigidosLista = [] } = filtroRes;
+  const persistentesCount = termosPersistentes ? termosPersistentes.length : 0;
+
+  if (persistentesCount === 0) {
+    if (badge) {
+      badge.style.background = '#10b981';
+      badge.style.color = '#064e3b';
+      badge.textContent = '100% LIMPO — 0 TERMOS PERSISTENTES';
+    }
+    container.style.border = '1px solid #10b981';
+    container.style.background = 'rgba(16, 185, 129, 0.12)';
+  } else {
+    if (badge) {
+      badge.style.background = '#f59e0b';
+      badge.style.color = '#78350f';
+      badge.textContent = `${persistentesCount} TERMO(S) PERSISTENTE(S)`;
+    }
+    container.style.border = '1px solid #f59e0b';
+    container.style.background = 'rgba(245, 158, 11, 0.12)';
+  }
+
+  let html = `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 8px;">
+    <div style="background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06);">
+      <span style="color: #94a3b8; font-size: 0.78rem; display: block; text-transform: uppercase; letter-spacing: 0.05em;">Termos Detectados</span>
+      <span style="font-size: 1.3rem; font-weight: 700; color: #f1f5f9;">${totalDetectados}</span>
+    </div>
+    <div style="background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(16,185,129,0.2);">
+      <span style="color: #94a3b8; font-size: 0.78rem; display: block; text-transform: uppercase; letter-spacing: 0.05em;">Termos Corrigidos</span>
+      <span style="font-size: 1.3rem; font-weight: 700; color: #34d399;">${totalCorrigidos}</span>
+    </div>
+    <div style="background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 6px; border: 1px solid ${persistentesCount === 0 ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.3)'};">
+      <span style="color: #94a3b8; font-size: 0.78rem; display: block; text-transform: uppercase; letter-spacing: 0.05em;">Persistentes</span>
+      <span style="font-size: 1.3rem; font-weight: 700; color: ${persistentesCount === 0 ? '#34d399' : '#f87171'};">${persistentesCount}</span>
+    </div>
+  </div>`;
+
+  if (termosCorrigidosLista && termosCorrigidosLista.length > 0) {
+    const unicos = [...new Set(termosCorrigidosLista)];
+    html += `<div style="font-size: 0.85rem; color: #cbd5e1; margin-top: 6px;">
+      <strong style="color: #34d399;">Higienizados pelo filtro:</strong> ${unicos.map(t => `<code style="background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 4px; color: #a7f3d0; margin-right: 4px;">${t}</code>`).join(' ')}
+    </div>`;
+  } else if (totalDetectados === 0) {
+    html += `<div style="font-size: 0.85rem; color: #34d399; margin-top: 4px;">
+      ✓ Nenhum clichê ou termo proibido detectado no texto gerado. Roteiro 100% canônico e higienizado.
+    </div>`;
+  }
+
+  conteudo.innerHTML = html;
+}
+
+/**
+ * ITEM 3 (Ajustes Finais): Limitar Frases de Reforço de Historicidade
+ * "not legends or myths", "historical fact", "the Scripture treats this as" no máximo 2 vezes no total.
+ */
+function limitarFrasesHistoricas(texto) {
+  if (!texto || typeof texto !== 'string') return texto;
+
+  const patterns = [
+    /\b(?:not\s+(?:legends?\s+or\s+myths?|myths?\s+or\s+legends?)|n[aã]o\s+(?:s[aã]o\s+)?(?:lendas?\s+ou\s+mitos?|mitos?\s+ou\s+lendas?))\b/gi,
+    /\b(?:historical\s+fact|fato\s+hist[oó]rico)\b/gi,
+    /\b(?:(?:the\s+)?scripture\s+treats\s+this\s+as|as\s+escrituras\s+tratam\s+isso\s+como)\b/gi
+  ];
+
+  let res = texto;
+  let contagem = 0;
+
+  for (const pat of patterns) {
+    res = res.replace(pat, (match) => {
+      contagem++;
+      if (contagem > 2) {
+        return 'the biblical record';
+      }
+      return match;
+    });
+  }
+
+  return res;
 }
 
 /**
@@ -2176,6 +2395,100 @@ FINAL DIRECTIVES:
 - The script must contain EXCLUSIVELY the words to be spoken by the narrator.
 - No camera directions, no sound effect cues, no visual editing notes.
 - Language: 100% in ${lang.name}.`;
+  },
+
+  /**
+   * ITEM 2: Passo 1 - Gerar Esboço Estruturado de 7 Seções Bíblicas Canônicas
+   */
+  generateOutlinePrompt({ ideia, idioma, tomVoz }) {
+    const lang = this.getLanguageConfig(idioma);
+    return `Act as a senior biblical documentary script architect for the channel 'Explicador Bíblico'.
+Create a rigorous 7-section documentary outline for a long-form video on: '${ideia}'.
+Tone of voice: '${tomVoz}'.
+Language: 100% in ${lang.name}.
+
+MANDATORY CANONICAL OUTLINE RULES:
+1. EXACTLY 7 SECTIONS: Provide exactly 7 numbered sections, where each section addresses a COMPLETELY DIFFERENT biblical point or historical episode.
+2. STRICT BIBLICAL FIDELITY (ZERO SPECULATION):
+   - Never contradict explicit canonical scripture (e.g., Genesis 7:23 explicitly states that only Noah and those with him in the ark remained alive).
+   - When Scripture does not explain how something occurred (such as post-Flood mentions of giant lineages like Anakim or Rephaim), state in ONE sentence that the Bible does not detail the mechanism, and move on. NEVER speculate (strictly forbidden: "perhaps some survived", "increasingly human", "did not perish in the waters").
+   - Do NOT assert connections that Scripture never makes (e.g., never link giants to the fall of Jericho).
+   - Battles (e.g. 2 Samuel 21) must be scheduled for ONLY ONE section across the entire outline, narrated strictly from literal biblical citations without evaluating or justifying the destruction of peoples.
+   - Do not include extra-biblical lore or Book of Enoch concepts.
+3. STRUCTURE:
+   Section 1: Opening Hook & Pre-Flood Genesis Account (Genesis 6:1-4).
+   Section 2: The Pre-Flood World, Moral Corruption, and the Divine Decree.
+   Section 3: The Global Deluge and Solemn Survival (Genesis 7:23 - Noah only remained alive).
+   Section 4: The Canonical Boundary: What Scripture Declares vs. What It Leaves Unexplained (One sentence acknowledging silence, zero speculation).
+   Section 5: The Spies in Canaan and Hebron (Numbers 13:28-33 - literal report of the sons of Anak, with no invented links to Jericho).
+   Section 6: The Wars of David and the Giants of Gath (2 Samuel 21:15-22 / 1 Chronicles 20 - literal chronicle narrated only once).
+   Section 7: Solemn Conclusion & Final Canonical Verdict (1 Samuel 17:47 - "the battle is the LORD's", sacred synthesis and call to subscribe).
+
+OUTPUT FORMAT:
+Output EXACTLY 7 lines, formatted as:
+SECTION 1: [Short Title] — [2-sentence summary of the unique biblical passage and events covered]
+SECTION 2: [Short Title] — [2-sentence summary]
+SECTION 3: [Short Title] — [2-sentence summary]
+SECTION 4: [Short Title] — [2-sentence summary]
+SECTION 5: [Short Title] — [2-sentence summary]
+SECTION 6: [Short Title] — [2-sentence summary]
+SECTION 7: [Short Title] — [2-sentence summary]`;
+  },
+
+  /**
+   * ITEM 2: Passo 2 - Gerar Seção Individual (380 a 420 palavras por seção)
+   */
+  generateSectionPrompt({ ideia, secaoNumero, totalSecoes, tituloSecao, resumoSecao, resumoSecoesAnteriores, versiculosJaCitados, idioma, tomVoz, tipoGancho }) {
+    const lang = this.getLanguageConfig(idioma);
+    const isFirst = secaoNumero === 1;
+    const isLast = secaoNumero === totalSecoes;
+
+    return `Act as a senior documentary scriptwriter and master storyteller for biblical YouTube channels following the proven formula of 'Explicador Bíblico'.
+Write SECTION ${secaoNumero} of ${totalSecoes} for the long-form documentary script: '${ideia}'.
+Language: 100% in ${lang.name}.
+Tone of voice: '${tomVoz}'.
+
+SECTION IDENTITY:
+- Section Number: ${secaoNumero} of ${totalSecoes}
+- Title: ${tituloSecao}
+- Scope/Summary: ${resumoSecao}
+
+CONTEXT OF PREVIOUS SECTIONS (DO NOT DUPLICATE THESE EVENTS OR SCENES):
+${resumoSecoesAnteriores || '(This is the opening section of the documentary)'}
+
+VERSES ALREADY QUOTED VERBATIM (STRICTLY FORBIDDEN TO QUOTE VERBATIM AGAIN):
+${versiculosJaCitados && versiculosJaCitados.length > 0 ? versiculosJaCitados.join(', ') : 'None yet.'}
+
+LENGTH REQUIREMENT:
+- TARGET LENGTH: STRICTLY 380 TO 420 WORDS.
+- Write dense, immersive, multi-paragraph narrative text. Do NOT write a summary or bullet points.
+
+CRITICAL RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
+1. ${isFirst ? `OPENING HOOK (FIRST 2-3 SENTENCES):
+   - Open immediately with a concrete, striking factual statement drawn directly from canonical Scripture.
+   - PROHIBITED: "The biblical narrative includes...", "In the biblical narrative...", "The Bible tells us...", "Throughout history...".` : 'CONTINUITY: Begin directly continuing the living chronicle with narrative momentum. No meta-intro or welcome back.'}
+2. REPETITION CONTROLS:
+   - NEVER quote the same verse verbatim more than once in the entire script.
+   - NEVER narrate a biblical story or battle (such as 2 Samuel 21 or Numbers 13) if already covered in previous sections.
+   - Limit phrases like "not legends or myths", "historical fact", and "the Scripture treats this as" — use at most once if not already used.
+3. CANONICAL FIDELITY & ZERO SPECULATION:
+   - NEVER contradict explicit canonical scripture (e.g. Genesis 7:23: "Noah only remained alive, and they that were with him in the ark"; 1 Samuel 17:47: "the battle is the LORD's").
+   - When the Bible does not explain a detail or mechanism, state that in ONE honest sentence and move on. STRICTLY PROHIBITED to speculate ("perhaps some survived", "increasingly human", "did not perish in the waters").
+   - Never assert connections the text does not make (e.g. never connect giants to the walls of Jericho).
+4. BATTLES & SOLEMN RESTRAINT:
+   - Narrate battles strictly with literal scripture citations from ${lang.bibleTranslation}.
+   - Do NOT evaluate, moralize, or justify the destruction of populations.
+   - STRICTLY PROHIBITED WORDS: "eliminated", "hunted down", "not an injustice", "populations were".
+5. FORBIDDEN CLICHÉS & WORDS:
+   - NEVER use: "tonight", "this morning", "profound", "fabric", "stark", "debate", "shrouded in mystery", "figuratively", "loomed large", "captivated minds", "what if I told you", "in the annals", "embark", "journey through", "delve", "dive deep", "enigmatic", "the very fabric", "challenge everything you thought", "testament to", "tapestry", "stark reminder", "serves as a reminder", "insurmountable", "unwavering", "glimmer of hope", "quintessential", "navigate", "multifaceted".
+6. VERBATIM SCRIPTURE:
+   - When quoting scripture, quote word-for-word from ${lang.bibleTranslation} (${lang.citationRule}).
+7. ${isLast ? 'FINAL CLIMAX & CTA: Deliver a solemn, awe-inspiring synthesis of what Scripture reveals, ending with a reverent call to subscribe to the channel.' : 'NARRATIVE BRIDGE: End this section with natural narrative momentum leading into the next historical point.'}
+
+OUTPUT FORMAT:
+Output EXCLUSIVELY the narration text for Section ${secaoNumero}.
+Do NOT output section headers like "[Hook]" or "Word Count:".
+Just the pure, powerful spoken narration paragraphs.`;
   },
 
   generateMediaKeywordsPrompt({ roteiro }) {
@@ -2908,6 +3221,210 @@ document.addEventListener('DOMContentLoaded', () => {
     );
   });
 
+/**
+ * ITEM 2: Aparar texto para respeitar estritamente o limite máximo de palavras (ex: 3.200 palavras)
+ */
+function apararParaLimiteMaximo(texto, maxPalavras = 3200) {
+  if (!texto) return texto;
+  const palavras = texto.match(/\S+/g) || [];
+  if (palavras.length <= maxPalavras) return texto;
+
+  const paragrafos = texto.split(/\n\s*\n/);
+  let resultado = [];
+  let contagem = 0;
+
+  for (let i = 0; i < paragrafos.length; i++) {
+    const p = paragrafos[i];
+    const pCount = (p.match(/\S+/g) || []).length;
+    if (contagem + pCount <= maxPalavras) {
+      resultado.push(p);
+      contagem += pCount;
+    } else {
+      const frases = p.match(/[^.!?]+[.!?]+/g) || [p];
+      let pAparado = '';
+      for (const f of frases) {
+        const fCount = (f.match(/\S+/g) || []).length;
+        if (contagem + fCount <= maxPalavras) {
+          pAparado += (pAparado ? ' ' : '') + f.trim();
+          contagem += fCount;
+        } else {
+          break;
+        }
+      }
+      if (pAparado) {
+        resultado.push(pAparado);
+      }
+      break;
+    }
+  }
+
+  return resultado.join('\n\n');
+}
+
+/**
+ * ITEM 2: Geração Estruturada em 7 Seções Bíblicas Canônicas
+ * Passo 1: Gerar esboço de 7 seções, cada uma com um ponto diferente.
+ * Passo 2: Gerar cada seção separadamente (350-400 palavras), enviando esboço e resumo anterior.
+ * Total entre 2.800 e 3.200 palavras. NUNCA passar de 3.200.
+ */
+async function gerarRoteiroEmSeteSecoes({
+  ideia,
+  estiloRoteiro,
+  tomVoz,
+  tipoGancho,
+  idioma,
+  modelo,
+  onProgress
+}) {
+  const lang = PromptEngine.getLanguageConfig(idioma);
+
+  const updateProgress = (passo, total, texto, percentual) => {
+    if (typeof onProgress === 'function') {
+      onProgress(passo, total, texto, percentual);
+    }
+  };
+
+  updateProgress(0, 7, 'Passo 1/7: Elaborando esboço de 7 seções bíblicas canônicas...', 5);
+
+  // Passo 1: Esboço de 7 seções
+  const outlinePrompt = PromptEngine.generateOutlinePrompt({ ideia, idioma, tomVoz });
+  const outlineText = await OpenRouterAPI.generateContent(
+    outlinePrompt,
+    modelo,
+    SCRIPT_SYSTEM_PROMPT
+  );
+
+  console.log('[Geração em 7 Seções] Esboço de seções recebido:\n', outlineText);
+
+  // Parse das seções do esboço
+  let secoes = [];
+  const linhas = (outlineText || '').split('\n').filter(l => l.trim().length > 0);
+  for (const l of linhas) {
+    const match = l.match(/^(?:SECTION|SEÇÃO|SECCION|\d+)[.:\s\-]+(?:\d+[.:\s\-]+)?([^—\-:]+)[—\-:]*(.*)$/i);
+    if (match) {
+      secoes.push({
+        numero: secoes.length + 1,
+        titulo: match[1].trim(),
+        resumo: match[2].trim() || match[1].trim()
+      });
+    }
+  }
+
+  const fallbackSecoes = [
+    { numero: 1, titulo: "Opening Hook & The Sons of God in Genesis 6", resumo: "Direct canonical hook on Genesis 6:1-4 and the reality of the pre-Flood world." },
+    { numero: 2, titulo: "The Pre-Flood Realm and Global Corruption", resumo: "The physical conditions of the antediluvian earth, human corruption, and the solemn divine decree." },
+    { numero: 3, titulo: "The Great Deluge and Exclusive Survival", resumo: "The cataclysm of waters and Genesis 7:23 where only Noah and those with him in the ark survived." },
+    { numero: 4, titulo: "The Canonical Boundary: What Scripture Declares and Leaves Unexplained", resumo: "Stating in one sentence that the Bible does not detail post-Flood mechanics, with zero speculation." },
+    { numero: 5, titulo: "The Spies of Israel and the City of Hebron", resumo: "Numbers 13:28-33, the report of the sons of Anak in Hebron, strictly without invented Jericho links." },
+    { numero: 6, titulo: "The Wars of David and the Giants of Gath", resumo: "2 Samuel 21:15-22 and 1 Chronicles 20, Goliath and his kin, narrated as literal history without justifying destruction." },
+    { numero: 7, titulo: "Solemn Conclusion & The Sovereign Victory of God", resumo: "1 Samuel 17:47 ('the battle is the LORD\\'s'), final awe-inspiring theological synthesis and channel CTA." }
+  ];
+
+  if (secoes.length < 7) {
+    console.warn(`[Geração em 7 Seções] Detectadas ${secoes.length} seções. Normalizando para 7 seções canônicas.`);
+    for (let k = secoes.length; k < 7; k++) {
+      secoes.push(fallbackSecoes[k]);
+    }
+  } else if (secoes.length > 7) {
+    secoes = secoes.slice(0, 7);
+  }
+
+  // Passo 2: Geração individual de cada seção
+  const secoesGeradas = [];
+  const versiculosCitados = [];
+  let resumoSecoesAnteriores = '';
+
+  for (let i = 0; i < secoes.length; i++) {
+    const sec = secoes[i];
+    const secNum = i + 1;
+    const pct = Math.round(10 + (secNum / 7) * 80);
+
+    updateProgress(
+      secNum,
+      7,
+      `Passo 2/7: Gerando Seção ${secNum} de 7: "${sec.titulo}" (alvo: 380-420 palavras)...`,
+      pct
+    );
+
+    const sectionPrompt = PromptEngine.generateSectionPrompt({
+      ideia,
+      secaoNumero: secNum,
+      totalSecoes: 7,
+      tituloSecao: sec.titulo,
+      resumoSecao: sec.resumo,
+      resumoSecoesAnteriores,
+      versiculosJaCitados: versiculosCitados,
+      idioma,
+      tomVoz,
+      tipoGancho
+    });
+
+    const textoSecao = await OpenRouterAPI.generateContent(
+      sectionPrompt,
+      modelo,
+      SCRIPT_SYSTEM_PROMPT
+    );
+
+    const limpo = textoSecao ? textoSecao.trim() : '';
+    secoesGeradas.push(limpo);
+
+    // Rastrear versículos citados para proibir repetição
+    const versos = limpo.match(/\b(?:Genesis|Gênesis|Génesis|Exodus|Êxodo|Numbers|Números|Deuteronomy|Deuteronômio|Joshua|Josué|1 Samuel|2 Samuel|1 Kings|2 Kings|1 Chronicles|2 Chronicles|1 Crônicas|2 Crônicas|Psalms|Salmos|Isaiah|Isaías)\s+\d+:\d+(?:-\d+)?\b/gi);
+    if (versos) {
+      for (const v of versos) {
+        if (!versiculosCitados.includes(v)) {
+          versiculosCitados.push(v);
+        }
+      }
+    }
+
+    const palavrasSecao = (limpo.match(/\S+/g) || []).length;
+    resumoSecoesAnteriores += `\nSection ${secNum} [${sec.titulo}] (${palavrasSecao} words): ${sec.resumo}`;
+  }
+
+  updateProgress(7, 7, 'Consolidando as 7 seções e validando métricas de extensão...', 95);
+
+  let scriptFinal = secoesGeradas.join('\n\n');
+
+  // Controle estrito de palavras: Entre 2.800 e 3.200 palavras. NUNCA passar de 3.200.
+  let contagem = (scriptFinal.match(/\S+/g) || []).length;
+  console.log(`[Geração em 7 Seções] Contagem bruta gerada: ${contagem} palavras.`);
+
+  if (contagem > 3200) {
+    scriptFinal = apararParaLimiteMaximo(scriptFinal, 3200);
+    contagem = (scriptFinal.match(/\S+/g) || []).length;
+    console.log(`[Geração em 7 Seções] Ajustado estritamente para o teto de 3.200 palavras: ${contagem} palavras.`);
+  } else if (contagem < 2800) {
+    const faltam = 2800 - contagem;
+    console.log(`[Geração em 7 Seções] Contagem em ${contagem} palavras. Complementando ${faltam} palavras para cumprir meta de 2.800...`);
+    const promptExpansao = `Act as the same senior biblical documentary scriptwriter.
+The script on '${ideia}' is currently at ${contagem} words. The required documentary minimum is 2,800 words.
+Without repeating any stories, without speculating, and without forbidden clichés, write a dense and reverent 2-paragraph expansion on the profound biblical truth of 1 Samuel 17:47 ("the battle is the LORD's") and the eternal sovereignty of the Creator over all terrestrial powers to conclude the script.
+Length: at least ${faltam + 30} words.
+Language: 100% in ${lang.name}. Literal quotes from ${lang.bibleTranslation}.
+Output EXCLUSIVELY the final 2 paragraphs.`;
+
+    try {
+      const extra = await OpenRouterAPI.generateContent(promptExpansao, modelo, SCRIPT_SYSTEM_PROMPT);
+      if (extra && extra.trim()) {
+        scriptFinal = scriptFinal.trim() + '\n\n' + extra.trim();
+        contagem = (scriptFinal.match(/\S+/g) || []).length;
+        if (contagem > 3200) {
+          scriptFinal = apararParaLimiteMaximo(scriptFinal, 3200);
+        }
+      }
+    } catch (eExp) {
+      console.warn('Falha na expansão de encerramento:', eExp);
+    }
+  }
+
+  updateProgress(7, 7, 'Geração em 7 seções concluída com êxito!', 100);
+  return scriptFinal;
+}
+
+window.apararParaLimiteMaximo = apararParaLimiteMaximo;
+window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
+
   document.getElementById('btn-gerar-prompt-roteiro').addEventListener('click', async () => {
     const ideia = inputIdeiaEscolhida.value.trim() || UI.getValue('select-tema', 'input-tema-custom');
     const estiloRoteiro = document.getElementById('select-estilo-roteiro').value;
@@ -2916,86 +3433,88 @@ document.addEventListener('DOMContentLoaded', () => {
     const idioma = UI.getValue('select-idioma', 'input-idioma-custom');
     const modeloRoteiro = OpenRouterAPI.getModelRoteiro();
 
-    const promptText = PromptEngine.generateScriptPrompt({
-      ideia,
-      estiloRoteiro,
-      tomVoz,
-      tipoGancho,
-      idioma
-    });
+    const isLongo = estiloRoteiro.includes('18-20') || estiloRoteiro.includes('Longo');
+    const hasApiKey = Boolean(OpenRouterAPI.getApiKey());
+    const btn = document.getElementById('btn-gerar-prompt-roteiro');
+    const outputEl = document.getElementById('output-prompt-roteiro');
+    const progressEl = document.getElementById('progresso-geracao-secoes');
+    const progressText = document.getElementById('texto-progresso-secao');
+    const progressCount = document.getElementById('contador-progresso-secao');
+    const progressBar = document.getElementById('barra-progresso-secao');
 
-    let resultText = await executeApiCall(
-      'btn-gerar-prompt-roteiro',
-      promptText,
-      'output-prompt-roteiro',
-      'Roteiro completo gerado com sucesso!',
-      modeloRoteiro,
-      SCRIPT_SYSTEM_PROMPT
-    );
+    let resultText = '';
 
-    if (resultText && Boolean(OpenRouterAPI.getApiKey())) {
-      // ITEM 5: Tamanho mínimo de 2.800 palavras para YouTube Longo - Continuação automática se menor
-      if (estiloRoteiro.includes('18-20') || estiloRoteiro.includes('Longo')) {
-        let currentWords = (resultText.trim().match(/\S+/g) || []).length;
-        let continuacoes = 0;
-        const maxContinuacoes = 2;
-        const lang = PromptEngine.getLanguageConfig(idioma);
+    if (isLongo && hasApiKey) {
+      // ITEM 2: Geração Estruturada em 7 Seções para YouTube Longo
+      UI.setButtonLoading(btn, true);
+      if (progressEl) progressEl.classList.remove('hidden');
 
-        while (currentWords < 2800 && continuacoes < maxContinuacoes) {
-          continuacoes++;
-          UI.showToast(`Roteiro com ${currentWords} palavras. Gerando continuação automática para meta de 2.800 palavras (${continuacoes}/${maxContinuacoes})...`);
-
-          const promptContinuacao = `Act as the same senior biblical documentary scriptwriter and storyteller.
-The biblical documentary script about '${ideia}' is currently at ${currentWords} words, but the REQUIRED MINIMUM is 2,800 words (it needs at least ${2800 - currentWords} more words to reach full 18-20 minutes).
-
-Below is the script generated so far:
-"""
-${resultText}
-"""
-
-TASK:
-Seamlessly continue the documentary narrative right from where it left off, maintaining the exact same storytelling narrative style (living ancient scenes, chronological sequence of biblical events, physical reality, tension, and verbatim literal Scripture quotes from ${lang.bibleTranslation}).
-CRITICAL RULES:
-1. Stay 100% focused on the title theme: '${ideia}'.
-2. Do NOT repeat scenes, passages, or stories already covered in the text above.
-3. No generic devotional applications ("giants in your life") until the final conclusion.
-4. Maximum 1 phrase of "many understand" in this continuation. Never call the biblical account a "metaphor", "symbol", "cautionary tale", or "narrative device".
-5. Provide the next dense, multi-paragraph numbered sections, followed by the solemn conclusion, ensuring the total length exceeds 2,800 words.
-6. Output EXCLUSIVELY the continuation narrative to be appended.`;
-
-          try {
-            const textoContinuacao = await OpenRouterAPI.generateContent(
-              promptContinuacao,
-              modeloRoteiro,
-              SCRIPT_SYSTEM_PROMPT
-            );
-            if (textoContinuacao && textoContinuacao.trim()) {
-              resultText = resultText.trim() + '\n\n' + textoContinuacao.trim();
-              currentWords = (resultText.trim().match(/\S+/g) || []).length;
-            } else {
-              break;
-            }
-          } catch (eCont) {
-            console.warn('Falha na expansão automática:', eCont);
-            break;
+      try {
+        resultText = await gerarRoteiroEmSeteSecoes({
+          ideia,
+          estiloRoteiro,
+          tomVoz,
+          tipoGancho,
+          idioma,
+          modelo: modeloRoteiro,
+          onProgress: (passo, total, texto, percentual) => {
+            if (progressText) progressText.textContent = texto;
+            if (progressCount) progressCount.textContent = `Passo ${passo}/${total}`;
+            if (progressBar) progressBar.style.width = `${percentual}%`;
           }
-        }
+        });
+        if (outputEl) outputEl.value = resultText;
+        UI.showToast('Roteiro completo gerado em 7 seções com sucesso!');
+        AutoSave.save();
+      } catch (err) {
+        UI.showToast(err.message, 'error');
+        console.error('Erro na geração em 7 seções:', err);
+      } finally {
+        UI.setButtonLoading(btn, false);
+        setTimeout(() => {
+          if (progressEl) progressEl.classList.add('hidden');
+        }, 4000);
+      }
+    } else {
+      // Fluxo para outros formatos (Shorts / Médio) ou sem API Key (apenas exibe o prompt estruturado)
+      const promptText = PromptEngine.generateScriptPrompt({
+        ideia,
+        estiloRoteiro,
+        tomVoz,
+        tipoGancho,
+        idioma
+      });
+
+      resultText = await executeApiCall(
+        'btn-gerar-prompt-roteiro',
+        promptText,
+        'output-prompt-roteiro',
+        'Roteiro completo gerado com sucesso!',
+        modeloRoteiro,
+        SCRIPT_SYSTEM_PROMPT
+      );
+    }
+
+    if (resultText && hasApiKey) {
+      // ITEM 3: Limitar Frases de Reforço de Historicidade no máximo 2 vezes no total
+      if (typeof limitarFrasesHistoricas === 'function') {
+        resultText = limitarFrasesHistoricas(resultText);
       }
 
-      // ITEM 2 (Ajustes Finais): Checagem de Repetição de Versículos Bíblicos por Extenso
+      // ITEM 3: Checagem de Repetição de Versículos Bíblicos por Extenso (máx 1 vez)
       if (typeof verificarERegenerarVersiculosRepetidos === 'function') {
         const repRes = await verificarERegenerarVersiculosRepetidos(resultText, idioma, modeloRoteiro);
         resultText = repRes.texto;
         if (repRes.modificado) {
-          console.log('[Checagem Repetição] Versículos duplicados foram reescritos sem repetição de citação literal.');
+          console.log('[Checagem Repetição] Versículos duplicados reescritos sem repetição de citação literal.');
         }
       }
 
-      // ITEM 3 & ITEM 6: Filtro Pós-Geração Automático (varre termos proibidos e regenera parágrafos afetados)
+      // ITEM 1, 5 & 6: Filtro Pós-Geração Automático com Contexto Vizinho e Relatório na Tela
       const filtroRes = await aplicarFiltroTermosProibidos(resultText, idioma, modeloRoteiro);
       resultText = filtroRes.texto;
 
-      // Exibe ou oculta alerta visual de termos persistentes (destaque amarelo)
+      // Exibe ou oculta alerta visual de termos persistentes (se houver)
       const alertaEl = document.getElementById('alerta-termos-proibidos');
       const alertaMsgEl = document.getElementById('alerta-termos-proibidos-msg');
       if (alertaEl && alertaMsgEl) {
@@ -3003,7 +3522,7 @@ CRITICAL RULES:
           const listaFormatada = filtroRes.termosPersistentes
             .map(p => `Parágrafo ${p.paragrafoIndex}: <mark style="background-color: #fef08a; color: #854d0e; padding: 2px 6px; border-radius: 4px; font-weight: bold;">${p.termos.join(', ')}</mark>`)
             .join(' | ');
-          alertaMsgEl.innerHTML = `Os seguintes termos proibidos persistiram após regeneração automática e requerem atenção: ${listaFormatada}`;
+          alertaMsgEl.innerHTML = `Os seguintes termos proibidos persistiram após regeneração e requerem atenção: ${listaFormatada}`;
           alertaEl.classList.remove('hidden');
         } else {
           alertaEl.classList.add('hidden');
@@ -3012,7 +3531,7 @@ CRITICAL RULES:
       }
 
       if (filtroRes.modificado) {
-        UI.showToast('Filtro pós-geração aplicado: clichês ou termos sensíveis foram substituídos automaticamente.');
+        UI.showToast(`Filtro pós-geração: ${filtroRes.totalCorrigidos} termo(s) proibido(s) corrigido(s) automaticamente.`);
       }
     }
 
