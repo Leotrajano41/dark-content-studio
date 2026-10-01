@@ -1700,7 +1700,7 @@ const FORBIDDEN_TERMS = [
   { term: 'tapestry', pattern: /\btapestry\b/i },
   { term: 'tapeçaria', pattern: /\btape[cç]aria\b/i },
 
-  // Novos clichês adicionados (Item 6)
+  // Novos clichês adicionados (Item 6 & Ajustes Finais)
   { term: 'stark reminder', pattern: /\bstark\s+reminder\b/i },
   { term: 'lembrete gritante', pattern: /\blembrete\s+(?:gritante|severo|duro)\b/i },
   { term: 'serves as a reminder', pattern: /\bserve[sd]?\s+as\s+a\s+reminder\b/i },
@@ -1718,6 +1718,18 @@ const FORBIDDEN_TERMS = [
   { term: 'profundo', pattern: /\bprofund[oa]s?\b/i },
   { term: 'multifaceted', pattern: /\bmultifaceted\b/i },
   { term: 'multifacetado', pattern: /\bmultifacetad[oa]s?\b/i },
+
+  // Palavras soltas e clichês proibidos (Ajustes Finais Solicitados)
+  { term: 'debate', pattern: /\bdebates?\b/i },
+  { term: 'stark', pattern: /\bstark(?:ly)?\b/i },
+  { term: 'shrouded in mystery', pattern: /\bshrouded\s+in\s+mystery\b/i },
+  { term: 'envolto em mistério', pattern: /\benvolto\s+em\s+mist[eé]rio\b/i },
+  { term: 'figuratively', pattern: /\bfigurative(?:ly)?\b/i },
+  { term: 'figurativamente', pattern: /\bfigurad(?:o|amente)\b/i },
+  { term: 'loomed large', pattern: /\bloomed?\s+large\b/i },
+  { term: 'pairava grande', pattern: /\bpairav(?:a|am)\s+grande\b/i },
+  { term: 'captivated minds', pattern: /\bcaptivat(?:ed?|ing)\s+(?:the\s+)?minds?\b/i },
+  { term: 'cativou mentes', pattern: /\bcativ(?:ou|am|ando)\s+(?:as\s+)?mentes\b/i },
 
   // Aberturas e termos proibidos (Item 1 & Item 4)
   { term: 'the biblical narrative includes', pattern: /\bthe\s+biblical\s+narrative\s+includes\b/i },
@@ -1839,9 +1851,120 @@ MANDATORY EDITING RULES:
   return { texto: textoFinal, termosPersistentes, modificado };
 }
 
+/**
+ * ITEM 2 (Ajustes Finais): Checagem de Repetição de Versículos Bíblicos por Extenso
+ * Se o mesmo versículo for citado por extenso mais de uma vez no roteiro,
+ * regenera os parágrafos subsequentes mantendo a narrativa histórica viva sem repetir a citação literal.
+ */
+async function verificarERegenerarVersiculosRepetidos(roteiro, idioma, modelo) {
+  if (!roteiro || typeof roteiro !== 'string') return { texto: roteiro, modificado: false };
+
+  const paragrafos = roteiro.split(/\n\s*\n/);
+  let modificado = false;
+  const lang = (typeof PromptEngine !== 'undefined' && PromptEngine.getLanguageConfig)
+    ? PromptEngine.getLanguageConfig(idioma)
+    : { name: 'English' };
+
+  const citacoesVistas = []; // { ref?: string, quoteNorm?: string, pIdx: number }
+
+  const bibleRefRegex = /\b(?:Genesis|G[êe]nesis|Exodus|[ÊE]xodo|Leviticus|Lev[ií]tico|Numbers|N[úu]meros|Deuteronomy|Deuteron[ôo]mio|Joshua|Josu[ée]|Judges|Ju[ií]zes|Ruth|Rute|1\s*Samuel|2\s*Samuel|1\s*Kings|2\s*Kings|1\s*Reis|2\s*Reis|1\s*Chronicles|2\s*Chronicles|1\s*Cr[ôo]nicas|2\s*Cr[ôo]nicas|Ezra|Esdras|Nehemiah|Neemias|Esther|Ester|Job|J[óo]|Psalms|Salmos|Proverbs|Prov[ée]rbios|Ecclesiastes|Eclesiastes|Song of Solomon|Cantares|Isaiah|Isa[ií]as|Jeremiah|Jeremias|Lamentations|Lamenta[çc][õo]es|Ezekiel|Ezequiel|Daniel|Hosea|Oseias|Joel|Amos|Am[óo]s|Obadiah|Obadias|Jonah|Jonas|Micah|Miqueias|Nahum|Naum|Habakkuk|Habacuque|Zephaniah|Sofonias|Haggai|Ageu|Zechariah|Zacarias|Malachi|Malaquias|Matthew|Mateus|Mark|Marcos|Luke|Lucas|John|Jo[ãa]o|Acts|Atos|Romans|Romanos|1\s*Corinthians|2\s*Corinthians|1\s*Cor[ií]ntios|2\s*Cor[ií]ntios|Galatians|G[áa]latas|Ephesians|Ef[ée]sios|Philippians|Filipenses|Colossians|Colossenses|1\s*Thessalonians|2\s*Thessalonians|1\s*Tessalonicenses|2\s*Tessalonicenses|1\s*Timothy|2\s*Timothy|1\s*Tim[óo]teo|2\s*Tim[óo]teo|Titus|Tito|Philemon|Filemom|Hebrews|Hebreus|James|Tiago|1\s*Peter|2\s*Peter|1\s*Pedro|2\s*Pedro|1\s*John|2\s*John|3\s*John|1\s*Jo[ãa]o|2\s*Jo[ãa]o|3\s*Jo[ãa]o|Jude|Judas|Revelation|Apocalipse)\s+\d+:\d+(?:-\d+)?\b/gi;
+
+  for (let i = 0; i < paragrafos.length; i++) {
+    let p = paragrafos[i];
+
+    // Procura citações entre aspas com mais de 25 caracteres
+    const quotesInP = [];
+    const quoteMatches = p.matchAll(/["“]([^"”]{25,})["”]/g);
+    for (const q of quoteMatches) {
+      quotesInP.push(q[1].trim());
+    }
+
+    // Procura referências bíblicas
+    const refsInP = [];
+    const refMatches = p.matchAll(bibleRefRegex);
+    for (const rm of refMatches) {
+      refsInP.push(rm[0].replace(/\s+/g, ' ').toLowerCase());
+    }
+
+    let versiculoRepetido = null;
+
+    if (quotesInP.length > 0) {
+      // Repetição de referência acompanhada de citação
+      for (const r of refsInP) {
+        const jaCitado = citacoesVistas.find(c => c.ref === r);
+        if (jaCitado) {
+          versiculoRepetido = { tipo: 'ref', valor: r, jaNoParagrafo: jaCitado.pIdx + 1 };
+          break;
+        }
+      }
+      // Ou repetição textual de citação
+      if (!versiculoRepetido) {
+        for (const q of quotesInP) {
+          const qNorm = q.toLowerCase().replace(/[^a-z0-9]/g, '');
+          const jaCitado = citacoesVistas.find(c => {
+            const cNorm = c.quoteNorm;
+            return cNorm && (cNorm.includes(qNorm.slice(0, 35)) || qNorm.includes(cNorm.slice(0, 35)));
+          });
+          if (jaCitado) {
+            versiculoRepetido = { tipo: 'quote', valor: q.slice(0, 45) + '...', jaNoParagrafo: jaCitado.pIdx + 1 };
+            break;
+          }
+        }
+      }
+    }
+
+    if (versiculoRepetido) {
+      console.log(`[Checagem Repetição] Parágrafo ${i + 1} repete versículo citado no parágrafo ${versiculoRepetido.jaNoParagrafo}:`, versiculoRepetido.valor);
+
+      const promptReescrita = `Act as an expert biblical documentary script editor.
+The following paragraph repeats a literal Scripture citation that was ALREADY quoted verbatim earlier in the script (Paragraph ${versiculoRepetido.jaNoParagrafo}).
+
+ORIGINAL PARAGRAPH:
+"""${p}"""
+
+MANDATORY EDITING RULES:
+1. STRICT RULE: DO NOT quote the repeated verse (${versiculoRepetido.valor}) verbatim again.
+2. Advance the narrative! Rephrase the paragraph to focus on the historical context, scene development, ancient atmosphere, or subsequent events without repeating the verbatim quote.
+3. Keep the exact same storytelling power, tension, historical fidelity, and language (${lang.name}).
+4. Eliminate any forbidden clichés or repetition.
+5. Output EXCLUSIVELY the rewritten paragraph text. Do NOT include commentary, quotes around the paragraph, or preamble.`;
+
+      try {
+        const novoP = await OpenRouterAPI.generateContent(
+          promptReescrita,
+          modelo,
+          SCRIPT_SYSTEM_PROMPT
+        );
+        if (novoP && novoP.trim()) {
+          p = novoP.trim().replace(/^["']|["']$/g, '');
+          paragrafos[i] = p;
+          modificado = true;
+        }
+      } catch (err) {
+        console.warn(`[Checagem Repetição] Falha ao regenerar parágrafo repetido ${i + 1}:`, err);
+      }
+    }
+
+    if (quotesInP.length > 0) {
+      for (const r of refsInP) {
+        citacoesVistas.push({ ref: r, pIdx: i });
+      }
+      for (const q of quotesInP) {
+        citacoesVistas.push({
+          quoteNorm: q.toLowerCase().replace(/[^a-z0-9]/g, ''),
+          pIdx: i
+        });
+      }
+    }
+  }
+
+  return { texto: paragrafos.join('\n\n'), modificado };
+}
+
 window.SCRIPT_SYSTEM_PROMPT = SCRIPT_SYSTEM_PROMPT;
 window.FORBIDDEN_TERMS = FORBIDDEN_TERMS;
 window.aplicarFiltroTermosProibidos = aplicarFiltroTermosProibidos;
+window.verificarERegenerarVersiculosRepetidos = verificarERegenerarVersiculosRepetidos;
 
 /**
  * Configurações de Duração e Metas Explícitas de Palavras por Formato
@@ -2856,6 +2979,15 @@ CRITICAL RULES:
             console.warn('Falha na expansão automática:', eCont);
             break;
           }
+        }
+      }
+
+      // ITEM 2 (Ajustes Finais): Checagem de Repetição de Versículos Bíblicos por Extenso
+      if (typeof verificarERegenerarVersiculosRepetidos === 'function') {
+        const repRes = await verificarERegenerarVersiculosRepetidos(resultText, idioma, modeloRoteiro);
+        resultText = repRes.texto;
+        if (repRes.modificado) {
+          console.log('[Checagem Repetição] Versículos duplicados foram reescritos sem repetição de citação literal.');
         }
       }
 
