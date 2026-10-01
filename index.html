@@ -208,12 +208,18 @@ body {
 
 .api-form-grid {
   display: grid;
-  grid-template-columns: 2fr 1.5fr 1fr;
+  grid-template-columns: 1.4fr 1.2fr 1.2fr auto;
   gap: 16px;
   align-items: flex-end;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
+  .api-form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
   .api-form-grid {
     grid-template-columns: 1fr;
   }
@@ -845,11 +851,19 @@ textarea.h-180 {
         </div>
 
         <div class="form-group">
-          <label for="input-api-model">
-            Modelo de IA (OpenRouter)
-            <span class="tooltip-wrapper" data-tooltip="Digite o nome do modelo de IA que deseja usar na OpenRouter (ex: 'gpt-4o', 'anthropic/claude-3.5-sonnet', 'google/gemini-2.0-flash-001', 'deepseek/deepseek-r1').">?</span>
+          <label for="input-api-model-ideias">
+            Modelo para Ideias/SEO
+            <span class="tooltip-wrapper" data-tooltip="Modelo de IA usado para ideias de vídeo, títulos, thumbnails e SEO (padrão: openai/gpt-4o-mini).">?</span>
           </label>
-          <input type="text" id="input-api-model" class="form-control" placeholder="google/gemini-2.0-flash-001">
+          <input type="text" id="input-api-model-ideias" class="form-control" placeholder="openai/gpt-4o-mini">
+        </div>
+
+        <div class="form-group">
+          <label for="input-api-model-roteiro">
+            Modelo para Roteiro
+            <span class="tooltip-wrapper" data-tooltip="Modelo de IA usado para a geração do roteiro longo e completo (padrão: anthropic/claude-haiku-4.5).">?</span>
+          </label>
+          <input type="text" id="input-api-model-roteiro" class="form-control" placeholder="anthropic/claude-haiku-4.5">
         </div>
 
         <div class="form-group form-group-btn">
@@ -1058,6 +1072,15 @@ textarea.h-180 {
             </svg>
             <span class="btn-text">Gerar Roteiro Completo com IA</span>
           </button>
+        </div>
+
+        <!-- Alerta de Termos Proibidos / Sensíveis Persistentes (Item 3) -->
+        <div id="alerta-termos-proibidos" class="hidden" style="background: rgba(234, 179, 8, 0.15); border: 1px solid #eab308; color: #fef08a; padding: 12px 16px; border-radius: 8px; margin-top: 20px; font-size: 0.92rem;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; margin-bottom: 4px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            <span>Atenção: Termos sensíveis ou clichês proibidos detectados no roteiro</span>
+          </div>
+          <div id="alerta-termos-proibidos-msg" style="margin-top: 4px; line-height: 1.4;"></div>
         </div>
 
         <!-- Output 2: Roteiro -->
@@ -1503,51 +1526,77 @@ textarea.h-180 {
  */
 const OpenRouterAPI = {
   KEY_STORAGE_KEY: 'dark_studio_openrouter_api_key',
-  MODEL_STORAGE_KEY: 'dark_studio_openrouter_model',
-  DEFAULT_MODEL: 'google/gemini-2.0-flash-001',
+  MODEL_IDEAS_STORAGE_KEY: 'dark_studio_openrouter_model_ideas',
+  MODEL_ROTEIRO_STORAGE_KEY: 'dark_studio_openrouter_model_roteiro',
+  MODEL_LEGACY_KEY: 'dark_studio_openrouter_model',
+  DEFAULT_MODEL_IDEAS: 'openai/gpt-4o-mini',
+  DEFAULT_MODEL_ROTEIRO: 'anthropic/claude-haiku-4.5',
 
   getApiKey() {
     return localStorage.getItem(this.KEY_STORAGE_KEY) || '';
   },
 
-  getModel() {
-    return localStorage.getItem(this.MODEL_STORAGE_KEY) || this.DEFAULT_MODEL;
+  getModelIdeas() {
+    return localStorage.getItem(this.MODEL_IDEAS_STORAGE_KEY) || this.DEFAULT_MODEL_IDEAS;
   },
 
-  saveConfig(apiKey, model) {
-    const cleanKey = apiKey.trim();
-    const cleanModel = model.trim() || this.DEFAULT_MODEL;
+  getModelRoteiro() {
+    return localStorage.getItem(this.MODEL_ROTEIRO_STORAGE_KEY) || this.DEFAULT_MODEL_ROTEIRO;
+  },
+
+  saveConfig(apiKey, modelIdeas, modelRoteiro) {
+    const cleanKey = (apiKey || '').trim();
+    const cleanModelIdeas = (modelIdeas && modelIdeas.trim()) ? modelIdeas.trim() : this.DEFAULT_MODEL_IDEAS;
+    const cleanModelRoteiro = (modelRoteiro && modelRoteiro.trim()) ? modelRoteiro.trim() : this.DEFAULT_MODEL_ROTEIRO;
 
     localStorage.setItem(this.KEY_STORAGE_KEY, cleanKey);
-    localStorage.setItem(this.MODEL_STORAGE_KEY, cleanModel);
-    return { apiKey: cleanKey, model: cleanModel };
+    localStorage.setItem(this.MODEL_IDEAS_STORAGE_KEY, cleanModelIdeas);
+    localStorage.setItem(this.MODEL_ROTEIRO_STORAGE_KEY, cleanModelRoteiro);
+    return { apiKey: cleanKey, modelIdeas: cleanModelIdeas, modelRoteiro: cleanModelRoteiro };
   },
 
-  async generateContent(promptText) {
+  async generateContent(promptText, specificModel = null, customSystemPrompt = null) {
     const apiKey = this.getApiKey();
-    const model = this.getModel();
+    const model = specificModel || this.getModelIdeas();
 
     if (!apiKey) {
       throw new Error('API Key da OpenRouter não configurada. Insira sua chave no painel superior.');
     }
 
-    const endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+    const isDirectOpenAi = apiKey.startsWith('sk-proj-') || (!apiKey.startsWith('sk-or-') && apiKey.startsWith('sk-'));
+    const endpoint = isDirectOpenAi
+      ? 'https://api.openai.com/v1/chat/completions'
+      : 'https://openrouter.ai/api/v1/chat/completions';
+
+    let activeModel = model;
+    if (isDirectOpenAi) {
+      if (activeModel.includes('gpt-4o-mini')) activeModel = 'gpt-4o-mini';
+      else if (activeModel.includes('gpt-4o')) activeModel = 'gpt-4o';
+      else if (activeModel.includes('claude')) activeModel = 'gpt-4o-mini';
+      else if (activeModel.startsWith('openai/')) activeModel = activeModel.replace('openai/', '');
+    }
+
+    const defaultSystemPrompt = 'You are an expert biblical documentary scriptwriter and YouTube dark channel strategist following the proven formula of "Explicador Bíblico".\n\nCRITICAL MANDATORY RULES FOR ALL GENERATIONS:\n1. HISTORICAL & BIBLICAL TRUTH: Always treat the biblical narrative as literal truth and real history. STRICTLY FORBIDDEN: never use skepticism, never use terms or concepts like "myth", "legend", "debate", "were they real", "scholars suggest", "traditional theology may not reveal", or any translations/equivalents in Portuguese, Spanish, or any other language (e.g., "mito", "lenda", "debate", "se eram reais", "estudiosos sugerem", "a teologia tradicional oculta").\n2. STRICTLY CANONICAL TEXT: Strictly restrict all content to the 66 canonical books of the Bible. STRICTLY FORBIDDEN: never include extra-biblical theories, secular ancient civilizational hypotheses, human evolutionary ancestry theories, or apocryphal/pseudepigraphal books (such as the Book of Enoch / Livro de Enoque).\n3. EXACT SCRIPTURAL TRANSLATIONS: Direct Bible quotations must always be 100% literal from the authorized canonical translation for the target language:\n   - English: King James Version (KJV)\n   - Portuguese: João Ferreira de Almeida (JFA)\n   - Spanish: Reina-Valera 1909 (RVR1909)\n4. STRICT LANGUAGE COMPLIANCE: Always deliver 100% of the output in the requested language.';
+
+    const headers = {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    };
+    if (!isDirectOpenAi) {
+      headers['HTTP-Referer'] = window.location.href;
+      headers['X-Title'] = 'Dark Studio Pro';
+    }
 
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': window.location.href,
-          'X-Title': 'Dark Studio Pro'
-        },
+        headers: headers,
         body: JSON.stringify({
-          model: model,
+          model: activeModel,
           messages: [
             {
               role: 'system',
-              content: 'You are an expert biblical documentary scriptwriter and YouTube dark channel strategist following the proven formula of "Explicador Bíblico".\n\nCRITICAL MANDATORY RULES FOR ALL GENERATIONS:\n1. HISTORICAL & BIBLICAL TRUTH: Always treat the biblical narrative as literal truth and real history. STRICTLY FORBIDDEN: never use skepticism, never use terms or concepts like "myth", "legend", "debate", "were they real", "scholars suggest", "traditional theology may not reveal", or any translations/equivalents in Portuguese, Spanish, or any other language (e.g., "mito", "lenda", "debate", "se eram reais", "estudiosos sugerem", "a teologia tradicional oculta").\n2. STRICTLY CANONICAL TEXT: Strictly restrict all content to the 66 canonical books of the Bible. STRICTLY FORBIDDEN: never include extra-biblical theories, secular ancient civilizational hypotheses, human evolutionary ancestry theories, or apocryphal/pseudepigraphal books (such as the Book of Enoch / Livro de Enoque).\n3. EXACT SCRIPTURAL TRANSLATIONS: Direct Bible quotations must always be 100% literal from the authorized canonical translation for the target language:\n   - English: King James Version (KJV)\n   - Portuguese: João Ferreira de Almeida (JFA)\n   - Spanish: Reina-Valera 1909 (RVR1909)\n4. STRICT LANGUAGE COMPLIANCE: Always deliver 100% of the output in the requested language.'
+              content: customSystemPrompt || defaultSystemPrompt
             },
             {
               role: 'user',
@@ -1590,6 +1639,163 @@ const OpenRouterAPI = {
     }
   }
 };
+window.OpenRouterAPI = OpenRouterAPI;
+
+/**
+ * REGRAS DE CONTEÚDO (Item 2) - System Prompt Exclusivo para Geração de Roteiro
+ */
+const SCRIPT_SYSTEM_PROMPT = `You are a master biblical documentary scriptwriter and theologian specializing in canonical deep-dives following the formula of 'Explicador Bíblico'.
+
+ABSOLUTE CANONICAL RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
+1. FACT VS INTERPRETATION:
+   - State as absolute historical and sacred FACT ONLY what the literal canonical biblical text explicitly states, always accompanied by verbatim scripture quotes (KJV for English, João Ferreira de Almeida for Portuguese, Reina-Valera 1909 for Spanish).
+   - Any theological commentary, traditions, or scholarly views must be explicitly framed as interpretations, using phrases like:
+     "Many understand this passage as...", "Traditional interpreters view this as...", "Theological tradition often reads this as..." (or equivalents in PT/ES).
+2. STRICTLY PROHIBITED THEMES & CONCEPTS:
+   - STRICTLY FORBIDDEN: Any language of genetic, biological, or racial purity/corruption (e.g. NEVER use "genetic", "bloodline", "hybrid", "pure humans", "gene pool", or any equivalent in PT/ES).
+   - STRICTLY FORBIDDEN: Justifications for the destruction or ethnic wiping out of entire peoples.
+   - STRICTLY FORBIDDEN: Any content or lore derived from the Book of Enoch (1 Enoch), Book of Jasher, or Jubilees (such as angels teaching metallurgy, astrology, naming specific fallen angels like Azazel/Semyaza, or corrupting human seed), EVEN IF the Book of Enoch is not explicitly named.
+   - STRICTLY FORBIDDEN: Fabricating numbers, measurements, or historical facts that the 66 canonical biblical books do not contain.
+   - STRICTLY FORBIDDEN: Immediate temporal markers such as "tonight", "this morning", "today in this video", "esta noite", "esta manhã".
+3. STRICT SCRIPTURAL FIDELITY:
+   - Scripture quotes must be literal and verbatim from the target language's authorized Bible version (English: KJV).
+   - Deliver 100% of the script in the selected content language.`;
+
+/**
+ * FILTRO AUTOMÁTICO PÓS-GERAÇÃO (Item 3)
+ * Lista de clichês e termos proibidos monitorados
+ */
+const FORBIDDEN_TERMS = [
+  // Clichês de IA / YouTube (Item 3)
+  { term: 'what if I told you', pattern: /\bwhat\s+if\s+i\s+told\s+you\b/i },
+  { term: 'in the annals', pattern: /\bin\s+the\s+annals\b/i },
+  { term: 'nos anais', pattern: /\bnos\s+anais\b/i },
+  { term: 'embark', pattern: /\bembark(?:s|ing|ed)?\b/i },
+  { term: 'embarque', pattern: /\bembarqu(?:e|em|amos|ar)\b/i },
+  { term: 'journey through', pattern: /\bjourney\s+through\b/i },
+  { term: 'jornada através', pattern: /\bjornada\s+atrav[eé]s\b/i },
+  { term: 'delve', pattern: /\bdelv(?:e|es|ing|ed)?\b/i },
+  { term: 'dive deep', pattern: /\bdive\s+deep(?:er)?\b/i },
+  { term: 'deep dive', pattern: /\bdeep\s+dive\b/i },
+  { term: 'mergulhe fundo', pattern: /\bmergulh(?:e|ar|ando)\s+fundo\b/i },
+  { term: 'enigmatic', pattern: /\benigmatic\b/i },
+  { term: 'enigmático', pattern: /\benigm[aá]tico\b/i },
+  { term: 'the very fabric', pattern: /\bthe\s+very\s+fabric\b/i },
+  { term: 'o próprio tecido', pattern: /\bo\s+pr[oó]prio\s+tecido\b/i },
+  { term: 'challenge everything you thought', pattern: /\bchallenge\s+everything\s+you\s+thought\b/i },
+  { term: 'testament to', pattern: /\btestament\s+to\b/i },
+  { term: 'testemunho de', pattern: /\btestemunho\s+de\b/i },
+  { term: 'tapestry', pattern: /\btapestry\b/i },
+  { term: 'tapeçaria', pattern: /\btape[cç]aria\b/i },
+
+  // Pureza genética/racial & termos do Item 2
+  { term: 'genetic', pattern: /\bgenetic(?:s|ally)?\b/i },
+  { term: 'genética', pattern: /\bgen[eé]tic[oa]s?\b/i },
+  { term: 'bloodline', pattern: /\bbloodlines?\b/i },
+  { term: 'linhagem sanguínea', pattern: /\blinhagem\s+sangu[ií]nea\b/i },
+  { term: 'hybrid', pattern: /\bhybrids?\b/i },
+  { term: 'híbrido', pattern: /\bh[ií]bridos?\b/i },
+  { term: 'pure humans', pattern: /\bpure\s+humans?\b/i },
+  { term: 'humanos puros', pattern: /\bhumanos?\s+puros?\b/i },
+  { term: 'gene pool', pattern: /\bgene\s+pools?\b/i },
+
+  // Marcadores de tempo imediato (Item 2)
+  { term: 'tonight', pattern: /\btonight\b/i },
+  { term: 'esta noite', pattern: /\besta\s+noite\b/i },
+  { term: 'this morning', pattern: /\bthis\s+morning\b/i },
+  { term: 'esta manhã', pattern: /\besta\s+manh[aã]\b/i },
+
+  // Ceticismo & Livros apócrifos proibidos
+  { term: 'myth', pattern: /\bmyths?\b/i },
+  { term: 'mito', pattern: /\bmitos?\b/i },
+  { term: 'legend', pattern: /\blegends?\b/i },
+  { term: 'lenda', pattern: /\blendas?\b/i },
+  { term: 'were they real', pattern: /\bwere\s+they\s+real\b/i },
+  { term: 'scholars suggest', pattern: /\bscholars\s+suggest\b/i },
+  { term: 'traditional theology may not reveal', pattern: /\btraditional\s+theology\s+may\s+not\s+reveal\b/i },
+  { term: 'book of enoch', pattern: /\bbook\s+of\s+enoch\b/i },
+  { term: 'livro de enoque', pattern: /\blivro\s+de\s+enoque\b/i }
+];
+
+/**
+ * Função de Varredura e Regeneração Automática de Parágrafos (Item 3)
+ * Varre o roteiro por termos proibidos e clichês. Se encontrar, regenera apenas
+ * os parágrafos afetados (máximo de 2 tentativas por parágrafo).
+ */
+async function aplicarFiltroTermosProibidos(roteiro, idioma, modelo) {
+  if (!roteiro || typeof roteiro !== 'string') return { texto: roteiro, termosPersistentes: [], modificado: false };
+
+  // Divide em blocos/parágrafos
+  const paragrafos = roteiro.split(/\n\s*\n/);
+  let modificado = false;
+  let termosPersistentes = [];
+  const lang = (typeof PromptEngine !== 'undefined' && PromptEngine.getLanguageConfig)
+    ? PromptEngine.getLanguageConfig(idioma)
+    : { name: 'English' };
+
+  for (let pIdx = 0; pIdx < paragrafos.length; pIdx++) {
+    let paragrafo = paragrafos[pIdx];
+    let termosEncontrados = FORBIDDEN_TERMS.filter(f => f.pattern.test(paragrafo));
+
+    if (termosEncontrados.length === 0) continue;
+
+    console.log(`[Filtro Pós-Geração] Parágrafo ${pIdx + 1} contém termos proibidos:`, termosEncontrados.map(t => t.term));
+
+    // Regenera automaticamente só o parágrafo afetado (máx. 2 tentativas)
+    let tentativas = 0;
+    while (termosEncontrados.length > 0 && tentativas < 2) {
+      tentativas++;
+      try {
+        const rewritePrompt = `Act as an expert biblical script editor.
+Rewrite the following single paragraph from a biblical documentary script to strictly eliminate every prohibited cliché, forbidden term, or skepticism.
+
+ORIGINAL PARAGRAPH:
+"""${paragrafo}"""
+
+PROHIBITED TERMS DETECTED:
+${termosEncontrados.map(t => `"${t.term}"`).join(', ')}
+
+MANDATORY EDITING RULES:
+1. Rephrase the paragraph completely to eliminate all clichés ("what if I told you", "in the annals", "embark", "journey through", "delve", "dive deep", "enigmatic", "the very fabric", "challenge everything you thought", "testament to", "tapestry") and any forbidden genetic/racial concepts ("genetic", "bloodline", "hybrid", "pure humans", "gene pool").
+2. State as sacred fact ONLY what canonical Scripture says, with literal quotes where applicable. Frame any theological interpretations as "many understand this passage as...".
+3. Do NOT use temporal markers like "tonight" or "this morning".
+4. Keep the exact same narrative tone, historical depth, and content language (${lang.name}).
+5. Output EXCLUSIVELY the rewritten paragraph text. Do NOT include greetings, preamble, quotes around the paragraph, or commentary.`;
+
+        const novoParagrafo = await OpenRouterAPI.generateContent(
+          rewritePrompt,
+          modelo,
+          SCRIPT_SYSTEM_PROMPT
+        );
+
+        if (novoParagrafo && novoParagrafo.trim()) {
+          paragrafo = novoParagrafo.trim().replace(/^["']|["']$/g, '');
+          modificado = true;
+          termosEncontrados = FORBIDDEN_TERMS.filter(f => f.pattern.test(paragrafo));
+        }
+      } catch (err) {
+        console.warn(`[Filtro Pós-Geração] Falha ao regenerar parágrafo ${pIdx + 1}:`, err);
+        break;
+      }
+    }
+
+    if (termosEncontrados.length > 0) {
+      termosPersistentes.push({
+        paragrafoIndex: pIdx + 1,
+        termos: termosEncontrados.map(t => t.term)
+      });
+    }
+
+    paragrafos[pIdx] = paragrafo;
+  }
+
+  const textoFinal = paragrafos.join('\n\n');
+  return { texto: textoFinal, termosPersistentes, modificado };
+}
+
+window.SCRIPT_SYSTEM_PROMPT = SCRIPT_SYSTEM_PROMPT;
+window.FORBIDDEN_TERMS = FORBIDDEN_TERMS;
+window.aplicarFiltroTermosProibidos = aplicarFiltroTermosProibidos;
 
 /**
  * Configurações de Duração e Metas Explícitas de Palavras por Formato
@@ -1668,19 +1874,27 @@ const PromptEngine = {
 Generate exactly 10 viral video title and theme ideas for a video about: '${tema}'.
 
 CRITICAL MANDATORY GUIDELINES:
-1. STRICT LANGUAGE COMPLIANCE: All 10 titles, themes, and summaries MUST be written 100% in ${lang.name}. Never output in any other language.
+1. STRICT LANGUAGE COMPLIANCE: All 10 titles, themes, and premises MUST be written 100% in ${lang.name}. Never output in any other language.
 2. BIBLICAL TRUTH (SACRED FACT): Always treat the biblical narrative as literal truth and real sacred history.
    - STRICTLY FORBIDDEN: Never use skepticism, doubts, or secular speculative framing.
    - PROHIBITED WORDS/CONCEPTS: Never use terms like "myth", "legend", "debate", "were they real", "scholars suggest", "traditional theology may not reveal", or equivalents in any language ("mito", "lenda", "debate", "se eram reais", "estudiosos sugerem", "a teologia tradicional oculta").
 3. CANONICAL SCRIPTURE ONLY: Restrict all content strictly to the 66 canonical books of the Bible.
    - STRICTLY FORBIDDEN: Never cite or include extra-biblical theories, secular ancient civilizational speculations, evolutionary human ancestry theories, or apocryphal/pseudepigraphal books (such as the Book of Enoch / Livro de Enoque).
-4. STRICT TITLE FORMATTING RULES (HIGH CTR):
+4. MANDATORY TITLE VARIETY & FORMATTING (HIGH CTR - ITEM 5):
    - MAXIMUM OF 1 WORD IN CAPS LOCK per title (e.g., "${lang.titleHookSample}").
-   - NEVER write the entire title in uppercase. Never use more than 1 word in ALL CAPS.
-   - Include compelling curiosity hooks, such as "The REAL...", "(Many Miss This)", "(What Scripture Actually Says)" adapted to ${lang.name}.
+   - NEVER write an entire title in uppercase. Never use more than 1 word in ALL CAPS.
+   - DIVERSIFY TITLE STRUCTURES INTENTIONALLY across the 10 ideas!
+     * DO NOT repeat the same pattern like "The X... (Parentheses)" on every title.
+     * Vary the structures across:
+       a) Provocative Questions (e.g., "Why Did the Giants Vanish After the Flood?")
+       b) Direct Canonical Revelations (e.g., "What Scripture ACTUALLY Says About Og of Bashan")
+       c) Biblical Paradoxes / Mysteries (e.g., "The Untold Truth of the Pre-Flood World")
+       d) Parenthetical Curiosity Hooks (e.g., "The GIANTS Before the Flood (Many Miss This)")
+       e) Solemn Warnings / Historic Accounts (e.g., "How the Pre-Flood Giants Defied God's Law")
+     * Each of the 10 titles must have a distinct grammatical format.
 
 OUTPUT FORMAT:
-Provide the 10 ideas numbered 1 to 10 in ${lang.name}, with Title (max 1 word in CAPS + curiosity hook) followed by a short 1-2 sentence hook premise.`;
+Provide the 10 ideas numbered 1 to 10 in ${lang.name}, with Title (max 1 word in CAPS, varied structure) followed by a short 1-2 sentence hook premise.`;
   },
 
   generateScriptPrompt({ ideia, estiloRoteiro, tomVoz, tipoGancho, idioma }) {
@@ -1759,14 +1973,18 @@ Create a complete narration script about: '${ideia}'.
 Tone of voice: '${tomVoz}'.
 Opening hook style: '${tipoGancho}'.
 
-MANDATORY BIBLICAL AND CONTENT RULES (NON-NEGOTIABLE):
+MANDATORY BIBLICAL AND CONTENT RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
 1. 100% LANGUAGE COMPLIANCE: The entire script MUST be written 100% in ${lang.name}.
-2. BIBLICAL TRUTH (SACRED FACT):
-   - Always treat the biblical narrative as literal truth and real history.
-   - PROHIBITED WORDS/CONCEPTS: Never use skepticism, doubts, or terms like "myth", "legend", "debate", "were they real", "scholars suggest", "traditional theology may not reveal", or equivalents in any language ("mito", "lenda", "debate", "se eram reais", "estudiosos sugerem", "a teologia tradicional oculta").
-3. STRICTLY CANONICAL TEXT:
-   - Restrict the entire script to the 66 canonical books of the Bible.
-   - STRICTLY FORBIDDEN: Never cite or include extra-biblical theories, secular ancient civilizational speculations, evolutionary human ancestry theories, or apocryphal/pseudepigraphal books (such as the Book of Enoch / Livro de Enoque).
+2. FACT VS INTERPRETATION (ITEM 2):
+   - State as absolute historical fact ONLY what the biblical text literally says, accompanied by verbatim canonical scripture quotes.
+   - Any theological interpretation or secondary viewpoint MUST be introduced with phrases such as: "many understand this passage as...", "interpreters view this as...", or "theological tradition notes that...".
+3. STRICTLY FORBIDDEN THEMES & CONCEPTS (ITEM 2):
+   - ZERO TOLERANCE: Never use any language of genetic purity, DNA, racial hierarchy, or biological corruption (STRICTLY FORBIDDEN: "genetic", "bloodline", "hybrid", "pure humans", "gene pool").
+   - ZERO TOLERANCE: Never justify the destruction or wiping out of entire peoples.
+   - ZERO TOLERANCE: Never introduce lore, myths, or concepts derived from the Book of Enoch (such as fallen angels teaching metallurgy, astrology, naming Watchers/Azazel/Semyaza), even if the Book of Enoch is not explicitly named.
+   - ZERO TOLERANCE: Never invent numbers, dates, measurements, or facts not present in the 66 canonical biblical books.
+   - ZERO TOLERANCE: Never use temporal markers like "tonight", "this morning", "today in this video".
+   - ZERO TOLERANCE: Never use AI clichés like "what if I told you", "in the annals", "embark", "journey through", "delve", "dive deep", "enigmatic", "the very fabric", "challenge everything you thought", "testament to", "tapestry".
 4. LITERAL SCRIPTURE QUOTATIONS:
    - ${lang.citationRule}
    - When quoting scripture (e.g. Genesis 6:1-4, Numbers 13:33, Deuteronomy 3:11), quote the literal, exact text word-for-word from ${lang.bibleTranslation}.
@@ -2078,8 +2296,9 @@ const AutoSave = {
   DEBOUNCE_DELAY: 600,
   _debounceTimer: null,
 
-  // Todos os campos monitorados (exceto API Key e Modelo, já gerenciados à parte)
+  // Todos os campos monitorados
   FIELD_IDS: [
+    'input-api-model-ideias', 'input-api-model-roteiro',
     'select-tema', 'input-tema-custom',
     'select-idioma', 'input-idioma-custom',
     'select-estilo-roteiro',
@@ -2115,18 +2334,51 @@ const AutoSave = {
   restore() {
     try {
       const raw = localStorage.getItem(this.SESSION_KEY);
-      if (!raw) return false;
+      if (!raw) {
+        this.garantirPadroesSelects();
+        return false;
+      }
       const session = JSON.parse(raw);
       const hasContent = Object.values(session).some(v => v && v.trim() !== '');
-      if (!hasContent) return false;
+      if (!hasContent) {
+        this.garantirPadroesSelects();
+        return false;
+      }
+
+      const validEstilos = [
+        'YouTube Longo (18-20 minutos)',
+        'YouTube Médio (5-8 minutos)',
+        'Shorts/Reels — YouTube, Instagram, Facebook (50-60 segundos)',
+        'Shorts/Reels Estendido — YouTube, Instagram, Facebook (até 3 minutos)'
+      ];
 
       // 1ª passagem: define todos os valores silenciosamente
       this.FIELD_IDS.forEach(id => {
         const el = document.getElementById(id);
-        if (el && session[id] !== undefined) {
+        if (!el || session[id] === undefined) return;
+
+        // Correção de Bug (Item 6): Campo Estilo de Roteiro nunca fica vazio
+        if (id === 'select-estilo-roteiro') {
+          const val = session[id];
+          if (validEstilos.includes(val)) {
+            el.value = val;
+          } else if (val && val.includes('18-20')) {
+            el.value = 'YouTube Longo (18-20 minutos)';
+          } else if (val && val.includes('5-8')) {
+            el.value = 'YouTube Médio (5-8 minutos)';
+          } else if (val && val.includes('3 minutos')) {
+            el.value = 'Shorts/Reels Estendido — YouTube, Instagram, Facebook (até 3 minutos)';
+          } else if (val && val.includes('50-60')) {
+            el.value = 'Shorts/Reels — YouTube, Instagram, Facebook (50-60 segundos)';
+          } else {
+            el.value = 'YouTube Longo (18-20 minutos)';
+          }
+        } else {
           el.value = session[id];
         }
       });
+
+      this.garantirPadroesSelects();
 
       // 2ª passagem: dispara eventos de change nos selects para mostrar/ocultar campos custom
       this.FIELD_IDS.forEach(id => {
@@ -2158,6 +2410,23 @@ const AutoSave = {
     }
   },
 
+  garantirPadroesSelects() {
+    const elEstilo = document.getElementById('select-estilo-roteiro');
+    if (elEstilo && (!elEstilo.value || !Array.from(elEstilo.options).some(o => o.value === elEstilo.value && o.value !== ''))) {
+      elEstilo.value = 'YouTube Longo (18-20 minutos)';
+    }
+
+    const inputModelIdeias = document.getElementById('input-api-model-ideias');
+    if (inputModelIdeias && !inputModelIdeias.value.trim()) {
+      inputModelIdeias.value = OpenRouterAPI.getModelIdeas();
+    }
+
+    const inputModelRoteiro = document.getElementById('input-api-model-roteiro');
+    if (inputModelRoteiro && !inputModelRoteiro.value.trim()) {
+      inputModelRoteiro.value = OpenRouterAPI.getModelRoteiro();
+    }
+  },
+
   debouncedSave() {
     clearTimeout(this._debounceTimer);
     this._debounceTimer = setTimeout(() => this.save(), this.DEBOUNCE_DELAY);
@@ -2183,45 +2452,67 @@ function limparTextoParaNarracao(texto) {
 
   let limpo = texto;
 
-  // 1. Remove cabeçalho inicial de roteiro (ex: "**Roteiro: ...**", "# Script ...", "**Guion: ...**")
+  // 1. Remove linhas de título ("Title: ...", "Título: ...", "# ...", "## ...", "### ...")
+  limpo = limpo.replace(/^\s*(?:Title|Título|Titulo)\s*:[^\n]*/gmi, '');
+  limpo = limpo.replace(/^\s*#+\s*[^\n]*/gm, '');
+
+  // 2. Remove linhas completas de cabeçalho de seção em negrito (ex: "**1. The Origin of the Giants...**", "**Immersive Introduction (0-45s):**", "**The Giants Before the Flood...**")
+  limpo = limpo.replace(/^\s*\*{2}(?:\d+[\.:\s]+)?[A-ZÀ-Ú][^\n*]+\*{2}\s*:?\s*$/gm, '');
+
+  // 3. Remove separadores horizontais markdown (---, ***, ___)
+  limpo = limpo.replace(/^\s*[-*_]{3,}\s*$/gm, '');
+
+  // 4. Remove linhas e menções de WORD COUNT / contagem de palavras
+  limpo = limpo.replace(/^\s*(?:WORD\s+COUNT|CONTAGEM\s+DE\s+PALAVRAS|RECUENTO\s+DE\s+PALABRAS)\b[^\n]*/gmi, '');
+  limpo = limpo.replace(/\bWORD\s+COUNT\b[^\n]*/gi, '');
+  limpo = limpo.replace(/\(\s*(?:approx\.?|aproximadamente)?\s*\d+(?:\s*[-–a]\s*\d+)?\s*(?:palavras|words|palabras)\s*\)/gi, '');
+  limpo = limpo.replace(/\(\s*(?:word\s+count|contagem\s+de\s+palavras|recuento\s+de\s+palabras)\s*:[^)]*\)/gi, '');
+  limpo = limpo.replace(/\(\s*meta:?[^)]+\)/gi, '');
+
+  // 5. Remove cabeçalho inicial de roteiro (ex: "**Roteiro: ...**", "# Script ...", "**Guion: ...**")
   limpo = limpo.replace(/^\s*(?:#+\s*)?(?:\*{0,2}(?:Roteiro|Script|Guión|Guion):\s*.*?\*{0,2}\s*\n+)+/im, '');
 
-  // 2. Remove qualquer marcador entre colchetes, com ou sem asteriscos e dois pontos ao redor:
+  // 6. Remove qualquer marcador entre colchetes, com ou sem asteriscos e dois pontos ao redor:
   // ex: **[Hook (0-15s)]:**, [Hook], [Ponto 1: Contexto], [Point 1: The Nephilim], [Conclusion], etc.
   limpo = limpo.replace(/\*{0,2}\[[^\]]*\]\*{0,2}\s*:?/g, '');
 
-  // 3. Remove contagens de palavras e metas entre parênteses ou colchetes:
-  // ex: (350-450 words), (130-160 palavras), (word count: 400), (meta: ...), (approx. 400 words)
-  limpo = limpo.replace(/\(\s*(?:approx\.?|aproximadamente)?\s*\d+(?:\s*[-–a]\s*\d+)?\s*(?:palavras|words|palabras)\s*\)/gi, '');
-  limpo = limpo.replace(/\(\s*(?:word count|contagem de palavras|recuento de palabras)\s*:[^)]+\)/gi, '');
-  limpo = limpo.replace(/\(\s*meta:?[^)]+\)/gi, '');
-
-  // 4. Remove marcadores de cabeçalho sem colchetes em linhas isoladas ou com tempo
+  // 7. Remove marcadores de cabeçalho sem colchetes em linhas isoladas ou com tempo
   // ex: HOOK (0-15s):, INTRODUÇÃO (0-45s):, PONTO 1: Título, POINT 1:, PUNTO 1:, CONCLUSÃO:, CONCLUSION:
   limpo = limpo.replace(/^\s*(?:#+\s*)?(?:HOOK|GANCHO|INTRODUÇÃO|INTRODUCCION|INTRODUCCIÓN|INTRODUCTION|PONTO\s*\d+|POINT\s*\d+|PUNTO\s*\d+|CONCLUSÃO|CONCLUSION|CONCLUSIÓN|CTA|GANCHO(?:S)?(?:\s+INTERNO(?:S)?)?|INTERNAL\s+HOOKS?|CHAMADA(?:\s+PARA\s+AÇÃO)?|CALL\s+TO\s+ACTION)\s*(?:\([^)]*\))?:?\s*$/gmi, '');
   limpo = limpo.replace(/^\s*(?:HOOK|GANCHO|INTRODUÇÃO|INTRODUCCION|INTRODUCCIÓN|INTRODUCTION|PONTO\s*\d+|POINT\s*\d+|PUNTO\s*\d+|CONCLUSÃO|CONCLUSION|CONCLUSIÓN)\s*\([^)]*\)\s*:?\s*/gmi, '');
   limpo = limpo.replace(/^\s*(?:#+\s*)?(?:PONTO|POINT|PUNTO)\s*\d+\s*:\s*[^\n]+/gmi, '');
+  limpo = limpo.replace(/^\s*(?:Immersive\s+)?(?:Introduction|Hook|Conclusion)\s*(?:\([^)]*\))?:?\s*$/gmi, '');
+  limpo = limpo.replace(/^\s*\d+\.\s+[A-ZÀ-Ú][^\n.:]*\s*(?:\([^)]*\))?\s*:?\s*$/gm, '');
 
-  // 5. Remove rótulos internos estruturais mantendo o texto que vem depois:
+  // 8. Remove cabeçalhos de seção em CAPS (linhas isoladas onde as palavras estão todas em maiúsculas)
+  limpo = limpo.replace(/^\s*(?:[A-ZÀ-Ú0-9\s:()\-–—\[\]./]{3,70})\s*:?\s*$/gm, (match) => {
+    const letters = match.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, '');
+    if (letters.length >= 3 && letters === letters.toUpperCase()) {
+      return '';
+    }
+    return match;
+  });
+
+  // 9. Remove rótulos internos estruturais mantendo o texto que vem depois:
   // "Assertion:", "Afirmação:", "Development:", "Desenvolvimento:", "Evidence/References:", "Analysis/Impact:", etc.
   limpo = limpo.replace(/(?:Afirmação|Assertion|Afirmación|Desenvolvimento|Development|Desarrollo|Evidências\/Referências|Evidências|Evidencias\/Referencias|Evidencias|Evidence\/References|Evidence|Referências|Referencias|References|Análise\/Impacto|Análise|Análisis\/Impacto|Análisis|Analysis\/Impact|Analysis|Impacto|Impact|Ganchos Internos|Internal Hooks|CTAs Orgânicas|Organic CTAs|Chamada para Ação|Call to Action|CTA|Hook|Introdução|Introduction|Introducción|Conclusão|Conclusion|Conclusión)\s*:\s*/gi, '');
 
-  // 6. Remove marcadores de negrito markdown (**texto** vira texto) e itálico (*texto* vira texto)
+  // 10. Remove marcadores de negrito markdown (**texto** vira texto) e itálico (*texto* vira texto)
   limpo = limpo.replace(/^#+\s+/gm, '');
   limpo = limpo.replace(/\*\*([^*]+)\*\*/g, '$1');
   limpo = limpo.replace(/\*([^*]+)\*/g, '$1');
   limpo = limpo.replace(/__([^_]+)__/g, '$1');
   limpo = limpo.replace(/_([^_]+)_/g, '$1');
 
-  // 7. Remove marcadores de listas ou tópicos no início de linha (- ou * ou • ou 1.)
+  // 11. Remove marcadores de listas ou tópicos no início de linha (- ou * ou • ou 1.)
   limpo = limpo.replace(/^\s*[-*•]\s+/gm, '');
   limpo = limpo.replace(/^\s*\d+\.\s+/gm, '');
 
-  // 8. Remove linhas residuais que contenham apenas palavras estruturais isoladas ou pontuação solta (: ou -)
+  // 12. Remove linhas residuais que contenham apenas palavras estruturais isoladas ou pontuação solta (: ou -)
   limpo = limpo.replace(/^\s*(?:Hook|Introduction|Point \d+|Assertion|Development|Evidence|Analysis|Impact|Conclusion|Call to Action|Ponto \d+|Afirmação|Desenvolvimento|Evidências|Análise|Impacto|Conclusão|Punto \d+|Afirmación|Desarrollo)\s*$/gmi, '');
-  limpo = limpo.replace(/^\s*[:\-–]\s*$/gm, '');
+  limpo = limpo.replace(/^\s*[:\-–—]\s*$/gm, '');
 
-  // 9. Normaliza quebras de linha e espaços extras
+  // 12. Normaliza quebras de linha e espaços extras
   limpo = limpo
     .split('\n')
     .map(l => l.trim())
@@ -2310,21 +2601,31 @@ document.addEventListener('DOMContentLoaded', () => {
   UI.initClipboardButtons();
 
   const inputApiKey = document.getElementById('input-api-key');
-  const inputApiModel = document.getElementById('input-api-model');
+  const inputApiModelIdeias = document.getElementById('input-api-model-ideias');
+  const inputApiModelRoteiro = document.getElementById('input-api-model-roteiro');
 
   if (inputApiKey) inputApiKey.value = OpenRouterAPI.getApiKey();
-  if (inputApiModel) inputApiModel.value = OpenRouterAPI.getModel();
+  if (inputApiModelIdeias) inputApiModelIdeias.value = OpenRouterAPI.getModelIdeas();
+  if (inputApiModelRoteiro) inputApiModelRoteiro.value = OpenRouterAPI.getModelRoteiro();
   UI.updateApiStatusBadge();
+
+  // Garante que o select-estilo-roteiro tenha valor válido imediatamente ao abrir
+  const selectEstiloEl = document.getElementById('select-estilo-roteiro');
+  if (selectEstiloEl && (!selectEstiloEl.value || !Array.from(selectEstiloEl.options).some(o => o.value === selectEstiloEl.value && o.value !== ''))) {
+    selectEstiloEl.value = 'YouTube Longo (18-20 minutos)';
+  }
 
   document.getElementById('btn-save-api-config').addEventListener('click', () => {
     const key = inputApiKey.value;
-    const model = inputApiModel.value;
+    const modelIdeias = inputApiModelIdeias.value;
+    const modelRoteiro = inputApiModelRoteiro.value;
 
-    OpenRouterAPI.saveConfig(key, model);
+    OpenRouterAPI.saveConfig(key, modelIdeias, modelRoteiro);
     UI.updateApiStatusBadge();
+    AutoSave.save();
 
     if (key.trim()) {
-      UI.showToast(`Configurações salvas! Modelo: ${OpenRouterAPI.getModel()}`);
+      UI.showToast(`Configurações salvas! Ideias/SEO: ${OpenRouterAPI.getModelIdeas()} | Roteiro: ${OpenRouterAPI.getModelRoteiro()}`);
     } else {
       UI.showToast('Configurações salvas sem API Key. A ferramenta funcionará em modo gerador de prompts.', 'warning');
     }
@@ -2384,7 +2685,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (inputTomCustom) inputTomCustom.addEventListener('input', syncTomAudio);
   syncTomAudio();
 
-  async function executeApiCall(btnId, promptText, outputTextareaId, successMessage) {
+  async function executeApiCall(btnId, promptText, outputTextareaId, successMessage, specificModel, customSystemPrompt) {
     const btn = document.getElementById(btnId);
     const outputEl = document.getElementById(outputTextareaId);
     const hasApiKey = Boolean(OpenRouterAPI.getApiKey());
@@ -2393,7 +2694,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       if (hasApiKey) {
-        const aiResponse = await OpenRouterAPI.generateContent(promptText);
+        const aiResponse = await OpenRouterAPI.generateContent(promptText, specificModel, customSystemPrompt);
         if (outputEl) outputEl.value = aiResponse;
         UI.showToast(successMessage || 'Conteúdo gerado com sucesso via OpenRouter!');
         AutoSave.save();
@@ -2421,7 +2722,8 @@ document.addEventListener('DOMContentLoaded', () => {
       'btn-gerar-prompt-ideias',
       promptText,
       'output-prompt-ideias',
-      '10 Ideias virais geradas com sucesso!'
+      '10 Ideias virais geradas com sucesso!',
+      OpenRouterAPI.getModelIdeas()
     );
   });
 
@@ -2431,6 +2733,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const tomVoz = UI.getValue('select-tom', 'input-tom-custom');
     const tipoGancho = UI.getValue('select-gancho', 'input-gancho-custom');
     const idioma = UI.getValue('select-idioma', 'input-idioma-custom');
+    const modeloRoteiro = OpenRouterAPI.getModelRoteiro();
 
     const promptText = PromptEngine.generateScriptPrompt({
       ideia,
@@ -2444,8 +2747,36 @@ document.addEventListener('DOMContentLoaded', () => {
       'btn-gerar-prompt-roteiro',
       promptText,
       'output-prompt-roteiro',
-      'Roteiro completo gerado com sucesso!'
+      'Roteiro completo gerado com sucesso!',
+      modeloRoteiro,
+      SCRIPT_SYSTEM_PROMPT
     );
+
+    if (resultText && Boolean(OpenRouterAPI.getApiKey())) {
+      // ITEM 3: Filtro Pós-Geração Automático (varre termos proibidos e regenera parágrafos afetados)
+      const filtroRes = await aplicarFiltroTermosProibidos(resultText, idioma, modeloRoteiro);
+      resultText = filtroRes.texto;
+
+      // Exibe ou oculta alerta visual de termos persistentes (destaque amarelo)
+      const alertaEl = document.getElementById('alerta-termos-proibidos');
+      const alertaMsgEl = document.getElementById('alerta-termos-proibidos-msg');
+      if (alertaEl && alertaMsgEl) {
+        if (filtroRes.termosPersistentes && filtroRes.termosPersistentes.length > 0) {
+          const listaFormatada = filtroRes.termosPersistentes
+            .map(p => `Parágrafo ${p.paragrafoIndex}: <mark style="background-color: #fef08a; color: #854d0e; padding: 2px 6px; border-radius: 4px; font-weight: bold;">${p.termos.join(', ')}</mark>`)
+            .join(' | ');
+          alertaMsgEl.innerHTML = `Os seguintes termos proibidos persistiram após regeneração automática e requerem atenção: ${listaFormatada}`;
+          alertaEl.classList.remove('hidden');
+        } else {
+          alertaEl.classList.add('hidden');
+          alertaMsgEl.innerHTML = '';
+        }
+      }
+
+      if (filtroRes.modificado) {
+        UI.showToast('Filtro pós-geração aplicado: clichês ou termos sensíveis foram substituídos automaticamente.');
+      }
+    }
 
     if (resultText) {
       // ITEM 3: Validação Bíblica Automática e Silenciosa (PT / EN / ES)
@@ -2547,7 +2878,8 @@ document.addEventListener('DOMContentLoaded', () => {
       'btn-gerar-prompt-keywords',
       promptText,
       'output-prompt-keywords',
-      'Keywords de mídia geradas!'
+      'Keywords de mídia geradas!',
+      OpenRouterAPI.getModelIdeas()
     );
   });
 
@@ -2564,7 +2896,8 @@ document.addEventListener('DOMContentLoaded', () => {
       'btn-gerar-prompt-imagens-ia',
       promptText,
       'output-prompt-imagens-ia',
-      'Prompts para IA visual gerados!'
+      'Prompts para IA visual gerados!',
+      OpenRouterAPI.getModelIdeas()
     );
   });
 
@@ -2583,7 +2916,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       if (hasApiKey) {
-        const aiResponse = await OpenRouterAPI.generateContent(promptText);
+        const aiResponse = await OpenRouterAPI.generateContent(promptText, OpenRouterAPI.getModelIdeas());
         const parsed = parseThumbnailResponse(aiResponse);
 
         document.getElementById('output-thumb-a').value = parsed.a;
@@ -2626,7 +2959,8 @@ document.addEventListener('DOMContentLoaded', () => {
       'btn-gerar-prompt-seo',
       promptText,
       'output-prompt-seo',
-      'SEO Completo gerado com sucesso!'
+      'SEO Completo gerado com sucesso!',
+      OpenRouterAPI.getModelIdeas()
     );
   });
 
@@ -2859,11 +3193,12 @@ Desenvolvimento: Para entender essa aparente contradição histórica, precisamo
   document.getElementById('btn-clear-all').addEventListener('click', () => {
     if (confirm('Deseja limpar todos os campos e conteúdos gerados?')) {
       document.querySelectorAll('input[type="text"]').forEach(i => {
-        if (i.id !== 'input-api-model') i.value = '';
+        if (i.id !== 'input-api-model-ideias' && i.id !== 'input-api-model-roteiro') i.value = '';
       });
       document.querySelectorAll('textarea').forEach(t => t.value = '');
       selectTema.value = 'Fins Trágicos Bíblicos';
       document.getElementById('select-idioma').value = 'Português (Brasil)';
+      document.getElementById('select-estilo-roteiro').value = 'YouTube Longo (18-20 minutos)';
       document.getElementById('select-tom').value = 'Investigativo e Curioso';
       document.getElementById('select-voz-audio').value = 'onyx';
       document.querySelectorAll('.custom-input-container').forEach(el => el.classList.add('hidden'));
