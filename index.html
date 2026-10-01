@@ -3705,8 +3705,13 @@ const UI = {
     const badge = document.getElementById('api-status-badge');
     if (!badge) return;
 
-    const key = OpenRouterAPI.getApiKey();
-    if (key) {
+    // Lê primeiro do campo DOM (já preenchido pelo usuário ou pelo restore)
+    const domInput = document.getElementById('input-api-key');
+    const keyDom = domInput ? domInput.value.trim() : '';
+    // Fallback: lê direto do localStorage sem passar pela migração
+    const keyStorage = keyDom || localStorage.getItem('dark_studio_openrouter_api_key') || '';
+
+    if (keyStorage) {
       badge.className = 'status-badge status-active';
       badge.innerHTML = '<span class="status-dot"></span> API Configurada';
     } else {
@@ -4173,16 +4178,29 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   document.getElementById('btn-save-api-config').addEventListener('click', () => {
-    const key = inputApiKey.value;
-    const modelIdeias = inputApiModelIdeias.value;
-    const modelRoteiro = inputApiModelRoteiro.value;
+    const key = (inputApiKey.value || '').trim();
+    const modelIdeias = (inputApiModelIdeias.value || '').trim() || 'openai/gpt-4o-mini';
+    const modelRoteiro = (inputApiModelRoteiro.value || '').trim() || 'anthropic/claude-sonnet-4.5';
 
+    // 1. Grava direto no localStorage (sem passar pela migração) para garantia máxima
+    if (key) {
+      localStorage.setItem('dark_studio_openrouter_api_key', key);
+      localStorage.setItem('openrouter_api_key', key);
+    }
+    localStorage.setItem('dark_studio_openrouter_model_ideas', modelIdeias);
+    localStorage.setItem('dark_studio_openrouter_model_roteiro', modelRoteiro);
+
+    // 2. Também chama saveConfig para manter a API em sincronia
     OpenRouterAPI.saveConfig(key, modelIdeias, modelRoteiro);
+
+    // 3. Atualiza o badge imediatamente (lê do DOM — chave já está no campo)
     UI.updateApiStatusBadge();
+
+    // 4. Salva sessão completa no AutoSave
     AutoSave.save();
 
-    if (key.trim()) {
-      UI.showToast(`Configurações salvas! Ideias/SEO: ${OpenRouterAPI.getModelIdeas()} | Roteiro: ${OpenRouterAPI.getModelRoteiro()}`);
+    if (key) {
+      UI.showToast(`Configurações salvas! Ideias/SEO: ${modelIdeias} | Roteiro: ${modelRoteiro}`);
     } else {
       UI.showToast('Configurações salvas sem API Key. A ferramenta funcionará em modo gerador de prompts.', 'warning');
     }
