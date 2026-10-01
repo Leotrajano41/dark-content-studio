@@ -2187,21 +2187,82 @@ function limitarFrasesHistoricas(texto) {
 }
 
 /**
- * AJUSTE: Garante que a afirmação sobre o silêncio da Bíblia apareça no MÁXIMO UMA VEZ no roteiro inteiro.
+ * PONTO 3: Garante que a afirmação sobre o silêncio da Bíblia apareça no MÁXIMO UMA VEZ no roteiro inteiro.
+ * Analisa sentença por sentença no roteiro completo e elimina qualquer redundância a partir da 2ª.
  */
 function limitarDeclaracoesDeSilencioBiblico(texto) {
   if (!texto || typeof texto !== 'string') return texto;
-  const padraoSilencio = /\b(?:(?:strikingly,\s+)?(?:the\s+)?(?:scriptures?|bible|escritura|b[ií]blia|sagrada\s+escritura|holy\s+writ|sacred\s+text)\s+(?:falls?\s+into\s+(?:a\s+)?(?:solemn\s+)?silence|remains?\s+(?:resolute\s+in\s+its\s+)?silence|remains?\s+silent|permanece\s+em\s+sil[eê]ncio|guarda\s+sil[eê]ncio|offers?\s+no\s+(?:account|explanation)|n[aã]o\s+oferece\s+explica[cç][aã]o|does\s+not\s+(?:explain|detail|elaborate|clarify|reveal)|n[aã]o\s+(?:explica|detalha|revela)|is\s+silent)|(?:the\s+)?(?:scriptures?|bible)\s+does\s+not\s+(?:detail|explain|elaborate)\s+[^.!?]*|this\s+silence\s+on\s+the\s+mechanism\s+[^.!?]*)\b[^.!?]*[.,;!?]/gi;
+
+  const paragrafos = texto.split(/\n\s*\n/);
+  let ocorrenciasSilencio = 0;
+
+  const termosSagradosRegex = /\b(?:scriptures?|bible|biblical\s+(?:text|record|account|narrative|writer|author)|inspired\s+(?:record|text|author|word)|holy\s+writ|canonical\s+(?:text|record|account)|sacred\s+(?:text|record|narrative)|b[ií]blia|escrituras?|texto\s+b[ií]blico|relato\s+b[ií]blico|sagradas\s+escrituras)\b/i;
+  const termosSilencioRegex = /\b(?:silence|silent|does\s+not\s+(?:explain|detail|elaborate|clarify|reveal|state|disclose|record|provide|tell)|offers?\s+no\s+(?:explanation|detail|account|record)|leaves?\s+(?:unexplained|unstated|unrevealed|unaddressed)|fails?\s+to\s+explain|without\s+explanation|unrevealed\s+mechanism|sil[eê]ncio|silencios[oa]|n[aã]o\s+(?:explica|detalha|revela|esclarece|informa)|n[aã]o\s+oferece\s+explica[cç][aã]o|guarda\s+sil[eê]ncio|permanece\s+em\s+sil[eê]ncio|deixa\s+sem\s+explica[cç][aã]o)\b/i;
+  const fraseExplicitaSilencioRegex = /\b(?:silence\s+of\s+scripture|scripture(?:'s)?\s+silence|sil[eê]ncio\s+da\s+(?:b[ií]blia|escritura))\b/i;
+
+  const paragrafosCorrigidos = paragrafos.map(p => {
+    const sentencas = p.match(/[^.!?]+(?:[.!?]+["']?|$)/g) || [p];
+    const sentencasMantidas = [];
+
+    for (const sent of sentencas) {
+      const sTrim = sent.trim();
+      if (!sTrim) continue;
+
+      const ehSilencioBiblico = (termosSagradosRegex.test(sTrim) && termosSilencioRegex.test(sTrim)) || fraseExplicitaSilencioRegex.test(sTrim);
+
+      if (ehSilencioBiblico) {
+        ocorrenciasSilencio++;
+        if (ocorrenciasSilencio === 1) {
+          sentencasMantidas.push(sent); // Mantém unicamente a 1ª ocorrência no roteiro inteiro
+        } else {
+          console.log('[Silêncio Bíblico] Sentença repetida removida no pós-processamento:', sTrim);
+        }
+      } else {
+        sentencasMantidas.push(sent);
+      }
+    }
+
+    return sentencasMantidas.join(' ').replace(/[^\S\r\n]{2,}/g, ' ').replace(/[^\S\r\n]+([.,;:!?])/g, '$1').trim();
+  }).filter(p => p.length > 0);
+
+  return paragrafosCorrigidos.join('\n\n');
+}
+
+/**
+ * PONTO 5: Limitar o uso de "canonical" (canonical record/text/account) a no máximo 2 vezes no roteiro inteiro.
+ */
+function limitarTermosCanonicos(texto) {
+  if (!texto || typeof texto !== 'string') return texto;
 
   let contagem = 0;
-  return texto.replace(padraoSilencio, (match) => {
+  const canonicalRegex = /\b(?:the\s+)?canonical\s+(?:record|text|account|narrative|scripture|witness|boundary|framework)\b|\bcanonical\b|\b(?:o\s+)?(?:texto|registro|relato|c[aâ]non)\s+can[oô]nic[oa]\b|\bcan[oô]nic[oa]s?\b/gi;
+
+  return texto.replace(canonicalRegex, (match) => {
     contagem++;
-    if (contagem === 1) {
-      return match; // Mantém a 1ª ocorrência no roteiro
+    if (contagem <= 2) {
+      return match; // Mantém no máximo 2 ocorrências
     }
-    return ''; // A partir da 2ª ocorrência, remove a frase redundante
-  }).replace(/[^\S\r\n]{2,}/g, ' ').replace(/[^\S\r\n]+([.,;:!?])/g, '$1').replace(/\n{3,}/g, '\n\n').trim();
+    const mLower = match.toLowerCase();
+    if (mLower.includes('canonical record')) return 'biblical record';
+    if (mLower.includes('canonical text')) return 'biblical text';
+    if (mLower.includes('canonical account')) return 'biblical account';
+    if (mLower.includes('canonical narrative')) return 'sacred narrative';
+    if (mLower.includes('canonical scripture')) return 'Holy Scripture';
+    if (mLower.includes('canonical witness')) return 'scriptural witness';
+    if (mLower.includes('canonical boundary')) return 'scriptural boundary';
+    if (mLower.includes('canonical')) return 'biblical';
+
+    // Português / Espanhol
+    if (mLower.includes('registro can')) return 'registro bíblico';
+    if (mLower.includes('texto can')) return 'texto bíblico';
+    if (mLower.includes('relato can')) return 'relato bíblico';
+    if (mLower.includes('canônic') || mLower.includes('canonic')) return 'bíblico';
+
+    return 'biblical';
+  });
 }
+window.limitarDeclaracoesDeSilencioBiblico = limitarDeclaracoesDeSilencioBiblico;
+window.limitarTermosCanonicos = limitarTermosCanonicos;
 
 /**
  * AJUSTE: Validação e correção automática de aspas abertas/fechadas nas citações
@@ -2396,14 +2457,24 @@ MANDATORY EDITING RULES:
  * Tipos: CRONOLOGIA, AFIRMAÇÃO ALÉM DO TEXTO, FRASE QUEBRADA, ASPAS, EVENTO REPETIDO.
  */
 const REVIEWER_SYSTEM_PROMPT = `You are a senior biblical documentary script editor, fact-checker, and canonical auditor for the YouTube channel 'Explicador Bíblico'.
-Your role is to rigorously inspect the provided complete documentary script and return a strictly structured JSON array of every genuine error or structural flaw found.
+Your role is to rigorously inspect the provided complete 7-section documentary script across the ENTIRE text (comparing all sections, not just adjacent ones) and return a strictly structured JSON array of every genuine error, repetition, premature conclusion, or flaw found.
 
-CHECK FOR EXACTLY THESE 5 CATEGORIES OF PROBLEMS:
-1. CRONOLOGIA: Erroneous, impossible, or internally contradictory dates, historical intervals, or time spans (e.g. claiming an event happened 40 years later when centuries actually elapsed, or conflicting elapsed times between sections).
-2. AFIRMAÇÃO ALÉM DO TEXTO: Statements attributed to canonical Scripture that the cited biblical verse or passage does NOT actually say (e.g., asserting as biblical fact something absent from the text).
-3. FRASE QUEBRADA: Broken, truncated, ungrammatical, or nonsensical sentences with missing words or malformed quotation introductions (e.g. 'The passage records the physical "For only...').
-4. ASPAS: Citations with unclosed quotes, stray quotation marks, or quotes lacking proper quotation pair closure.
-5. EVENTO REPETIDO: The exact same biblical episode, scene, or battle narrated across two different sections. For repetition, mark the redundant/inferior occurrence to be removed or rephrased, keeping the fuller version intact.
+CHECK ACROSS THE ENTIRE SCRIPT FOR EXACTLY THESE 7 CATEGORIES:
+1. EVENTO REPETIDO: The exact same biblical event, narrative episode, battle, or passage narrated or retold across more than one section (e.g. Numbers 13 retold multiple times, King Og's iron bed retold multiple times, the Genesis 7 Flood retold multiple times, Genesis 6:5 retold multiple times).
+   - RULE: Any biblical event must remain ONLY in its designated home section.
+   - For any repeated occurrence in other sections, provide the exact duplicate sentence/phrase as "fraseOriginal" and set "fraseCorrigida" to either an empty string "" to delete it, or to a smooth transition sentence that does NOT re-narrate the event.
+2. CONCLUSÃO PREMATURA: Any premature conclusion, summary wrap-up, or final sign-off found in Sections 1 through 6.
+   - RULE: A conclusion, summary of the whole history, or closing call can ONLY exist in Section 7.
+   - Mark premature concluding sentences in earlier sections to be removed ("") or replaced with forward-looking narrative momentum.
+3. SILÊNCIO REPETIDO: Phrases stating that the Bible is silent, does not explain, or offers no further details (e.g. "Scripture remains silent", "the biblical text does not elaborate", "the inspired record leaves unaddressed").
+   - RULE: Allowed at most ONCE in the ENTIRE script.
+   - If stated more than once, mark subsequent occurrences to be removed ("") or replaced.
+4. CITAÇÃO BÍBLICA: Verbatim biblical quotes enclosed in quotation marks that diverge from the official translation (King James Version / KJV for English; João Ferreira de Almeida / JFA for Portuguese; Reina-Valera 1909 / RVR1909 for Spanish).
+   - Example: In Numbers 13:33, replacing "which come of the Nephilim" with the exact KJV text "which come of the giants".
+   - Fix all literal quotes to match the exact wording of the official Bible translation.
+5. CRONOLOGIA: Erroneous, impossible, or contradictory dates, centuries, historical intervals, or time spans (e.g. claiming an event happened 40 years later when centuries elapsed).
+6. AFIRMAÇÃO ALÉM DO TEXTO: Claims attributed to Scripture that the cited verse does not say (e.g. asserting that the sons of God all drowned in the Flood, when Genesis 7 does not make that statement).
+7. FRASE QUEBRADA / ASPAS: Sentences with missing words, ungrammatical phrasing, broken fragments, or mismatched quotation marks.
 
 MANDATORY OUTPUT FORMAT:
 Respond EXCLUSIVELY with a valid JSON array of objects. Do NOT include markdown code blocks, do NOT write explanations before or after the JSON.
@@ -2411,8 +2482,8 @@ Format:
 [
   {
     "fraseOriginal": "The exact verbatim sentence or phrase from the script to be replaced",
-    "tipo": "CRONOLOGIA" | "AFIRMAÇÃO ALÉM DO TEXTO" | "FRASE QUEBRADA" | "ASPAS" | "EVENTO REPETIDO",
-    "fraseCorrigida": "The corrected sentence (or empty string \\"\\" if the redundant sentence should be removed)"
+    "tipo": "EVENTO REPETIDO" | "CONCLUSÃO PREMATURA" | "SILÊNCIO REPETIDO" | "CITAÇÃO BÍBLICA" | "CRONOLOGIA" | "AFIRMAÇÃO ALÉM DO TEXTO" | "FRASE QUEBRADA / ASPAS",
+    "fraseCorrigida": "The corrected sentence (or empty string \\"\\" if the sentence should be removed)"
   }
 ]
 If NO problems are detected, return strictly: []`;
@@ -2424,9 +2495,9 @@ async function executarRevisaoAutomaticaRoteiro(roteiro, idioma, modelo) {
 
   const lang = (typeof PromptEngine !== 'undefined' && PromptEngine.getLanguageConfig)
     ? PromptEngine.getLanguageConfig(idioma)
-    : { name: 'English' };
+    : { name: 'English', bibleTranslation: 'King James Version (KJV)' };
 
-  const reviewerPrompt = `Act as an expert biblical script reviewer. Audit the complete documentary script below in ${lang.name} across the 5 categories (CRONOLOGIA, AFIRMAÇÃO ALÉM DO TEXTO, FRASE QUEBRADA, ASPAS, EVENTO REPETIDO):
+  const reviewerPrompt = `Act as an expert biblical script reviewer. Audit the complete 7-section documentary script below in ${lang.name} using the official biblical translation ${lang.bibleTranslation} across the 7 categories (EVENTO REPETIDO, CONCLUSÃO PREMATURA, SILÊNCIO REPETIDO, CITAÇÃO BÍBLICA, CRONOLOGIA, AFIRMAÇÃO ALÉM DO TEXTO, FRASE QUEBRADA / ASPAS):
 
 SCRIPT TO AUDIT:
 """
@@ -2812,57 +2883,129 @@ Create a rigorous 7-section documentary outline dynamically built for a long-for
 Tone of voice: '${tomVoz}'.
 Language: 100% in ${lang.name}.
 
-MANDATORY CANONICAL OUTLINE RULES:
-1. DYNAMIC THEMATIC STRUCTURE (DERIVED STRICTLY FROM '${ideia}'):
-   - Generate all 7 sections based strictly on the specific biblical topic and scriptures of '${ideia}'.
-   - Progress chronologically and narratively through the biblical account:
-     * Section 1: The Dramatic Opening Hook & Core Event (The striking factual opening and foundational canonical account).
-     * Section 2: Historical Context & Setting (The ancient biblical world, background, and initial events).
-     * Section 3: The Rising Conflict / Divine Decree (The deepening crisis, confrontation, or critical turning point).
-     * Section 4: Canonical Specifics & Scriptural Boundaries (Specific biblical details, literal dialogue, and what Scripture explicitly reveals).
-     * Section 5: The Climax of Confrontation & Witness Accounts (The decisive event, key figures, and historical climax).
-     * Section 6: Historical Aftermath & Canonical Record (The immediate outcomes and subsequent scriptural testimony).
-     * Section 7: Solemn Conclusion & Divine Sovereignty (The eternal theological truth, sovereign power of God, and channel subscription call as the final paragraph).
-2. STRICT PROHIBITION OF TOPIC DUPLICATION (ZERO OVERLAP):
-   - Every single one of the 7 sections MUST cover a completely different historical episode, event, or passage.
-   - STRICTLY FORBIDDEN: Having two sections discussing the same event or scripture.
-3. STRICT BIBLICAL FIDELITY (ZERO SPECULATION):
-   - Never contradict explicit canonical scripture.
-   - Zero extra-biblical lore or apocryphal concepts.
-   - Zero backstage meta-language ("in the next section", "as we transition", "we will explore", "moving ahead", "annals").
-   - Zero internal editorial labels ("Canonical Boundary", "Opening Hook", "Section", "Point").
+MANDATORY 7-SECTION GENERIC NARRATIVE TEMPLATE (APPLIES TO ANY THEME OR PASSAGE):
+Every biblical documentary MUST follow this precise 7-part narrative progression:
+- SECTION 1: Hook + Core Fact (The dramatic opening hook and foundational factual biblical statement).
+- SECTION 2: Context / Setting (The ancient historical background, world setting, and origin of circumstances).
+- SECTION 3: Development (The initial unfolding of events, primary biblical accounts, and historical progression).
+- SECTION 4: Turning Point / Conflict (The decisive crisis, divine confrontation, critical turning point, or divine decree).
+- SECTION 5: Consequence (The immediate historical and scriptural outcomes of the turning point/conflict).
+- SECTION 6: Later Unfolding / Aftermath (Subsequent biblical references, later historical witness, or long-term scriptural impact across generations).
+- SECTION 7: Conclusion + Subscription Call (Solemn theological reflection on divine sovereignty, final synthesis of eternal truth, and channel subscription invite as the very last paragraph).
+
+CRITICAL ALLOCATION OF EXCLUSIVE EVENTS AND VERSES (ZERO REPETITION):
+1. For EACH of the 7 sections, you MUST list:
+   - Specific historical EVENTS exclusive to that section.
+   - Specific canonical biblical VERSES exclusive to that section.
+2. STRICT PROHIBITION: Any event or verse assigned to one section is ABSOLUTELY FORBIDDEN in all other sections.
+   - For example, if the Genesis 7 Flood, Numbers 13 spies, King Og, or Nicodemus at night is assigned to a section, it is STRICTLY PROHIBITED from appearing in any other section.
+3. Every biblical event must have EXACTLY ONE home section.
 
 OUTPUT FORMAT:
-Output EXACTLY 7 lines, formatted as:
-SECTION 1: [Short Title] — [2-sentence summary of the unique biblical passage and events covered]
-SECTION 2: [Short Title] — [2-sentence summary]
-SECTION 3: [Short Title] — [2-sentence summary]
-SECTION 4: [Short Title] — [2-sentence summary]
-SECTION 5: [Short Title] — [2-sentence summary]
-SECTION 6: [Short Title] — [2-sentence summary]
-SECTION 7: [Short Title] — [2-sentence summary]`;
+Output EXACTLY the 7 sections formatted as follows, without markdown fences or extra commentary:
+
+SECTION 1
+ROLE: Hook + Core Fact
+TITLE: [Concise Title]
+SUMMARY: [2-sentence narrative summary of this section's focus]
+EVENTS: [List of specific events exclusive to Section 1]
+VERSES: [List of specific scripture verses exclusive to Section 1]
+
+SECTION 2
+ROLE: Context / Setting
+TITLE: [Concise Title]
+SUMMARY: [2-sentence narrative summary of this section's focus]
+EVENTS: [List of specific events exclusive to Section 2]
+VERSES: [List of specific scripture verses exclusive to Section 2]
+
+SECTION 3
+ROLE: Development
+TITLE: [Concise Title]
+SUMMARY: [2-sentence narrative summary of this section's focus]
+EVENTS: [List of specific events exclusive to Section 3]
+VERSES: [List of specific scripture verses exclusive to Section 3]
+
+SECTION 4
+ROLE: Turning Point / Conflict
+TITLE: [Concise Title]
+SUMMARY: [2-sentence narrative summary of this section's focus]
+EVENTS: [List of specific events exclusive to Section 4]
+VERSES: [List of specific scripture verses exclusive to Section 4]
+
+SECTION 5
+ROLE: Consequence
+TITLE: [Concise Title]
+SUMMARY: [2-sentence narrative summary of this section's focus]
+EVENTS: [List of specific events exclusive to Section 5]
+VERSES: [List of specific scripture verses exclusive to Section 5]
+
+SECTION 6
+ROLE: Later Unfolding / Aftermath
+TITLE: [Concise Title]
+SUMMARY: [2-sentence narrative summary of this section's focus]
+EVENTS: [List of specific events exclusive to Section 6]
+VERSES: [List of specific scripture verses exclusive to Section 6]
+
+SECTION 7
+ROLE: Conclusion + Subscription Call
+TITLE: [Concise Title]
+SUMMARY: [2-sentence narrative summary of this section's focus]
+EVENTS: [List of specific events exclusive to Section 7]
+VERSES: [List of specific scripture verses exclusive to Section 7]`;
   },
 
   /**
    * PARTE 2: Passo 2 - Gerar Seção Individual Dinâmica (420 a 460 palavras por seção)
    */
-  generateSectionPrompt({ ideia, secaoNumero, totalSecoes, tituloSecao, resumoSecao, resumoSecoesAnteriores, versiculosJaCitados, idioma, tomVoz, tipoGancho }) {
+  generateSectionPrompt({
+    ideia,
+    secaoNumero,
+    totalSecoes,
+    papelSecao,
+    tituloSecao,
+    resumoSecao,
+    eventosDestaSecao,
+    versiculosDestaSecao,
+    eventosProibidos,
+    versiculosProibidos,
+    resumoSecoesAnteriores,
+    versiculosJaCitados,
+    idioma,
+    tomVoz,
+    tipoGancho
+  }) {
     const lang = this.getLanguageConfig(idioma);
     const isFirst = secaoNumero === 1;
     const isLast = secaoNumero === totalSecoes;
+
+    const listaEventosProibidos = Array.isArray(eventosProibidos)
+      ? eventosProibidos.filter(Boolean).join('\n  - ')
+      : (eventosProibidos || 'None.');
+
+    const listaVersiculosProibidos = Array.isArray(versiculosProibidos)
+      ? versiculosProibidos.filter(Boolean).join(', ')
+      : (versiculosProibidos || 'None.');
 
     return `Act as a senior documentary scriptwriter and master storyteller for biblical YouTube channels following the proven formula of 'Explicador Bíblico'.
 Write SECTION ${secaoNumero} of ${totalSecoes} for the long-form documentary script: '${ideia}'.
 Language: 100% in ${lang.name}.
 Tone of voice: '${tomVoz}'.
 
-SECTION IDENTITY:
+SECTION ARCHITECTURE (GENERIC NARRATIVE TEMPLATE):
 - Section Number: ${secaoNumero} of ${totalSecoes}
+- Narrative Role: ${papelSecao || (isFirst ? 'Hook + Core Fact' : isLast ? 'Conclusion + Subscription Call' : 'Narrative Chapter')}
 - Title: ${tituloSecao}
 - Scope/Summary: ${resumoSecao}
 
-CONTEXT OF PREVIOUS SECTIONS (DO NOT DUPLICATE THESE EVENTS OR SCENES):
-${resumoSecoesAnteriores || '(This is the opening section of the documentary)'}
+EXCLUSIVE CONTENT ASSIGNED TO THIS SECTION (FOCUS 100% ON THESE):
+- Events to Narrate in this Section: ${eventosDestaSecao || 'The specific biblical episode assigned to this chapter.'}
+- Verses to Feature in this Section: ${versiculosDestaSecao || 'The designated biblical passages for this chapter.'}
+
+CRITICAL: STRICTLY FORBIDDEN EVENTS AND VERSES (ASSIGNED EXCLUSIVELY TO OTHER SECTIONS — ZERO TOLERANCE):
+- DO NOT MENTION, NARRATE, OR RETELL ANY OF THESE EVENTS (THEY BELONG TO OTHER SECTIONS):
+  - ${listaEventosProibidos}
+- DO NOT QUOTE OR COVER ANY OF THESE VERSES (THEY BELONG TO OTHER SECTIONS):
+  ${listaVersiculosProibidos}
 
 VERSES ALREADY QUOTED VERBATIM (STRICTLY FORBIDDEN TO QUOTE VERBATIM AGAIN):
 ${versiculosJaCitados && versiculosJaCitados.length > 0 ? versiculosJaCitados.join(', ') : 'None yet.'}
@@ -2876,31 +3019,33 @@ CRITICAL RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
    - The VERY FIRST sentence of Section 1 MUST be a concrete, striking factual statement drawn directly from canonical Scripture corresponding to this theme.
    - Halts the listener immediately with divine authority and the physical reality of the ancient biblical world.
    - STRICTLY FORBIDDEN: Starting with weak intros like "The biblical narrative includes...", "In the biblical narrative...", "The Bible tells us...", "Throughout history...".` : 'CONTINUITY: Begin directly continuing the living chronicle with narrative momentum. No meta-intro or welcome back.'}
-2. ZERO BACKSTAGE / META-LANGUAGE & ZERO INTERNAL LABELS:
+2. ZERO PREMATURE CONCLUSION (SECTIONS 1 TO 6):
+   ${!isLast ? `- STRICTLY PROHIBITED to conclude, wrap up, summarize the entire history, or provide a closing sign-off in this section.
+   - Concluding is EXCLUSIVELY RESERVED for Section 7.
+   - Section ${secaoNumero} must end with natural forward narrative momentum carrying the listener into the next historical stage.` : `- MANDATORY FINAL CLIMAX & CTA: Deliver a solemn, awe-inspiring synthesis of what Scripture reveals about the sovereign victory of the Creator, ending with a reverent call to subscribe to the channel as the VERY LAST sentence and paragraph.`}
+3. ZERO BACKSTAGE / META-LANGUAGE & ZERO INTERNAL LABELS:
    - STRICTLY FORBIDDEN to use presentation or backstage phrases like "in the next section", "as we transition", "we will explore", "as we continue our exploration", "moving ahead", "as the narrative unfolds". Speak directly as an ancient chronicle without stepping out of the story.
-   - STRICTLY FORBIDDEN to utter internal architectural labels like "Canonical Boundary", "Opening Hook", "Section", "Point", "Outline" in the spoken text.
-3. REPETITION CONTROLS:
-   - NEVER quote the same verse verbatim more than once in the entire script.
-   - NEVER narrate a biblical story, battle, or event if already covered in previous sections.
+   - STRICTLY FORBIDDEN to utter internal architectural labels like "Canonical Boundary", "Opening Hook", "Section", "Point", "Outline", "Role" in the spoken text.
+4. REPETITION & EVENT ISOLATION CONTROLS:
+   - NEVER narrate a biblical story, battle, or event assigned to another section.
    - Limit phrases like "not legends or myths", "historical fact", and "the Scripture treats this as" — use at most once if not already used.
-4. CANONICAL FIDELITY & SILENCE LIMIT:
+5. CANONICAL FIDELITY & SILENCE LIMIT:
    - NEVER contradict explicit canonical scripture.
-   - When the Bible does not explain a detail or mechanism, state that silence in at most ONE honest sentence in the entire script and move on. STRICTLY PROHIBITED to speculate with unwritten conjectures.
-   - Never assert historical or narrative connections the biblical text does not make.
-5. BATTLES & SOLEMN RESTRAINT:
+   - If mentioning that Scripture does not give a detail, express that silence in at most ONE sentence in the entire script. Do not repeat silence statements.
+   - Limit the word "canonical" (canonical record, canonical text, canonical account) to at most 2 times in the entire script — use natural biblical terms like "biblical record" or "Holy Scripture".
+6. BATTLES & SOLEMN RESTRAINT:
    - Narrate events and battles strictly with literal scripture citations from ${lang.bibleTranslation}.
    - Do NOT evaluate, moralize, or justify the destruction of populations.
    - STRICTLY PROHIBITED WORDS: "eliminated", "hunted down", "not an injustice", "populations were".
-6. FORBIDDEN CLICHÉS & WORDS:
+7. FORBIDDEN CLICHÉS & WORDS:
    - NEVER use: "annals", "in the annals", "tonight", "this morning", "profound", "fabric", "stark", "debate", "shrouded in mystery", "figuratively", "loomed large", "captivated minds", "what if I told you", "embark", "journey through", "delve", "dive deep", "enigmatic", "the very fabric", "challenge everything you thought", "testament to", "testaments to", "sacred texts", "sacred text", "tapestry", "stark reminder", "serves as a reminder", "insurmountable", "unwavering", "glimmer of hope", "quintessential", "navigate", "multifaceted".
-7. VERBATIM SCRIPTURE & QUOTE INTEGRITY:
+8. VERBATIM SCRIPTURE & QUOTE INTEGRITY:
    - When quoting scripture, quote word-for-word from ${lang.bibleTranslation} (${lang.citationRule}).
    - Always open and close quotation marks properly on every scriptural quote.
-8. ${isLast ? 'FINAL CLIMAX & CTA: Deliver a solemn, awe-inspiring synthesis of what Scripture reveals about the sovereign victory of the Creator, ending with a reverent call to subscribe to the channel as the VERY LAST sentence and paragraph.' : 'NARRATIVE BRIDGE: End this section with natural narrative momentum leading into the next historical point.'}
 
 OUTPUT FORMAT:
 Output EXCLUSIVELY the narration text for Section ${secaoNumero}.
-Do NOT output section headers like "[Hook]" or "Word Count:".
+Do NOT output section headers, role labels, or word counts.
 Just the pure, powerful spoken narration paragraphs.`;
   },
 
@@ -3422,7 +3567,10 @@ function limparTextoParaNarracao(texto) {
   limpo = limpo.replace(/^\s*(?:Hook|Introduction|Point \d+|Assertion|Development|Evidence|Analysis|Impact|Conclusion|Call to Action|Ponto \d+|Afirmação|Desenvolvimento|Evidências|Análise|Impacto|Conclusão|Punto \d+|Afirmación|Desarrollo)\s*$/gmi, '');
   limpo = limpo.replace(/^\s*[:\-–—]\s*$/gm, '');
 
-  // 14. Limita declarações sobre o silêncio bíblico a no máximo UMA vez no roteiro inteiro
+  // 14. Limita uso de 'canonical' a no máximo 2 vezes e declarações sobre o silêncio bíblico a no máximo UMA vez no roteiro inteiro
+  if (typeof limitarTermosCanonicos === 'function') {
+    limpo = limitarTermosCanonicos(limpo);
+  }
   if (typeof limitarDeclaracoesDeSilencioBiblico === 'function') {
     limpo = limitarDeclaracoesDeSilencioBiblico(limpo);
   }
@@ -3727,28 +3875,70 @@ async function gerarRoteiroEmSeteSecoes({
 
   console.log('[Geração em 7 Seções] Esboço de seções recebido:\n', outlineText);
 
-  // Parse das seções do esboço
+  // Parse estruturado das seções do esboço com molde narrativo de 7 papéis canônicos
   let secoes = [];
-  const linhas = (outlineText || '').split('\n').filter(l => l.trim().length > 0);
-  for (const l of linhas) {
-    const match = l.match(/^(?:SECTION|SEÇÃO|SECCION|\d+)[.:\s\-]+(?:\d+[.:\s\-]+)?([^—\-:]+)[—\-:]*(.*)$/i);
-    if (match) {
+  const rolesPadrao = [
+    "Hook + Core Fact",
+    "Context / Setting",
+    "Development",
+    "Turning Point / Conflict",
+    "Consequence",
+    "Later Unfolding / Aftermath",
+    "Conclusion + Subscription Call"
+  ];
+
+  // 1. Tenta extrair blocos SECTION 1 ... SECTION 7
+  const blocos = (outlineText || '').split(/(?=SECTION\s+\d+|SEÇÃO\s+\d+|SECCION\s+\d+)/i).filter(b => b.trim().length > 0);
+
+  if (blocos.length >= 7) {
+    for (let idx = 0; idx < Math.min(blocos.length, 7); idx++) {
+      const bloco = blocos[idx];
+      const secNum = idx + 1;
+      const roleMatch = bloco.match(/ROLE\s*:\s*([^\n\r]+)/i);
+      const titleMatch = bloco.match(/TITLE\s*:\s*([^\n\r]+)/i) || bloco.match(/SECTION\s+\d+[:\s\-]+([^\n\r—\-]+)/i);
+      const summaryMatch = bloco.match(/SUMMARY\s*:\s*([^\n\r]+)/i);
+      const eventsMatch = bloco.match(/EVENTS\s*:\s*([^\n\r]+)/i);
+      const versesMatch = bloco.match(/VERSES\s*:\s*([^\n\r]+)/i);
+
       secoes.push({
-        numero: secoes.length + 1,
-        titulo: match[1].trim(),
-        resumo: match[2].trim() || match[1].trim()
+        numero: secNum,
+        papel: roleMatch ? roleMatch[1].trim() : rolesPadrao[idx],
+        titulo: titleMatch ? titleMatch[1].trim() : `Section ${secNum}`,
+        resumo: summaryMatch ? summaryMatch[1].trim() : bloco.split('\n')[0].replace(/^SECTION\s+\d+[:\s\-]*/i, '').trim(),
+        eventos: eventsMatch ? eventsMatch[1].trim() : '',
+        versiculos: versesMatch ? versesMatch[1].trim() : ''
       });
     }
   }
 
+  // 2. Fallback caso venha em formato de linhas simples
+  if (secoes.length < 7) {
+    secoes = [];
+    const linhas = (outlineText || '').split('\n').filter(l => l.trim().length > 0);
+    for (const l of linhas) {
+      const match = l.match(/^(?:SECTION|SEÇÃO|SECCION|\d+)[.:\s\-]+(?:\d+[.:\s\-]+)?([^—\-:]+)[—\-:]*(.*)$/i);
+      if (match) {
+        const secNum = secoes.length + 1;
+        secoes.push({
+          numero: secNum,
+          papel: rolesPadrao[secNum - 1] || 'Narrative Chapter',
+          titulo: match[1].trim(),
+          resumo: match[2].trim() || match[1].trim(),
+          eventos: match[2].trim(),
+          versiculos: ''
+        });
+      }
+    }
+  }
+
   const fallbackSecoes = [
-    { numero: 1, titulo: "Opening Hook & Core Event", resumo: `The foundational canonical account and dramatic opening event of ${ideia}.` },
-    { numero: 2, titulo: "Historical Setting & Context", resumo: `The ancient setting, historical background, and unfolding events of ${ideia}.` },
-    { numero: 3, titulo: "The Deepening Crisis & Turning Point", resumo: `The central biblical confrontation, divine decree, or turning point in ${ideia}.` },
-    { numero: 4, titulo: "Canonical Details & Sacred Truth", resumo: `Literal biblical details and what canonical Scripture explicitly records.` },
-    { numero: 5, titulo: "Key Witnesses & Climax of Confrontation", resumo: `Key biblical accounts, testimony of witnesses, and historical confrontation.` },
-    { numero: 6, titulo: "Historical Record & Subsequent Events", resumo: `The culmination of the biblical narrative and subsequent scriptural testimony.` },
-    { numero: 7, titulo: "Solemn Conclusion & Divine Sovereignty", resumo: `Final reverent synthesis of what Scripture reveals regarding ${ideia} and channel CTA.` }
+    { numero: 1, papel: "Hook + Core Fact", titulo: "Opening Hook & Core Event", resumo: `The foundational canonical account and dramatic opening event of ${ideia}.`, eventos: `Foundational opening fact of ${ideia}`, versiculos: "" },
+    { numero: 2, papel: "Context / Setting", titulo: "Historical Setting & Context", resumo: `The ancient setting, historical background, and origin of circumstances of ${ideia}.`, eventos: `Ancient historical setting and background of ${ideia}`, versiculos: "" },
+    { numero: 3, papel: "Development", titulo: "Development of Biblical Account", resumo: `The progressive development of events and circumstances in ${ideia}.`, eventos: `Initial progression and accounts of ${ideia}`, versiculos: "" },
+    { numero: 4, papel: "Turning Point / Conflict", titulo: "The Decisive Crisis & Divine Decree", resumo: `The central biblical confrontation, divine decree, or critical turning point in ${ideia}.`, eventos: `The decisive confrontation and decree regarding ${ideia}`, versiculos: "" },
+    { numero: 5, papel: "Consequence", titulo: "Direct Consequences & Witness", resumo: `The direct historical and scriptural outcomes of the turning point.`, eventos: `Immediate aftermath and consequences in ${ideia}`, versiculos: "" },
+    { numero: 6, papel: "Later Unfolding / Aftermath", titulo: "Later Unfolding & Subsequent Record", resumo: `Later biblical references and subsequent scriptural testimony across generations.`, eventos: `Later references and subsequent witness regarding ${ideia}`, versiculos: "" },
+    { numero: 7, papel: "Conclusion + Subscription Call", titulo: "Solemn Conclusion & Divine Sovereignty", resumo: `Final reverent synthesis of what Scripture reveals regarding ${ideia} and channel CTA.`, eventos: `Concluding theological synthesis of divine victory`, versiculos: "" }
   ];
 
   if (secoes.length < 7) {
@@ -3760,7 +3950,7 @@ async function gerarRoteiroEmSeteSecoes({
     secoes = secoes.slice(0, 7);
   }
 
-  // Passo 2: Geração individual de cada seção
+  // Passo 2: Geração individual de cada seção com isolamento mútuo estrito de eventos
   const secoesGeradas = [];
   const versiculosCitados = [];
   let resumoSecoesAnteriores = '';
@@ -3770,10 +3960,20 @@ async function gerarRoteiroEmSeteSecoes({
     const secNum = i + 1;
     const pct = Math.round(10 + (secNum / 7) * 80);
 
+    // Constrói lista de eventos e versículos atribuídos às OUTRAS 6 seções (estritamente proibidos aqui)
+    const outrosEventos = [];
+    const outrosVersiculos = [];
+    for (let j = 0; j < secoes.length; j++) {
+      if (j !== i) {
+        if (secoes[j].eventos) outrosEventos.push(`[Section ${j+1} - ${secoes[j].titulo}]: ${secoes[j].eventos}`);
+        if (secoes[j].versiculos) outrosVersiculos.push(`[Section ${j+1}]: ${secoes[j].versiculos}`);
+      }
+    }
+
     updateProgress(
       secNum,
       7,
-      `Passo 2/7: Gerando Seção ${secNum} de 7: "${sec.titulo}" (alvo: 380-420 palavras)...`,
+      `Passo 2/7: Gerando Seção ${secNum} de 7: "${sec.titulo}" (papel: ${sec.papel})...`,
       pct
     );
 
@@ -3781,8 +3981,13 @@ async function gerarRoteiroEmSeteSecoes({
       ideia,
       secaoNumero: secNum,
       totalSecoes: 7,
+      papelSecao: sec.papel,
       tituloSecao: sec.titulo,
       resumoSecao: sec.resumo,
+      eventosDestaSecao: sec.eventos,
+      versiculosDestaSecao: sec.versiculos,
+      eventosProibidos: outrosEventos,
+      versiculosProibidos: outrosVersiculos,
       resumoSecoesAnteriores,
       versiculosJaCitados: versiculosCitados,
       idioma,
@@ -3800,7 +4005,7 @@ async function gerarRoteiroEmSeteSecoes({
     secoesGeradas.push(limpo);
 
     // Rastrear versículos citados para proibir repetição
-    const versos = limpo.match(/\b(?:Genesis|Gênesis|Génesis|Exodus|Êxodo|Numbers|Números|Deuteronomy|Deuteronômio|Joshua|Josué|1 Samuel|2 Samuel|1 Kings|2 Kings|1 Chronicles|2 Chronicles|1 Crônicas|2 Crônicas|Psalms|Salmos|Isaiah|Isaías)\s+\d+:\d+(?:-\d+)?\b/gi);
+    const versos = limpo.match(/\b(?:Genesis|Gênesis|Génesis|Exodus|Êxodo|Numbers|Números|Deuteronomy|Deuteronômio|Joshua|Josué|1 Samuel|2 Samuel|1 Kings|2 Kings|1 Chronicles|2 Chronicles|1 Crônicas|2 Crônicas|Psalms|Salmos|Isaiah|Isaías|Matthew|Mateus|Mark|Marcos|Luke|Lucas|John|João|Acts|Atos|Romans|Romanos|Revelation|Apocalipse)\s+\d+:\d+(?:-\d+)?\b/gi);
     if (versos) {
       for (const v of versos) {
         if (!versiculosCitados.includes(v)) {
@@ -3868,7 +4073,10 @@ Output EXCLUSIVELY the final 2 paragraphs.`;
     }
   }
 
-  // Pós-processamento de garantia: silêncio único, CTA no final absoluto e aspas válidas
+  // Pós-processamento de garantia: termos canônicos (máx 2), silêncio único, CTA no final absoluto e aspas válidas
+  if (typeof limitarTermosCanonicos === 'function') {
+    scriptFinal = limitarTermosCanonicos(scriptFinal);
+  }
   if (typeof limitarDeclaracoesDeSilencioBiblico === 'function') {
     scriptFinal = limitarDeclaracoesDeSilencioBiblico(scriptFinal);
   }
@@ -4025,7 +4233,10 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       // ITEM 3: Validação Bíblica Automática e Silenciosa (PT / EN / ES)
       resultText = await validarRoteiroComBiblia(resultText, idioma);
 
-      // Pós-processamento de garantia em resultText: silêncio único, CTA no final e aspas válidas
+      // Pós-processamento de garantia em resultText: termos canônicos (máx 2), silêncio único, CTA no final e aspas válidas
+      if (typeof limitarTermosCanonicos === 'function') {
+        resultText = limitarTermosCanonicos(resultText);
+      }
       if (typeof limitarDeclaracoesDeSilencioBiblico === 'function') {
         resultText = limitarDeclaracoesDeSilencioBiblico(resultText);
       }

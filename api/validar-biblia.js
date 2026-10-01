@@ -336,30 +336,41 @@ function findBestQuoteMatch(realVerse, quotedText) {
   return realVerse;
 }
 
-      // Caso 2: A referência EXISTE. Busca citação correspondente nas proximidades
-      const postRefIdx = match.index + match.length;
-      const postSnippet = textoCorrigido.slice(postRefIdx, postRefIdx + 300);
+      // Caso 2: A referência EXISTE. Busca citação correspondente na vizinhança (antes ou depois da referência)
+      const windowStart = Math.max(0, match.index - 400);
+      const windowEnd = Math.min(textoCorrigido.length, match.index + match.length + 500);
+      const snippet = textoCorrigido.slice(windowStart, windowEnd);
 
-      // Procura citação entre aspas logo após a referência (com ou sem verbos declarativos)
-      const quoteMatch = postSnippet.match(/^[^"”\n\.]*["“]([^"”]+)["”]/i);
-
-      if (quoteMatch) {
-        const textoCitado = quoteMatch[1].trim();
+      // Procura todas as citações entre aspas na janela
+      const quoteRegex = /["“]([^"”]{10,500})["”]/g;
+      let qm;
+      while ((qm = quoteRegex.exec(snippet)) !== null) {
+        const textoCitado = qm[1].trim();
         const textoCorretoAlvo = findBestQuoteMatch(realText, textoCitado);
 
-        // Se o texto citado não coincidir com o texto bíblico oficial
-        if (normalizeWords(textoCitado) !== normalizeWords(textoCorretoAlvo)) {
-          const quoteFull = quoteMatch[0];
-          const newQuote = quoteFull.replace(quoteMatch[1], textoCorretoAlvo);
-          const replaceIdx = postRefIdx;
-          textoCorrigido = textoCorrigido.slice(0, replaceIdx) + textoCorrigido.slice(replaceIdx).replace(quoteFull, newQuote);
+        const candWords = normalizeWords(realText).split(/\s+/);
+        const quoteWords = normalizeWords(textoCitado).split(/\s+/);
+        const overlap = quoteWords.filter(w => candWords.includes(w)).length;
 
-          alteracoes.push({
-            tipo: 'CITACAO_CORRIGIDA',
-            referencia: match.rawRef,
-            textoAnterior: textoCitado,
-            textoCorreto: textoCorretoAlvo
-          });
+        // Se pelo menos 3 palavras coincidem ou há mais de 30% de similaridade com o versículo bíblico
+        if (overlap >= 3 || (overlap / Math.max(1, quoteWords.length) >= 0.3)) {
+          if (normalizeWords(textoCitado) !== normalizeWords(textoCorretoAlvo)) {
+            const quoteFull = qm[0];
+            const newQuote = quoteFull.charAt(0) + textoCorretoAlvo + quoteFull.charAt(quoteFull.length - 1);
+            
+            // Substitui na janela e reconstrói o texto
+            const idxInSnippet = qm.index;
+            const absoluteIdx = windowStart + idxInSnippet;
+            textoCorrigido = textoCorrigido.slice(0, absoluteIdx) + newQuote + textoCorrigido.slice(absoluteIdx + quoteFull.length);
+
+            alteracoes.push({
+              tipo: 'CITACAO_CORRIGIDA',
+              referencia: match.rawRef,
+              textoAnterior: textoCitado,
+              textoCorreto: textoCorretoAlvo
+            });
+            break; // Citação corrigida para esta referência
+          }
         }
       }
     }
