@@ -1683,7 +1683,7 @@ ABSOLUTE CANONICAL & STORYTELLING RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
    - STRICTLY FORBIDDEN to repeat the exact same biblical story in more than one section (e.g. do NOT tell the story of David and Goliath or the spies of Numbers 13 in multiple sections; tell each canonical account once).
 4. ABSOLUTE CANONICAL FIDELITY & SCRIPTURAL ACCURACY (ITEM 4):
    - NEVER contradict explicit canonical Scripture (e.g., Genesis 7:23 explicitly states that only Noah and those with him in the ark remained alive; 1 Samuel 17:47 affirms that the battle is the LORD's).
-   - When the Bible does not detail a specific mechanism (such as how post-Flood giant lineages like the Anakim or Og of Bashan arose after the Flood), state this truth honestly in ONE single sentence and move forward.
+   - When the Bible does not detail a specific mechanism (such as how post-Flood giant lineages arose), state this in EXACTLY ONE single sentence in Section 4 and NEVER repeat it elsewhere in the script.
    - STRICTLY FORBIDDEN to invent speculative survival theories ("perhaps some survived", "increasingly human", "did not perish in the waters").
    - NEVER fabricate connections not in Scripture (e.g. NEVER associate giants with Jericho, as Joshua 6 makes no mention of giants in Jericho).
 5. BATTLES & DESTRUCTION (ITEM 5):
@@ -1701,8 +1701,10 @@ ABSOLUTE CANONICAL & STORYTELLING RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
    - STRICTLY FORBIDDEN: Any language of genetic, biological, or racial purity/corruption ("genetic", "bloodline", "hybrid", "pure humans", "gene pool").
    - STRICTLY FORBIDDEN: Any content derived from the Book of Enoch (1 Enoch), Jasher, or Jubilees (angels teaching metallurgy, astrology, naming Watchers/Azazel/Semyaza).
    - STRICTLY FORBIDDEN: Immediate temporal markers ("tonight", "this morning", "today in this video").
-8. FORBIDDEN CLICHÉS & AI PHRASES (ITEM 1, ITEM 5 & ITEM 6):
-   - STRICTLY FORBIDDEN: "tonight", "this morning", "profound", "fabric", "stark", "debate", "shrouded in mystery", "figuratively", "loomed large", "captivated minds", "what if I told you", "in the annals", "embark", "journey through", "delve", "dive deep", "enigmatic", "the very fabric", "challenge everything you thought", "testament to", "tapestry", "stark reminder", "serves as a reminder", "insurmountable", "unwavering", "glimmer of hope", "quintessential", "navigate", "multifaceted", "eliminated", "hunted down", "not an injustice", "populations were", "perhaps some survived", "increasingly human", "did not perish in the waters".
+8. FORBIDDEN CLICHÉS, INTERNAL LABELS & AI PHRASES:
+   - STRICTLY FORBIDDEN: "tonight", "this morning", "profound", "fabric", "stark", "debate", "shrouded in mystery", "figuratively", "loomed large", "captivated minds", "what if I told you", "in the annals", "annals", "embark", "journey through", "delve", "dive deep", "enigmatic", "the very fabric", "challenge everything you thought", "testament to", "testaments to", "sacred texts", "sacred text", "tapestry", "stark reminder", "serves as a reminder", "insurmountable", "unwavering", "glimmer of hope", "quintessential", "navigate", "multifaceted", "eliminated", "hunted down", "not an injustice", "populations were", "perhaps some survived", "increasingly human", "did not perish in the waters".
+   - STRICTLY FORBIDDEN INTERNAL LABELS: NEVER speak or write internal editorial labels such as "Canonical Boundary", "Pre-Flood Hook", "Section 1", "Section", "Point 1", "Outline".
+   - STRICTLY FORBIDDEN BACKSTAGE PHRASES: "in the next section", "as we transition", "we will explore", "as we continue our exploration", "moving ahead", "as the narrative unfolds".
 9. LITERAL SCRIPTURE FIDELITY & LANGUAGE COMPLIANCE:
    - Scripture quotes must be literal and verbatim from the target language's authorized Bible version (English: KJV).
    - Deliver 100% of the script in the selected content language.`;
@@ -1744,6 +1746,13 @@ const FORBIDDEN_TERMS = [
   { term: 'increasingly human', pattern: /\bincreasingly\s+human\b/i },
   { term: 'did not perish in the waters', pattern: /\bdid\s+not\s+perish\s+(?:in|beneath)\s+(?:the\s+)?waters?\b/i },
 
+  // Termos internos de arquitetura / seções
+  { term: 'canonical boundary', pattern: /\bcanonical\s+boundary\b/i },
+  { term: 'limite canônico', pattern: /\blimite\s+can[oô]nico\b/i },
+  { term: 'pre-flood hook', pattern: /\bpre-flood\s+hook\b/i },
+  { term: 'sacred texts', pattern: /\bsacred\s+texts?\b/i },
+  { term: 'textos sagrados', pattern: /\btextos?\s+sagrados?\b/i },
+
   // Clichês clássicos de IA
   { term: 'what if I told you', pattern: /\bwhat\s+if\s+i\s+told\s+you\b/i },
   { term: 'in the annals', pattern: /\bin\s+the\s+annals\b/i },
@@ -1761,8 +1770,8 @@ const FORBIDDEN_TERMS = [
   { term: 'the very fabric', pattern: /\bthe\s+very\s+fabric\b/i },
   { term: 'o próprio tecido', pattern: /\bo\s+pr[oó]prio\s+tecido\b/i },
   { term: 'challenge everything you thought', pattern: /\bchallenge\s+everything\s+you\s+thought\b/i },
-  { term: 'testament to', pattern: /\btestament\s+to\b/i },
-  { term: 'testemunho de', pattern: /\btestemunho\s+de\b/i },
+  { term: 'testament to', pattern: /\btestaments?\s+to\b/i },
+  { term: 'testemunho de', pattern: /\btestemunhos?\s+de\b/i },
   { term: 'tapestry', pattern: /\btapestry\b/i },
   { term: 'tapeçaria', pattern: /\btape[cç]aria\b/i },
   { term: 'stark reminder', pattern: /\bstark\s+reminder\b/i },
@@ -2167,6 +2176,99 @@ function limitarFrasesHistoricas(texto) {
 }
 
 /**
+ * AJUSTE: Garante que a afirmação sobre o silêncio da Bíblia apareça no MÁXIMO UMA VEZ no roteiro inteiro.
+ */
+function limitarDeclaracoesDeSilencioBiblico(texto) {
+  if (!texto || typeof texto !== 'string') return texto;
+  const padraoSilencio = /\b(?:(?:strikingly,\s+)?(?:the\s+)?(?:scriptures?|bible|sacred\s+(?:narrative|text|history)|holy\s+writ)\s+(?:falls?\s+into\s+(?:a\s+)?(?:solemn\s+)?silence|remains?\s+(?:resolute\s+in\s+its\s+)?silence|remains?\s+silent|offers?\s+no\s+(?:account|explanation)|does\s+not\s+(?:explain|detail|elaborate|clarify)|is\s+silent)|(?:the\s+)?scripture\s+does\s+not\s+(?:detail|explain|elaborate)\s+how\s+giant\s+lineages\s+re-?emerged|this\s+silence\s+on\s+the\s+mechanism\s+of\s+their\s+return)\b[^.!?]*[.,;!?]/gi;
+
+  let contagem = 0;
+  return texto.replace(padraoSilencio, (match) => {
+    contagem++;
+    if (contagem === 1) {
+      return match; // Mantém estritamente a 1ª ocorrência canônica (na Seção 4)
+    }
+    return ''; // A partir da 2ª ocorrência, remove a frase redundante
+  }).replace(/[^\S\r\n]{2,}/g, ' ').replace(/[^\S\r\n]+([.,;:!?])/g, '$1').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+/**
+ * AJUSTE: Validação e correção automática de aspas abertas/fechadas nas citações
+ */
+function validarECorrigirAspas(texto) {
+  if (!texto || typeof texto !== 'string') return texto;
+  const paragrafos = texto.split(/\n\s*\n/);
+
+  const corrigidos = paragrafos.map(p => {
+    let limpo = p.trim();
+    if (!limpo) return limpo;
+
+    // Normaliza aspas curvas para retas
+    limpo = limpo.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+
+    const totalAspas = (limpo.match(/"/g) || []).length;
+    if (totalAspas % 2 === 0) return limpo;
+
+    const primeiraAspa = limpo.indexOf('"');
+    const antes = limpo.substring(0, primeiraAspa);
+
+    // Se a primeira aspa está colada em pontuação de fechamento (ex: earth.") e não abriu antes:
+    if (/[a-z0-9][.,;!?]$/i.test(antes)) {
+      limpo = '"' + limpo;
+    } else {
+      // Aspa foi aberta mas faltou fechar antes ou no final da oração
+      if (limpo.endsWith('.')) {
+        limpo = limpo.slice(0, -1) + '."';
+      } else if (/[!?]$/.test(limpo)) {
+        limpo = limpo.slice(0, -1) + '"' + limpo.slice(-1);
+      } else {
+        limpo = limpo + '"';
+      }
+    }
+
+    const finalCount = (limpo.match(/"/g) || []).length;
+    if (finalCount % 2 !== 0) {
+      if (limpo.endsWith('."') && !limpo.startsWith('"')) {
+        limpo = '"' + limpo;
+      } else {
+        limpo = limpo.replace(/([.!?])$/, '"$1');
+      }
+    }
+
+    return limpo;
+  });
+
+  return corrigidos.join('\n\n');
+}
+
+/**
+ * AJUSTE: Garante que o convite de inscrição seja sempre o ÚLTIMO parágrafo,
+ * sem absolutamente nada depois dele.
+ */
+function garantirCtaNoUltimoParagrafo(texto) {
+  if (!texto || typeof texto !== 'string') return texto;
+  const paragrafos = texto.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  if (paragrafos.length <= 1) return texto;
+
+  const ctaRegex = /\b(?:subscrib(?:e|ing)|inscreva-se|inscrever|join\s+(?:this\s+)?channel|follow\s+(?:this\s+)?channel|acompanhe\s+este\s+canal|suscr[ií]bete|suscribir)\b/i;
+
+  let ctaIndex = -1;
+  for (let i = 0; i < paragrafos.length; i++) {
+    if (ctaRegex.test(paragrafos[i])) {
+      ctaIndex = i;
+    }
+  }
+
+  // Se o CTA existe e NÃO é o último parágrafo, move ele para o final absoluto
+  if (ctaIndex !== -1 && ctaIndex < paragrafos.length - 1) {
+    const ctaParagrafo = paragrafos.splice(ctaIndex, 1)[0];
+    paragrafos.push(ctaParagrafo);
+  }
+
+  return paragrafos.join('\n\n');
+}
+
+/**
  * ITEM 2 (Ajustes Finais): Checagem de Repetição de Versículos Bíblicos por Extenso
  * Se o mesmo versículo for citado por extenso mais de uma vez no roteiro,
  * regenera os parágrafos subsequentes mantendo a narrativa histórica viva sem repetir a citação literal.
@@ -2511,7 +2613,7 @@ MANDATORY CANONICAL OUTLINE RULES:
    Section 1: The Pre-Flood Hook & Genesis 6:1-4 (The sons of God, the daughters of men, and the antediluvian giants as mighty men of renown).
    Section 2: Antediluvian Civilization & The 120-Year Warning (Genesis 6:3 & 6:5: widespread corruption, the physical conditions of the ancient world, and the decree of restraint BEFORE the floodwaters).
    Section 3: The Global Deluge & The Ark's Exclusive Survival (Genesis 7:23: the cataclysm of the deep, the total destruction of all flesh outside, and Noah alone remaining alive).
-   Section 4: The Canonical Boundary: Post-Flood Silence (Acknowledge in ONE sentence that Scripture does not detail the biological or physical mechanism of later giant lineages, with ZERO speculation).
+   Section 4: The Scriptural Silence on Post-Flood Lineages (Acknowledge in ONE sentence that Scripture does not detail the biological or physical mechanism of later giant lineages, with ZERO speculation).
    Section 5: The Spies in Canaan & The Sons of Anak in Hebron (Numbers 13:28-33: the literal report of the Anakim and the terror of the spies, with ZERO invented links to Jericho).
    Section 6: The Wars of David and the Giants of Gath (2 Samuel 21:15-22 / 1 Chronicles 20: the specific skirmishes with Goliath's kin, narrated as literal history without justifying destruction of peoples).
    Section 7: Solemn Conclusion & Divine Sovereignty (1 Samuel 17:47: "the battle is the LORD's", the final theological verdict, and the channel subscription call).
@@ -2519,6 +2621,7 @@ MANDATORY CANONICAL OUTLINE RULES:
    - Never contradict explicit canonical scripture (Genesis 7:23; 1 Samuel 17:47).
    - Zero extra-biblical lore or Book of Enoch concepts.
    - Zero backstage meta-language ("in the next section", "as we transition", "we will explore", "moving ahead", "annals").
+   - Zero internal editorial labels ("Canonical Boundary", "Pre-Flood Hook").
 
 OUTPUT FORMAT:
 Output EXACTLY 7 lines, formatted as:
@@ -2564,25 +2667,27 @@ CRITICAL RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
    - The VERY FIRST sentence of Section 1 MUST be a concrete, striking factual statement drawn directly from canonical Scripture (Genesis 6:1-4).
    - Halts the listener immediately with divine authority and the physical reality of the pre-Flood world.
    - STRICTLY FORBIDDEN: Starting with weak intros like "In the days before the Flood, the earth was not as we know it now", "The biblical narrative includes...", "In the biblical narrative...", "The Bible tells us...", "Throughout history...".` : 'CONTINUITY: Begin directly continuing the living chronicle with narrative momentum. No meta-intro or welcome back.'}
-2. ZERO BACKSTAGE / META-LANGUAGE (AJUSTE 3):
+2. ZERO BACKSTAGE / META-LANGUAGE & ZERO INTERNAL LABELS:
    - STRICTLY FORBIDDEN to use presentation or backstage phrases like "in the next section", "as we transition", "we will explore", "as we continue our exploration", "moving ahead", "as the narrative unfolds". Speak directly as an ancient chronicle without stepping out of the story.
+   - STRICTLY FORBIDDEN to utter internal architectural labels like "Canonical Boundary", "Pre-Flood Hook", "Section", "Point", "Outline" in the spoken text.
 3. REPETITION CONTROLS:
    - NEVER quote the same verse verbatim more than once in the entire script.
    - NEVER narrate a biblical story or battle (such as 2 Samuel 21 or Numbers 13) if already covered in previous sections.
    - Limit phrases like "not legends or myths", "historical fact", and "the Scripture treats this as" — use at most once if not already used.
-4. CANONICAL FIDELITY & ZERO SPECULATION:
+4. CANONICAL FIDELITY & SILENCE LIMIT:
    - NEVER contradict explicit canonical scripture (e.g. Genesis 7:23: "Noah only remained alive, and they that were with him in the ark"; 1 Samuel 17:47: "the battle is the LORD's").
-   - When the Bible does not explain a detail or mechanism, state that in ONE honest sentence and move on. STRICTLY PROHIBITED to speculate ("perhaps some survived", "increasingly human", "did not perish in the waters").
+${secaoNumero === 3 ? '   - STRICT RULE FOR SECTION 3: Section 3 is EXCLUSIVELY about the Floodwaters and the Ark. STRICTLY FORBIDDEN to mention post-Flood lineages or the silence of Scripture here.\n' : ''}${secaoNumero === 4 ? '   - STRICT RULE FOR SECTION 4: You must state that Scripture remains silent regarding the mechanism of how post-Flood giant lineages appeared in EXACTLY ONE single sentence. State it once and move on. NEVER repeat this silence statement.\n' : ''}   - When the Bible does not explain a detail or mechanism, state that in ONE honest sentence and move on. STRICTLY PROHIBITED to speculate ("perhaps some survived", "increasingly human", "did not perish in the waters").
    - Never assert connections the text does not make (e.g. never connect giants to the walls of Jericho).
 5. BATTLES & SOLEMN RESTRAINT:
    - Narrate battles strictly with literal scripture citations from ${lang.bibleTranslation}.
    - Do NOT evaluate, moralize, or justify the destruction of populations.
    - STRICTLY PROHIBITED WORDS: "eliminated", "hunted down", "not an injustice", "populations were".
 6. FORBIDDEN CLICHÉS & WORDS:
-   - NEVER use: "annals", "in the annals", "tonight", "this morning", "profound", "fabric", "stark", "debate", "shrouded in mystery", "figuratively", "loomed large", "captivated minds", "what if I told you", "embark", "journey through", "delve", "dive deep", "enigmatic", "the very fabric", "challenge everything you thought", "testament to", "tapestry", "stark reminder", "serves as a reminder", "insurmountable", "unwavering", "glimmer of hope", "quintessential", "navigate", "multifaceted".
-7. VERBATIM SCRIPTURE:
+   - NEVER use: "annals", "in the annals", "tonight", "this morning", "profound", "fabric", "stark", "debate", "shrouded in mystery", "figuratively", "loomed large", "captivated minds", "what if I told you", "embark", "journey through", "delve", "dive deep", "enigmatic", "the very fabric", "challenge everything you thought", "testament to", "testaments to", "sacred texts", "sacred text", "tapestry", "stark reminder", "serves as a reminder", "insurmountable", "unwavering", "glimmer of hope", "quintessential", "navigate", "multifaceted".
+7. VERBATIM SCRIPTURE & QUOTE INTEGRITY:
    - When quoting scripture, quote word-for-word from ${lang.bibleTranslation} (${lang.citationRule}).
-8. ${isLast ? 'FINAL CLIMAX & CTA: Deliver a solemn, awe-inspiring synthesis of what Scripture reveals, ending with a reverent call to subscribe to the channel.' : 'NARRATIVE BRIDGE: End this section with natural narrative momentum leading into the next historical point.'}
+   - Always open and close quotation marks properly on every scriptural quote.
+8. ${isLast ? 'FINAL CLIMAX & CTA: Deliver a solemn, awe-inspiring synthesis of what Scripture reveals (1 Samuel 17:47), ending with a reverent call to subscribe to the channel as the VERY LAST sentence and paragraph.' : 'NARRATIVE BRIDGE: End this section with natural narrative momentum leading into the next historical point.'}
 
 OUTPUT FORMAT:
 Output EXCLUSIVELY the narration text for Section ${secaoNumero}.
@@ -3101,16 +3206,35 @@ function limparTextoParaNarracao(texto) {
   limpo = limpo.replace(/^\s*[-*•]\s+/gm, '');
   limpo = limpo.replace(/^\s*\d+\.\s+/gm, '');
 
-  // 12. Remove linhas residuais que contenham apenas palavras estruturais isoladas ou pontuação solta (: ou -)
+  // 12. Remove menções a termos internos de arquitetura ou rótulos editoriais
+  limpo = limpo.replace(/\b(?:the\s+)?canonical\s+boundary\b/gi, '');
+  limpo = limpo.replace(/\b(?:the\s+)?pre-flood\s+hook\b/gi, '');
+
+  // 13. Remove linhas residuais que contenham apenas palavras estruturais isoladas ou pontuação solta (: ou -)
   limpo = limpo.replace(/^\s*(?:Hook|Introduction|Point \d+|Assertion|Development|Evidence|Analysis|Impact|Conclusion|Call to Action|Ponto \d+|Afirmação|Desenvolvimento|Evidências|Análise|Impacto|Conclusão|Punto \d+|Afirmación|Desarrollo)\s*$/gmi, '');
   limpo = limpo.replace(/^\s*[:\-–—]\s*$/gm, '');
 
-  // 12. Normaliza quebras de linha e espaços extras
+  // 14. Limita declarações sobre o silêncio bíblico a no máximo UMA vez no roteiro inteiro
+  if (typeof limitarDeclaracoesDeSilencioBiblico === 'function') {
+    limpo = limitarDeclaracoesDeSilencioBiblico(limpo);
+  }
+
+  // 15. Normaliza quebras de linha e espaços extras
   limpo = limpo
     .split('\n')
     .map(l => l.trim())
     .filter(l => l.length > 0)
     .join('\n\n');
+
+  // 16. Garante que o convite de inscrição seja sempre o ÚLTIMO parágrafo
+  if (typeof garantirCtaNoUltimoParagrafo === 'function') {
+    limpo = garantirCtaNoUltimoParagrafo(limpo);
+  }
+
+  // 17. Validação e correção automática de aspas abertas/fechadas em citações
+  if (typeof validarECorrigirAspas === 'function') {
+    limpo = validarECorrigirAspas(limpo);
+  }
 
   return limpo.trim();
 }
@@ -3413,7 +3537,7 @@ async function gerarRoteiroEmSeteSecoes({
     { numero: 1, titulo: "Opening Hook & The Sons of God in Genesis 6", resumo: "Direct canonical hook on Genesis 6:1-4 and the reality of the pre-Flood world." },
     { numero: 2, titulo: "The Pre-Flood Realm and Global Corruption", resumo: "The physical conditions of the antediluvian earth, human corruption, and the solemn divine decree." },
     { numero: 3, titulo: "The Great Deluge and Exclusive Survival", resumo: "The cataclysm of waters and Genesis 7:23 where only Noah and those with him in the ark survived." },
-    { numero: 4, titulo: "The Canonical Boundary: What Scripture Declares and Leaves Unexplained", resumo: "Stating in one sentence that the Bible does not detail post-Flood mechanics, with zero speculation." },
+    { numero: 4, titulo: "The Scriptural Silence on Post-Flood Lineages", resumo: "Stating in one sentence that the Bible does not detail post-Flood mechanics, with zero speculation." },
     { numero: 5, titulo: "The Spies of Israel and the City of Hebron", resumo: "Numbers 13:28-33, the report of the sons of Anak in Hebron, strictly without invented Jericho links." },
     { numero: 6, titulo: "The Wars of David and the Giants of Gath", resumo: "2 Samuel 21:15-22 and 1 Chronicles 20, Goliath and his kin, narrated as literal history without justifying destruction." },
     { numero: 7, titulo: "Solemn Conclusion & The Sovereign Victory of God", resumo: "1 Samuel 17:47 ('the battle is the LORD\\'s'), final awe-inspiring theological synthesis and channel CTA." }
@@ -3504,7 +3628,7 @@ async function gerarRoteiroEmSeteSecoes({
     console.log(`[Geração em 7 Seções] Narração limpa em ${contagem} palavras. Complementando ${faltam} palavras para cumprir meta de 2.800...`);
     const promptExpansao = `Act as the same senior biblical documentary scriptwriter.
 The clean narration of the documentary on '${ideia}' is currently at ${contagem} words. The required documentary minimum is 2,800 words.
-Without repeating any stories, without speculating, without backstage phrases, and without forbidden clichés, write a dense and reverent 2-paragraph expansion on the profound biblical truth of 1 Samuel 17:47 ("the battle is the LORD's"), the eternal sovereignty of the Creator over all terrestrial powers throughout biblical history, and the sacred preservation of the faithful remnant.
+Without repeating any stories, without speculating, without backstage phrases, without internal labels, and without forbidden clichés, write a dense and reverent 2-paragraph expansion on the biblical truth of 1 Samuel 17:47 ("the battle is the LORD's"), the eternal sovereignty of the Creator over all terrestrial powers throughout biblical history, and the sacred preservation of the faithful remnant.
 Length: at least ${faltam + 50} words.
 Language: 100% in ${lang.name}. Literal quotes from ${lang.bibleTranslation}.
 Output EXCLUSIVELY the final 2 paragraphs.`;
@@ -3512,7 +3636,19 @@ Output EXCLUSIVELY the final 2 paragraphs.`;
     try {
       const extra = await OpenRouterAPI.generateContent(promptExpansao, modelo, SCRIPT_SYSTEM_PROMPT);
       if (extra && extra.trim()) {
-        scriptFinal = scriptFinal.trim() + '\n\n' + extra.trim();
+        const paragrafosAtuais = scriptFinal.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+        const ctaRegex = /\b(?:subscrib(?:e|ing)|inscreva-se|inscrever|join\s+(?:this\s+)?channel|follow\s+(?:this\s+)?channel|acompanhe\s+este\s+canal|suscr[ií]bete|suscribir)\b/i;
+        let ctaParagrafo = '';
+        if (paragrafosAtuais.length > 0 && ctaRegex.test(paragrafosAtuais[paragrafosAtuais.length - 1])) {
+          ctaParagrafo = paragrafosAtuais.pop();
+        }
+
+        if (ctaParagrafo) {
+          scriptFinal = [...paragrafosAtuais, extra.trim(), ctaParagrafo].join('\n\n');
+        } else {
+          scriptFinal = scriptFinal.trim() + '\n\n' + extra.trim();
+        }
+
         scriptFinal = removerParagrafosDuplicadosPorSimilaridade(scriptFinal, 0.6);
         contagem = obterPalavrasLimpo(scriptFinal);
         if (contagem > 3200) {
@@ -3522,6 +3658,17 @@ Output EXCLUSIVELY the final 2 paragraphs.`;
     } catch (eExp) {
       console.warn('Falha na expansão de encerramento:', eExp);
     }
+  }
+
+  // Pós-processamento de garantia: silêncio único, CTA no final absoluto e aspas válidas
+  if (typeof limitarDeclaracoesDeSilencioBiblico === 'function') {
+    scriptFinal = limitarDeclaracoesDeSilencioBiblico(scriptFinal);
+  }
+  if (typeof garantirCtaNoUltimoParagrafo === 'function') {
+    scriptFinal = garantirCtaNoUltimoParagrafo(scriptFinal);
+  }
+  if (typeof validarECorrigirAspas === 'function') {
+    scriptFinal = validarECorrigirAspas(scriptFinal);
   }
 
   updateProgress(7, 7, 'Geração em 7 seções concluída com êxito!', 100);
@@ -3644,6 +3791,18 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
     if (resultText) {
       // ITEM 3: Validação Bíblica Automática e Silenciosa (PT / EN / ES)
       resultText = await validarRoteiroComBiblia(resultText, idioma);
+
+      // Pós-processamento de garantia em resultText: silêncio único, CTA no final e aspas válidas
+      if (typeof limitarDeclaracoesDeSilencioBiblico === 'function') {
+        resultText = limitarDeclaracoesDeSilencioBiblico(resultText);
+      }
+      if (typeof garantirCtaNoUltimoParagrafo === 'function') {
+        resultText = garantirCtaNoUltimoParagrafo(resultText);
+      }
+      if (typeof validarECorrigirAspas === 'function') {
+        resultText = validarECorrigirAspas(resultText);
+      }
+
       const outputRoteiroEl = document.getElementById('output-prompt-roteiro');
       if (outputRoteiroEl) outputRoteiroEl.value = resultText;
 
