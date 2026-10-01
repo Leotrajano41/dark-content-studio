@@ -1572,7 +1572,8 @@ const OpenRouterAPI = {
     if (isDirectOpenAi) {
       if (activeModel.includes('gpt-4o-mini')) activeModel = 'gpt-4o-mini';
       else if (activeModel.includes('gpt-4o')) activeModel = 'gpt-4o';
-      else if (activeModel.includes('claude')) activeModel = 'gpt-4o-mini';
+      else if (activeModel.includes('sonnet')) activeModel = 'gpt-4o';
+      else if (activeModel.includes('haiku') || activeModel.includes('claude')) activeModel = 'gpt-4o-mini';
       else if (activeModel.startsWith('openai/')) activeModel = activeModel.replace('openai/', '');
     }
 
@@ -1642,31 +1643,42 @@ const OpenRouterAPI = {
 window.OpenRouterAPI = OpenRouterAPI;
 
 /**
- * REGRAS DE CONTEÚDO (Item 2) - System Prompt Exclusivo para Geração de Roteiro
+ * REGRAS DE CONTEÚDO E STORYTELLING BÍBLICO (Item 2) - System Prompt Exclusivo para Geração de Roteiro
  */
-const SCRIPT_SYSTEM_PROMPT = `You are a master biblical documentary scriptwriter and theologian specializing in canonical deep-dives following the formula of 'Explicador Bíblico'.
+const SCRIPT_SYSTEM_PROMPT = `You are a master biblical documentary storyteller and narrator following the proven formula of the YouTube dark channel 'Explicador Bíblico'.
 
-ABSOLUTE CANONICAL RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
-1. FACT VS INTERPRETATION:
-   - State as absolute historical and sacred FACT ONLY what the literal canonical biblical text explicitly states, always accompanied by verbatim scripture quotes (KJV for English, João Ferreira de Almeida for Portuguese, Reina-Valera 1909 for Spanish).
-   - Any theological commentary, traditions, or scholarly views must be explicitly framed as interpretations, using phrases like:
-     "Many understand this passage as...", "Traditional interpreters view this as...", "Theological tradition often reads this as..." (or equivalents in PT/ES).
-2. STRICTLY PROHIBITED THEMES & CONCEPTS:
-   - STRICTLY FORBIDDEN: Any language of genetic, biological, or racial purity/corruption (e.g. NEVER use "genetic", "bloodline", "hybrid", "pure humans", "gene pool", or any equivalent in PT/ES).
+ABSOLUTE CANONICAL & STORYTELLING RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
+1. NARRATE AS LIVING HISTORY, NOT AS A THEOLOGICAL ESSAY (ITEM 3):
+   - Write as a cinematic, scene-by-scene biblical historical narrative (chronological progression, living ancient scenes, tension, physical gravity, and raw scriptural events).
+   - NEVER write as an academic theological dissertation, homiletic lecture, abstract analysis, or Sunday school devotional.
+2. MANDATORY HOOK IN THE FIRST 2-3 SENTENCES (ITEM 1):
+   - The script MUST begin immediately with a concrete, striking factual statement drawn directly from the biblical text.
+   - STRICTLY FORBIDDEN to open with weak contemplative formulas such as "The biblical narrative includes...", "In the biblical narrative...", "The Bible tells us...", "Throughout history...", or similar academic preambles.
+3. 80%+ FOCUS ON TITLE THEME & ZERO PREMATURE DEVOTIONAL DRIFT (ITEM 2):
+   - At least 80% of the entire script MUST focus directly on the specific subject promised in the title.
+   - STRICTLY FORBIDDEN to shift into generic devotional application ("giants in your life", "battling personal giants", "your daily struggles", "facing the giants in our hearts") anywhere before the final 2-minute conclusion.
+   - STRICTLY FORBIDDEN to repeat the exact same biblical story in more than one section (e.g. do NOT tell the story of David and Goliath or the spies of Numbers 13 in multiple sections; tell each canonical account once).
+4. FACT VS INTERPRETATION & STRICT CANONICAL TRUTH (ITEM 4 & ITEM 2):
+   - State as sacred historical FACT ONLY what the literal canonical text explicitly declares, always backed by verbatim scripture quotes (KJV for English, João Ferreira de Almeida for Portuguese, Reina-Valera 1909 for Spanish).
+   - MAXIMUM OF 3 PHRASES of the type "many understand this passage as...", "interpreters view this as...", or "theological tradition notes..." in the ENTIRE script. The rest must be narrated with the full authority of the canonical biblical text.
+   - STRICTLY FORBIDDEN to call the biblical account a "metaphor", "symbol", "symbolic", "cautionary tale", or "narrative device".
+   - STRICTLY FORBIDDEN: Any language of genetic, biological, or racial purity/corruption (e.g. NEVER use "genetic", "bloodline", "hybrid", "pure humans", "gene pool", or equivalents).
    - STRICTLY FORBIDDEN: Justifications for the destruction or ethnic wiping out of entire peoples.
-   - STRICTLY FORBIDDEN: Any content or lore derived from the Book of Enoch (1 Enoch), Book of Jasher, or Jubilees (such as angels teaching metallurgy, astrology, naming specific fallen angels like Azazel/Semyaza, or corrupting human seed), EVEN IF the Book of Enoch is not explicitly named.
+   - STRICTLY FORBIDDEN: Any content or lore derived from the Book of Enoch (1 Enoch), Jasher, or Jubilees (such as angels teaching metallurgy, astrology, naming fallen angels like Azazel/Semyaza, or corrupting human seed), EVEN IF the Book of Enoch is not explicitly named.
    - STRICTLY FORBIDDEN: Fabricating numbers, measurements, or historical facts that the 66 canonical biblical books do not contain.
    - STRICTLY FORBIDDEN: Immediate temporal markers such as "tonight", "this morning", "today in this video", "esta noite", "esta manhã".
-3. STRICT SCRIPTURAL FIDELITY:
+5. FORBIDDEN CLICHÉS & AI PHRASES (ITEM 6):
+   - STRICTLY FORBIDDEN: "what if I told you", "in the annals", "embark", "journey through", "delve", "dive deep", "enigmatic", "the very fabric", "challenge everything you thought", "testament to", "tapestry", "stark reminder", "serves as a reminder", "insurmountable", "unwavering", "glimmer of hope", "quintessential", "navigate", "profound", "multifaceted".
+6. LITERAL SCRIPTURE FIDELITY & LANGUAGE COMPLIANCE:
    - Scripture quotes must be literal and verbatim from the target language's authorized Bible version (English: KJV).
    - Deliver 100% of the script in the selected content language.`;
 
 /**
- * FILTRO AUTOMÁTICO PÓS-GERAÇÃO (Item 3)
+ * FILTRO AUTOMÁTICO PÓS-GERAÇÃO (Item 3 & Item 6)
  * Lista de clichês e termos proibidos monitorados
  */
 const FORBIDDEN_TERMS = [
-  // Clichês de IA / YouTube (Item 3)
+  // Clichês de IA / YouTube (Item 3 & Item 6)
   { term: 'what if I told you', pattern: /\bwhat\s+if\s+i\s+told\s+you\b/i },
   { term: 'in the annals', pattern: /\bin\s+the\s+annals\b/i },
   { term: 'nos anais', pattern: /\bnos\s+anais\b/i },
@@ -1687,6 +1699,39 @@ const FORBIDDEN_TERMS = [
   { term: 'testemunho de', pattern: /\btestemunho\s+de\b/i },
   { term: 'tapestry', pattern: /\btapestry\b/i },
   { term: 'tapeçaria', pattern: /\btape[cç]aria\b/i },
+
+  // Novos clichês adicionados (Item 6)
+  { term: 'stark reminder', pattern: /\bstark\s+reminder\b/i },
+  { term: 'lembrete gritante', pattern: /\blembrete\s+(?:gritante|severo|duro)\b/i },
+  { term: 'serves as a reminder', pattern: /\bserve[sd]?\s+as\s+a\s+reminder\b/i },
+  { term: 'serve como lembrete', pattern: /\bserve\s+como\s+(?:um\s+)?lembrete\b/i },
+  { term: 'insurmountable', pattern: /\binsurmountable\b/i },
+  { term: 'insuperável', pattern: /\binsuper[aá]ve(?:l|is)\b/i },
+  { term: 'unwavering', pattern: /\bunwavering\b/i },
+  { term: 'inabalável', pattern: /\binabal[aá]ve(?:l|is)\b/i },
+  { term: 'glimmer of hope', pattern: /\bglimmer\s+of\s+hope\b/i },
+  { term: 'vislumbre de esperança', pattern: /\bvislumbre\s+de\s+esperan[cç]a\b/i },
+  { term: 'quintessential', pattern: /\bquintessential\b/i },
+  { term: 'quintessencial', pattern: /\bquintessencia(?:l|is)\b/i },
+  { term: 'navigate', pattern: /\bnavigat(?:e|es|ing|ed)\b/i },
+  { term: 'profound', pattern: /\bprofound(?:ly)?\b/i },
+  { term: 'profundo', pattern: /\bprofund[oa]s?\b/i },
+  { term: 'multifaceted', pattern: /\bmultifaceted\b/i },
+  { term: 'multifacetado', pattern: /\bmultifacetad[oa]s?\b/i },
+
+  // Aberturas e termos proibidos (Item 1 & Item 4)
+  { term: 'the biblical narrative includes', pattern: /\bthe\s+biblical\s+narrative\s+includes\b/i },
+  { term: 'a narrativa bíblica inclui', pattern: /\ba\s+narrativa\s+b[ií]blica\s+inclui\b/i },
+  { term: 'metaphor', pattern: /\bmetaphor(?:s|ical|ically)?\b/i },
+  { term: 'metáfora', pattern: /\bmet[aá]fora?s?\b/i },
+  { term: 'symbol', pattern: /\bsymbol(?:s|ic|ical|ically|ize|izes|ized|izing)?\b/i },
+  { term: 'símbolo', pattern: /\bs[ií]mbol[oa]s?\b/i },
+  { term: 'cautionary tale', pattern: /\bcautionary\s+tale\b/i },
+  { term: 'conto de advertência', pattern: /\bconto\s+de\s+advert[eê]ncia\b/i },
+  { term: 'narrative device', pattern: /\bnarrative\s+device\b/i },
+  { term: 'recurso narrativo', pattern: /\brecurso\s+narrativo\b/i },
+  { term: 'giants in your life', pattern: /\bgiants?\s+in\s+(?:your|our|one's)\s+li(?:fe|ves)\b/i },
+  { term: 'gigantes em sua vida', pattern: /\bgigantes?\s+em\s+(?:sua|nossa)\s+vida\b/i },
 
   // Pureza genética/racial & termos do Item 2
   { term: 'genetic', pattern: /\bgenetic(?:s|ally)?\b/i },
@@ -1718,7 +1763,7 @@ const FORBIDDEN_TERMS = [
 ];
 
 /**
- * Função de Varredura e Regeneração Automática de Parágrafos (Item 3)
+ * Função de Varredura e Regeneração Automática de Parágrafos (Item 3 & Item 6)
  * Varre o roteiro por termos proibidos e clichês. Se encontrar, regenera apenas
  * os parágrafos afetados (máximo de 2 tentativas por parágrafo).
  */
@@ -1746,7 +1791,7 @@ async function aplicarFiltroTermosProibidos(roteiro, idioma, modelo) {
     while (termosEncontrados.length > 0 && tentativas < 2) {
       tentativas++;
       try {
-        const rewritePrompt = `Act as an expert biblical script editor.
+        const rewritePrompt = `Act as an expert biblical documentary script editor.
 Rewrite the following single paragraph from a biblical documentary script to strictly eliminate every prohibited cliché, forbidden term, or skepticism.
 
 ORIGINAL PARAGRAPH:
@@ -1756,11 +1801,12 @@ PROHIBITED TERMS DETECTED:
 ${termosEncontrados.map(t => `"${t.term}"`).join(', ')}
 
 MANDATORY EDITING RULES:
-1. Rephrase the paragraph completely to eliminate all clichés ("what if I told you", "in the annals", "embark", "journey through", "delve", "dive deep", "enigmatic", "the very fabric", "challenge everything you thought", "testament to", "tapestry") and any forbidden genetic/racial concepts ("genetic", "bloodline", "hybrid", "pure humans", "gene pool").
-2. State as sacred fact ONLY what canonical Scripture says, with literal quotes where applicable. Frame any theological interpretations as "many understand this passage as...".
-3. Do NOT use temporal markers like "tonight" or "this morning".
-4. Keep the exact same narrative tone, historical depth, and content language (${lang.name}).
-5. Output EXCLUSIVELY the rewritten paragraph text. Do NOT include greetings, preamble, quotes around the paragraph, or commentary.`;
+1. Rephrase the paragraph completely to eliminate all clichés ("what if I told you", "in the annals", "embark", "journey through", "delve", "dive deep", "enigmatic", "the very fabric", "challenge everything you thought", "testament to", "tapestry", "stark reminder", "serves as a reminder", "insurmountable", "unwavering", "glimmer of hope", "quintessential", "navigate", "profound", "multifaceted") and any forbidden genetic/racial concepts ("genetic", "bloodline", "hybrid", "pure humans", "gene pool").
+2. NEVER use weak openings like "The biblical narrative includes...". NEVER use generic devotional applications ("giants in your life"). NEVER call the biblical account a "metaphor", "symbol", "cautionary tale", or "narrative device".
+3. State as sacred fact ONLY what canonical Scripture says, with literal quotes where applicable. Frame secondary interpretations as "many understand this passage as...".
+4. Do NOT use temporal markers like "tonight" or "this morning".
+5. Keep the exact same narrative tone, historical depth, storytelling power, and content language (${lang.name}).
+6. Output EXCLUSIVELY the rewritten paragraph text. Do NOT include greetings, preamble, quotes around the paragraph, or commentary.`;
 
         const novoParagrafo = await OpenRouterAPI.generateContent(
           rewritePrompt,
@@ -1804,9 +1850,9 @@ window.aplicarFiltroTermosProibidos = aplicarFiltroTermosProibidos;
 const SCRIPT_DURATION_CONFIGS = {
   'YouTube Longo (18-20 minutos)': {
     nome: 'YouTube Longo (18-20 minutos)',
-    palavrasMin: 2700,
-    palavrasMax: 3000,
-    limite85: Math.round(2700 * 0.85), // 2295
+    palavrasMin: 2800,
+    palavrasMax: 3200,
+    limite85: Math.round(2800 * 0.85), // 2380
     duracaoTexto: '18 a 20 minutos'
   },
   'YouTube Médio (5-8 minutos)': {
@@ -1904,29 +1950,29 @@ Provide the 10 ideas numbered 1 to 10 in ${lang.name}, with Title (max 1 word in
 
     if (estilo.includes('18-20') || estilo.includes('Longo')) {
       instrucoesDuracaoEFormato = `FORMAT: YouTube Long Documentary (18-20 minutes of continuous narration)
-MANDATORY WORD COUNT TARGET: STRICTLY BETWEEN 2,700 AND 3,000 WORDS IN TOTAL.
-(Based on standard speech rate of 150 words per minute: 18 min = 2,700 words, 20 min = 3,000 words).
+MANDATORY WORD COUNT TARGET: STRICTLY BETWEEN 2,800 AND 3,200 WORDS IN TOTAL.
+(Based on standard narration speed of 150 words per minute: 18 min = 2,700 words, 20 min = 3,000 words. MINIMUM: 2,800 words).
 
 DEPTH AND VOLUME DIRECTIVES:
 - It is STRICTLY FORBIDDEN to summarize, abbreviate, or deliver a short outline.
 - The script MUST be long, dense, and deeply immersive.
-- Divide the body into EXACTLY 7 to 8 MAJOR NUMBERED SECTIONS.
-- Each section MUST contain multiple dense paragraphs (MANDATORY MINIMUM: 350 TO 450 WORDS PER SECTION).
-- Never write just a single sentence per section. Provide deep historical and geographical biblical context, literal Scripture exposition, theological significance, and profound reflections.
+- Divide the body into EXACTLY 8 to 9 MAJOR NUMBERED SECTIONS.
+- Each section MUST contain multiple dense, narrative paragraphs (MANDATORY MINIMUM: 350 TO 450 WORDS PER SECTION).
+- Never write just a single sentence per section. Reconstruct historical environments, biblical geography, chronological sequence of events, verbatim scripture dialogues, and solemn spiritual weight.
 
 REQUIRED SCRIPT STRUCTURE:
-- Hook (0-15s): Magnetic opening statement/question that halts the viewer, based on the hook type: ${tipoGancho}.
-- Immersive Introduction (0-45s / ~150 words): Establishes the solemn gravity of the biblical account and the promise of what Scripture reveals.
-- Body of Documentary (7 to 8 Major Points - 350 to 450 words each):
-  For EACH point:
-  * Provocative and reverent premise
-  * Deep biblical and historical contextualization within the canonical narrative
-  * Detailed textual scripture analysis with exact verbatim quotes
-  * Faithful theological reflection on the implications for faith and human obedience to God
-- Retention Hooks and Organic CTAs: Naturally woven between sections to sustain attention.
-- Conclusion and Climax (~180 words): Solemn synthesis of the biblical truth and final call to action.
+- Opening Hook (First 2-3 sentences): A concrete, striking factual statement drawn directly from the canonical biblical text. Halts the viewer immediately.
+  * STRICTLY FORBIDDEN: Opening with weak intros like "The biblical narrative includes...", "In the biblical narrative...", "The Bible tells us...", "Throughout history...".
+- Immersive Introduction (~150 words): Establishes the solemn gravity of the historical events recorded in Scripture.
+- Body of Documentary (8 to 9 Major Story Points - 350 to 450 words each):
+  * At least 80% of the entire script MUST focus directly on the specific subject promised in '${ideia}'.
+  * Narrate as a living historical chronicle (scenes, sequence of biblical events, physical reality of the pre-Flood world, Canaan encounters), NOT as an abstract theological essay or dissertation.
+  * STRICTLY FORBIDDEN to turn the script into generic devotional application ("giants in your life", "battling personal giants") before the final conclusion.
+  * STRICTLY FORBIDDEN to repeat the same biblical passage or event across multiple sections (cover each canonical passage once).
+- Retention Hooks and Organic CTAs: Naturally woven between sections to sustain attention without breaking the narrative mood.
+- Solemn Conclusion and Climax (~200 words): Reverent synthesis of what Scripture reveals, followed by the channel call to action.
 
-ATTENTION: Do NOT stop writing until reaching the target of 2,700 to 3,000 words.`;
+ATTENTION: Do NOT stop writing until reaching the target of 2,800 to 3,200 words.`;
 
     } else if (estilo.includes('5-8') || estilo.includes('Médio')) {
       instrucoesDuracaoEFormato = `FORMAT: YouTube Medium Video (5-8 minutes of narration)
@@ -1934,15 +1980,17 @@ MANDATORY WORD COUNT TARGET: STRICTLY BETWEEN 750 AND 1,200 WORDS IN TOTAL.
 (Based on 150 words per minute to fill 5 to 8 minutes).
 
 DEPTH AND VOLUME DIRECTIVES:
-- Divide into 3 to 5 clear points with real substance (minimum 120 to 200 words per point).
+- Divide into 3 to 5 clear points with real substance (minimum 150 to 220 words per point).
 - Never summarize sections in a single sentence.
+- Opening Hook: Concrete, striking factual statement drawn directly from Scripture (no weak "The biblical narrative includes...").
+- 80%+ on title theme; no generic devotional application until conclusion.
 
 STRUCTURE:
-- Hook (0-15s): Strong opening hook based on: ${tipoGancho}.
-- Introduction (0-30s): Quick context and promise of revelation.
-- Numbered Points (3 to 5 points): Assertion, biblical development, exact scripture quotes, and spiritual impact.
+- Opening Hook (First 2-3 sentences).
+- Introduction (~100 words).
+- Numbered Story Points (3 to 5 points): Scene development, literal scripture quotes, tension, and canonical revelation.
 - Mid-video organic CTA.
-- Conclusion: Memorable reflection and final CTA.`;
+- Conclusion and final CTA.`;
 
     } else if (estilo.includes('50-60') || (estilo.includes('Shorts') && !estilo.includes('Estendido') && !estilo.includes('3 minutos'))) {
       instrucoesDuracaoEFormato = `FORMAT: Vertical Video (Shorts / Reels / TikTok - 50 to 60 seconds)
@@ -1952,7 +2000,7 @@ MANDATORY WORD COUNT TARGET: STRICTLY BETWEEN 130 AND 160 WORDS IN TOTAL.
 DIRECT RUNNING TEXT FORMAT (NO NUMBERED POINTS):
 - No "Point 1", "Point 2", "Assertion:" or section labels.
 - Fast, continuous running narrative focused on ONE powerful biblical truth.
-- Immediate hook in the first 3 seconds based on: ${tipoGancho}.
+- Immediate hook in the first 3 seconds with a concrete scriptural fact.
 - Fast closing and 1-sentence CTA.`;
 
     } else {
@@ -1962,30 +2010,40 @@ MANDATORY WORD COUNT TARGET: STRICTLY BETWEEN 400 AND 450 WORDS IN TOTAL.
 (2:40 to 3 minutes at 150 words per minute).
 
 STRUCTURE:
-- Hook (0-5s): Magnetic opening.
+- Hook (0-5s): Concrete scriptural fact.
 - Quick Introduction (5-20s).
 - 2 to 3 dynamic narrative blocks (80-100 words each).
 - Strong conclusion and follow CTA.`;
     }
 
-    return `Act as a senior documentary scriptwriter for biblical YouTube channels following the proven formula of 'Explicador Bíblico'.
+    return `Act as a senior documentary scriptwriter and master storyteller for biblical YouTube channels following the proven formula of 'Explicador Bíblico'.
 Create a complete narration script about: '${ideia}'.
 Tone of voice: '${tomVoz}'.
 Opening hook style: '${tipoGancho}'.
 
 MANDATORY BIBLICAL AND CONTENT RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
 1. 100% LANGUAGE COMPLIANCE: The entire script MUST be written 100% in ${lang.name}.
-2. FACT VS INTERPRETATION (ITEM 2):
-   - State as absolute historical fact ONLY what the biblical text literally says, accompanied by verbatim canonical scripture quotes.
-   - Any theological interpretation or secondary viewpoint MUST be introduced with phrases such as: "many understand this passage as...", "interpreters view this as...", or "theological tradition notes that...".
-3. STRICTLY FORBIDDEN THEMES & CONCEPTS (ITEM 2):
-   - ZERO TOLERANCE: Never use any language of genetic purity, DNA, racial hierarchy, or biological corruption (STRICTLY FORBIDDEN: "genetic", "bloodline", "hybrid", "pure humans", "gene pool").
+2. MANDATORY HOOK IN FIRST 2-3 SENTENCES (ITEM 1):
+   - The opening 2-3 sentences MUST be a concrete, striking factual statement drawn directly from the canonical biblical text.
+   - PROHIBITED to open with: "The biblical narrative includes…", "In the biblical narrative...", "The Bible tells us...", "Throughout history...".
+3. 80%+ FOCUS ON TITLE THEME & NO PREMATURE DEVOTIONAL DRIFT (ITEM 2):
+   - At least 80% of the entire script MUST focus directly on the specific subject promised in '${ideia}'.
+   - STRICTLY FORBIDDEN to turn the script into generic devotional application ("giants in your life", "battling personal giants", "your daily struggles") before the final conclusion.
+   - STRICTLY FORBIDDEN to repeat the same biblical story or passage in more than one section.
+4. NARRATE AS LIVING HISTORY, NOT AS AN ESSAY (ITEM 3):
+   - Write as a dramatic chronological narrative with vivid ancient scenes, biblical geography, tension, and scriptural progression. Never write as an academic theological dissertation.
+5. STRICT INTERPRETATION LIMIT & NO METAPHOR LABELS (ITEM 4):
+   - State as sacred fact ONLY what canonical Scripture literally declares, with literal quotes.
+   - MAXIMUM OF 3 PHRASES of the type "many understand this passage as...", "interpreters view this as...", or "theological tradition notes that..." in the entire script.
+   - STRICTLY FORBIDDEN to call the biblical account a "metaphor", "symbol", "cautionary tale", or "narrative device".
+6. STRICTLY FORBIDDEN THEMES & CONCEPTS (ITEM 2 & ITEM 6):
+   - ZERO TOLERANCE: Never use any language of genetic purity, DNA, racial hierarchy, or biological corruption ("genetic", "bloodline", "hybrid", "pure humans", "gene pool").
    - ZERO TOLERANCE: Never justify the destruction or wiping out of entire peoples.
    - ZERO TOLERANCE: Never introduce lore, myths, or concepts derived from the Book of Enoch (such as fallen angels teaching metallurgy, astrology, naming Watchers/Azazel/Semyaza), even if the Book of Enoch is not explicitly named.
    - ZERO TOLERANCE: Never invent numbers, dates, measurements, or facts not present in the 66 canonical biblical books.
    - ZERO TOLERANCE: Never use temporal markers like "tonight", "this morning", "today in this video".
-   - ZERO TOLERANCE: Never use AI clichés like "what if I told you", "in the annals", "embark", "journey through", "delve", "dive deep", "enigmatic", "the very fabric", "challenge everything you thought", "testament to", "tapestry".
-4. LITERAL SCRIPTURE QUOTATIONS:
+   - ZERO TOLERANCE FOR CLICHÉS: "what if I told you", "in the annals", "embark", "journey through", "delve", "dive deep", "enigmatic", "the very fabric", "challenge everything you thought", "testament to", "tapestry", "stark reminder", "serves as a reminder", "insurmountable", "unwavering", "glimmer of hope", "quintessential", "navigate", "profound", "multifaceted".
+7. LITERAL SCRIPTURE QUOTATIONS:
    - ${lang.citationRule}
    - When quoting scripture (e.g. Genesis 6:1-4, Numbers 13:33, Deuteronomy 3:11), quote the literal, exact text word-for-word from ${lang.bibleTranslation}.
 
@@ -2753,7 +2811,55 @@ document.addEventListener('DOMContentLoaded', () => {
     );
 
     if (resultText && Boolean(OpenRouterAPI.getApiKey())) {
-      // ITEM 3: Filtro Pós-Geração Automático (varre termos proibidos e regenera parágrafos afetados)
+      // ITEM 5: Tamanho mínimo de 2.800 palavras para YouTube Longo - Continuação automática se menor
+      if (estiloRoteiro.includes('18-20') || estiloRoteiro.includes('Longo')) {
+        let currentWords = (resultText.trim().match(/\S+/g) || []).length;
+        let continuacoes = 0;
+        const maxContinuacoes = 2;
+        const lang = PromptEngine.getLanguageConfig(idioma);
+
+        while (currentWords < 2800 && continuacoes < maxContinuacoes) {
+          continuacoes++;
+          UI.showToast(`Roteiro com ${currentWords} palavras. Gerando continuação automática para meta de 2.800 palavras (${continuacoes}/${maxContinuacoes})...`);
+
+          const promptContinuacao = `Act as the same senior biblical documentary scriptwriter and storyteller.
+The biblical documentary script about '${ideia}' is currently at ${currentWords} words, but the REQUIRED MINIMUM is 2,800 words (it needs at least ${2800 - currentWords} more words to reach full 18-20 minutes).
+
+Below is the script generated so far:
+"""
+${resultText}
+"""
+
+TASK:
+Seamlessly continue the documentary narrative right from where it left off, maintaining the exact same storytelling narrative style (living ancient scenes, chronological sequence of biblical events, physical reality, tension, and verbatim literal Scripture quotes from ${lang.bibleTranslation}).
+CRITICAL RULES:
+1. Stay 100% focused on the title theme: '${ideia}'.
+2. Do NOT repeat scenes, passages, or stories already covered in the text above.
+3. No generic devotional applications ("giants in your life") until the final conclusion.
+4. Maximum 1 phrase of "many understand" in this continuation. Never call the biblical account a "metaphor", "symbol", "cautionary tale", or "narrative device".
+5. Provide the next dense, multi-paragraph numbered sections, followed by the solemn conclusion, ensuring the total length exceeds 2,800 words.
+6. Output EXCLUSIVELY the continuation narrative to be appended.`;
+
+          try {
+            const textoContinuacao = await OpenRouterAPI.generateContent(
+              promptContinuacao,
+              modeloRoteiro,
+              SCRIPT_SYSTEM_PROMPT
+            );
+            if (textoContinuacao && textoContinuacao.trim()) {
+              resultText = resultText.trim() + '\n\n' + textoContinuacao.trim();
+              currentWords = (resultText.trim().match(/\S+/g) || []).length;
+            } else {
+              break;
+            }
+          } catch (eCont) {
+            console.warn('Falha na expansão automática:', eCont);
+            break;
+          }
+        }
+      }
+
+      // ITEM 3 & ITEM 6: Filtro Pós-Geração Automático (varre termos proibidos e regenera parágrafos afetados)
       const filtroRes = await aplicarFiltroTermosProibidos(resultText, idioma, modeloRoteiro);
       resultText = filtroRes.texto;
 
