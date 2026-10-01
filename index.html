@@ -861,9 +861,9 @@ textarea.h-180 {
         <div class="form-group">
           <label for="input-api-model-roteiro">
             Modelo para Roteiro
-            <span class="tooltip-wrapper" data-tooltip="Modelo de IA usado para a geração do roteiro longo e completo (padrão: anthropic/claude-haiku-4.5).">?</span>
+            <span class="tooltip-wrapper" data-tooltip="Modelo de IA usado para a geração do roteiro longo e completo (padrão: anthropic/claude-sonnet-4.5).">?</span>
           </label>
-          <input type="text" id="input-api-model-roteiro" class="form-control" placeholder="anthropic/claude-haiku-4.5">
+          <input type="text" id="input-api-model-roteiro" class="form-control" placeholder="anthropic/claude-sonnet-4.5">
         </div>
 
         <div class="form-group form-group-btn">
@@ -1553,7 +1553,7 @@ const OpenRouterAPI = {
   MODEL_ROTEIRO_STORAGE_KEY: 'dark_studio_openrouter_model_roteiro',
   MODEL_LEGACY_KEY: 'dark_studio_openrouter_model',
   DEFAULT_MODEL_IDEAS: 'openai/gpt-4o-mini',
-  DEFAULT_MODEL_ROTEIRO: 'anthropic/claude-haiku-4.5',
+  DEFAULT_MODEL_ROTEIRO: 'anthropic/claude-sonnet-4.5',
 
   getApiKey() {
     return localStorage.getItem(this.KEY_STORAGE_KEY) || '';
@@ -1781,6 +1781,24 @@ const FORBIDDEN_TERMS = [
   { term: 'multifaceted', pattern: /\bmultifaceted\b/i },
   { term: 'multifacetado', pattern: /\bmultifacetad[oa]s?\b/i },
 
+  { term: 'annals', pattern: /\bannals\b/i },
+  { term: 'anais', pattern: /\banais\b/i },
+
+  // Frases de bastidor / meta-linguagem proibidas (Ajuste 3)
+  { term: 'in the next section', pattern: /\bin\s+(?:the|our)\s+next\s+section\b/i },
+  { term: 'na próxima seção', pattern: /\bna\s+pr[oó]xima\s+se[cç][aã]o\b/i },
+  { term: 'as we transition', pattern: /\bas\s+we\s+transition\b/i },
+  { term: 'ao fazermos a transição', pattern: /\b(?:ao|à\s+medida\s+que)\s+fazemos\s+a\s+transi[cç][aã]o\b/i },
+  { term: 'we will explore', pattern: /\bwe\s+will\s+explore\b/i },
+  { term: 'vamos explorar', pattern: /\b(?:vamos|iremos)\s+explorar\b/i },
+  { term: 'as we continue our exploration', pattern: /\bas\s+we\s+continue\s+(?:our\s+)?exploration\b/i },
+  { term: 'ao continuarmos nossa exploração', pattern: /\bao\s+continuarmos\s+nossa\s+explora[cç][aã]o\b/i },
+  { term: 'moving ahead', pattern: /\bmoving\s+ahead\b/i },
+  { term: 'seguindo em frente', pattern: /\bseguindo\s+em\s+frente\b/i },
+  { term: 'in the following section', pattern: /\bin\s+the\s+following\s+section\b/i },
+  { term: 'as we continue in this narrative', pattern: /\bas\s+we\s+continue\s+in\s+this\s+narrative\b/i },
+  { term: 'as the narrative unfolds', pattern: /\bas\s+the\s+narrative\s+unfolds\b/i },
+
   // Aberturas e termos proibidos
   { term: 'the biblical narrative includes', pattern: /\bthe\s+biblical\s+narrative\s+includes\b/i },
   { term: 'a narrativa bíblica inclui', pattern: /\ba\s+narrativa\s+b[ií]blica\s+inclui\b/i },
@@ -1819,62 +1837,82 @@ const FORBIDDEN_TERMS = [
 ];
 
 /**
- * Função de Substituição Determinística de Segurança (Fallback de Alta Confiança)
- * Se após as tentativas da IA algum termo persistir, substitui por equivalente neutro canônico.
+ * Stopwords para análise semântica de similaridade de parágrafos
  */
-function sanitizarTermosDeterministicamente(texto) {
-  if (!texto) return texto;
-  let s = texto;
-  s = s.replace(/\btonight\b/gi, 'in this account');
-  s = s.replace(/\besta noite\b/gi, 'neste relato');
-  s = s.replace(/\bthis morning\b/gi, 'in this passage');
-  s = s.replace(/\besta manh[aã]\b/gi, 'nesta passagem');
-  s = s.replace(/\bprofound(?:ly)?\b/gi, 'solemn');
-  s = s.replace(/\bprofund[oa]s?\b/gi, 'solene');
-  s = s.replace(/\bfabric\b/gi, 'reality');
-  s = s.replace(/\bstark\b/gi, 'striking');
-  s = s.replace(/\bshrouded in mystery\b/gi, 'marked by silence in Scripture');
-  s = s.replace(/\bfiguratively\b/gi, 'visibly');
-  s = s.replace(/\bloomed large\b/gi, 'stood prominent');
-  s = s.replace(/\bcaptivated minds\b/gi, 'drawn attention');
-  s = s.replace(/\bthe very fabric\b/gi, 'the reality');
-  s = s.replace(/\btapestry\b/gi, 'chronicle');
-  s = s.replace(/\bwhat if I told you\b/gi, 'Scripture reveals that');
-  s = s.replace(/\bin the annals\b/gi, 'in the biblical record');
-  s = s.replace(/\bembark(?:s|ing|ed)?\b/gi, 'proceed');
-  s = s.replace(/\bjourney through\b/gi, 'examine');
-  s = s.replace(/\bdelv(?:e|es|ing|ed)?\b/gi, 'examine');
-  s = s.replace(/\bdive deep\b/gi, 'look closely');
-  s = s.replace(/\benigmatic\b/gi, 'ancient');
-  s = s.replace(/\btestament to\b/gi, 'witness of');
-  s = s.replace(/\bstark reminder\b/gi, 'solemn warning');
-  s = s.replace(/\bserve[sd]? as a reminder\b/gi, 'bears witness');
-  s = s.replace(/\binsurmountable\b/gi, 'formidable');
-  s = s.replace(/\bunwavering\b/gi, 'steadfast');
-  s = s.replace(/\bglimmer of hope\b/gi, 'divine grace');
-  s = s.replace(/\bquintessential\b/gi, 'defining');
-  s = s.replace(/\bnavigat(?:e|es|ing|ed)\b/gi, 'walk through');
-  s = s.replace(/\bmultifaceted\b/gi, 'detailed');
-  s = s.replace(/\beliminat(?:ed?|ing|es|ion)\b/gi, 'defeated');
-  s = s.replace(/\bhunt(?:ed?|ing)\s+down\b/gi, 'pursued');
-  s = s.replace(/\bnot an injustice\b/gi, 'according to God\'s decree');
-  s = s.replace(/\bpopulations were\b/gi, 'the cities were');
-  s = s.replace(/\bperhaps some survived\b/gi, 'Scripture does not explain this mechanism');
-  s = s.replace(/\bincreasingly human\b/gi, 'in physical stature');
-  s = s.replace(/\bdid not perish in the waters\b/gi, 'was recorded in Scripture');
-  return s;
+const DEDUP_STOPWORDS = new Set([
+  'the', 'a', 'an', 'and', 'or', 'of', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'from',
+  'as', 'is', 'was', 'were', 'are', 'be', 'been', 'that', 'this', 'these', 'those', 'it', 'its',
+  'their', 'theirs', 'they', 'them', 'he', 'him', 'his', 'she', 'her', 'hers', 'which', 'who',
+  'whom', 'whose', 'not', 'but', 'so', 'then', 'there', 'here', 'when', 'where', 'how', 'all',
+  'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'too',
+  'very', 'can', 'will', 'just', 'should', 'now', 'o', 'a', 'os', 'as', 'um', 'uma', 'e', 'de',
+  'do', 'da', 'dos', 'das', 'em', 'no', 'na', 'nos', 'nas', 'por', 'para', 'com', 'que'
+]);
+
+/**
+ * BUG 1: Remove parágrafos que tenham mais de 60% de palavras semânticas em comum com o parágrafo anterior (duplicatas de regeneração)
+ */
+function removerParagrafosDuplicadosPorSimilaridade(texto, threshold = 0.6) {
+  if (!texto || typeof texto !== 'string') return texto;
+  const paragrafos = texto.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  if (paragrafos.length <= 1) return texto;
+  const resultado = [];
+
+  const extrairPalavrasSignificativas = (t) => {
+    const palavras = (t.toLowerCase().match(/\b[a-z0-9à-ú]+\b/gi) || []);
+    return palavras.filter(w => !DEDUP_STOPWORDS.has(w) && w.length > 2);
+  };
+
+  for (let i = 0; i < paragrafos.length; i++) {
+    const atual = paragrafos[i];
+    if (i === 0) {
+      resultado.push(atual);
+      continue;
+    }
+
+    const anteriorOriginal = paragrafos[i - 1];
+    const palavrasAtual = extrairPalavrasSignificativas(atual);
+    const palavrasAnt = extrairPalavrasSignificativas(anteriorOriginal);
+    let duplicado = false;
+
+    if (palavrasAtual.length > 6 && palavrasAnt.length > 6) {
+      const setAnt = new Set(palavrasAnt);
+      const setAtual = new Set(palavrasAtual);
+
+      let comuns = 0;
+      for (const w of setAtual) {
+        if (setAnt.has(w)) comuns++;
+      }
+
+      // Coeficiente de Dice para similaridade de vocabulário entre os dois parágrafos
+      const dice = (setAtual.size + setAnt.size) > 0 ? (2 * comuns / (setAtual.size + setAnt.size)) : 0;
+
+      if (dice >= threshold) {
+        console.log(`[Remover Duplicado] Parágrafo ${i + 1} possui ${(dice * 100).toFixed(1)}% de similaridade com parágrafo anterior. Removendo duplicata.`);
+        duplicado = true;
+      }
+    }
+
+    if (!duplicado) {
+      resultado.push(atual);
+    }
+  }
+
+  return resultado.join('\n\n');
 }
 
 /**
- * Função de Varredura e Regeneração com Contexto Vizinho (Item 1 & Item 6)
- * Varre o roteiro por termos proibidos. Se encontrar, regenera com contexto vizinho.
+ * Função de Varredura e Regeneração com Contexto Vizinho (Item 1, Bug 1 & Bug 2)
+ * Se persistir após 2 regenerações do parágrafo, regenera só a FRASE inteira; se ainda persistir, apaga a frase.
  */
 async function aplicarFiltroTermosProibidos(roteiro, idioma, modelo) {
   if (!roteiro || typeof roteiro !== 'string') {
     return { texto: roteiro, totalDetectados: 0, totalCorrigidos: 0, termosPersistentes: [], termosCorrigidosLista: [], modificado: false };
   }
 
-  const paragrafos = roteiro.split(/\n\s*\n/);
+  // Primeiro remove eventuais parágrafos duplicados pré-existentes
+  let textoBase = removerParagrafosDuplicadosPorSimilaridade(roteiro, 0.6);
+  let paragrafos = textoBase.split(/\n\s*\n/);
   let modificado = false;
   let termosPersistentes = [];
   let termosCorrigidosLista = [];
@@ -1895,7 +1933,7 @@ async function aplicarFiltroTermosProibidos(roteiro, idioma, modelo) {
     termosEncontrados.forEach(t => termosCorrigidosLista.push(t.term));
     console.log(`[Filtro Pós-Geração] Parágrafo ${pIdx + 1} contém termos proibidos:`, termosEncontrados.map(t => t.term));
 
-    // Contexto vizinho (Item 6)
+    // Contexto vizinho
     const prevContext = pIdx > 0 ? paragrafos[pIdx - 1].trim().slice(0, 300) : '(Beginning of the section)';
     const nextContext = pIdx < paragrafos.length - 1 ? paragrafos[pIdx + 1].trim().slice(0, 300) : '(End of the section)';
 
@@ -1904,7 +1942,7 @@ async function aplicarFiltroTermosProibidos(roteiro, idioma, modelo) {
       tentativas++;
       try {
         const rewritePrompt = `Act as an expert biblical documentary script editor.
-Rewrite the following target paragraph from a biblical documentary script to strictly eliminate every prohibited cliché and forbidden term, maintaining seamless narrative coherence with surrounding context.
+Rewrite the following target paragraph from a biblical documentary script to strictly eliminate every prohibited cliché, forbidden term, and backstage meta-phrase, maintaining seamless narrative coherence with surrounding context.
 
 PREVIOUS PARAGRAPH (CONTEXT ONLY — DO NOT DUPLICATE ITS WORDS):
 """${prevContext}"""
@@ -1920,7 +1958,7 @@ ${termosEncontrados.map(t => `"${t.term}"`).join(', ')}
 
 MANDATORY RULES:
 1. ELIMINATE PROHIBITED TERMS: Completely rephrase without using: ${termosEncontrados.map(t => `"${t.term}"`).join(', ')}.
-2. NEVER use "tonight", "this morning", "profound", "fabric", "stark", "debate", "shrouded in mystery", "figuratively", "loomed large", "captivated minds".
+2. NEVER use "tonight", "this morning", "profound", "fabric", "stark", "debate", "shrouded in mystery", "annals", "in the next section", "as we transition", "we will explore", "as we continue our exploration", "moving ahead", "as the narrative unfolds".
 3. STRICT BIBLICAL FIDELITY: Never contradict canonical Scripture (e.g. Genesis 7:23: only Noah and his family in the ark remained alive). If Scripture does not detail how giants appear after the Flood, state this in ONE honest sentence and move on. NEVER speculate ("perhaps some survived", "increasingly human", "did not perish in the waters").
 4. BATTLES & SOLEMN RESTRAINT: Narrate battles strictly from biblical citation without evaluating or justifying the destruction of peoples. Never use "eliminated", "hunted down", "not an injustice", "populations were".
 5. NO DUPLICATION: Flow naturally from the previous paragraph into the next without repeating sentences from either.
@@ -1948,15 +1986,60 @@ MANDATORY RULES:
       }
     }
 
-    // Se ainda restou algum termo após a IA, aplica a sanitização determinística segura
+    // BUG 2: Se ainda restou algum termo após 2 regenerações do parágrafo: regenera só a FRASE inteira; se ainda persistir, apaga a frase!
     if (termosEncontrados.length > 0) {
-      const parSanitizado = sanitizarTermosDeterministicamente(paragrafo);
-      if (parSanitizado !== paragrafo) {
-        paragrafo = parSanitizado;
-        modificado = true;
-        totalCorrigidos += termosEncontrados.length;
-        termosEncontrados = FORBIDDEN_TERMS.filter(f => f.pattern.test(paragrafo));
+      const frases = paragrafo.match(/[^.!?]+(?:[.!?]+["']?|$)/g) || [paragrafo];
+      let frasesAtualizadas = [];
+
+      for (let fIdx = 0; fIdx < frases.length; fIdx++) {
+        let frase = frases[fIdx].trim();
+        if (!frase) continue;
+
+        let termosFrase = FORBIDDEN_TERMS.filter(f => f.pattern.test(frase));
+        if (termosFrase.length > 0) {
+          try {
+            const promptFrase = `Act as an expert biblical script editor.
+Rewrite the following single sentence to eliminate all forbidden terms while preserving narrative tone and historical truth.
+Original sentence: """${frase}"""
+Forbidden terms: ${termosFrase.map(t => `"${t.term}"`).join(', ')}
+Rules:
+- Never use forbidden clichés, meta-language ("in the next section", "as we transition", "we will explore", "moving ahead", "annals"), or speculation.
+- Strictly adhere to canonical Scripture.
+- Output EXCLUSIVELY the single rewritten sentence without quotes.`;
+
+            const fraseNova = await OpenRouterAPI.generateContent(promptFrase, modelo, SCRIPT_SYSTEM_PROMPT);
+            if (fraseNova && fraseNova.trim()) {
+              const fLimpa = fraseNova.trim().replace(/^["']|["']$/g, '');
+              const termosRestantes = FORBIDDEN_TERMS.filter(f => f.pattern.test(fLimpa));
+              if (termosRestantes.length === 0) {
+                frase = fLimpa;
+                totalCorrigidos += termosFrase.length;
+                modificado = true;
+              } else {
+                console.log(`[Filtro] Termo persistiu na frase após regeneração. Apagando frase: "${frase}"`);
+                frase = '';
+                totalCorrigidos += termosFrase.length;
+                modificado = true;
+              }
+            } else {
+              frase = '';
+              totalCorrigidos += termosFrase.length;
+              modificado = true;
+            }
+          } catch (eFrase) {
+            frase = '';
+            totalCorrigidos += termosFrase.length;
+            modificado = true;
+          }
+        }
+
+        if (frase) {
+          frasesAtualizadas.push(frase);
+        }
       }
+
+      paragrafo = frasesAtualizadas.join(' ').trim();
+      termosEncontrados = FORBIDDEN_TERMS.filter(f => f.pattern.test(paragrafo));
     }
 
     if (termosEncontrados.length > 0) {
@@ -1966,13 +2049,16 @@ MANDATORY RULES:
       });
     }
 
+    // O parágrafo regenerado SUBSTITUI o original no array (BUG 1)
     paragrafos[pIdx] = paragrafo;
   }
 
-  const textoFinal = paragrafos.join('\n\n');
+  // Checagem final obrigatória: se dois parágrafos tiverem mais de 60% de palavras em comum, remove o segundo (BUG 1)
+  let textoFinal = paragrafos.filter(p => p && p.trim().length > 0).join('\n\n');
+  textoFinal = removerParagrafosDuplicadosPorSimilaridade(textoFinal, 0.6);
+
   const res = { texto: textoFinal, totalDetectados, totalCorrigidos, termosPersistentes, termosCorrigidosLista, modificado };
 
-  // Atualiza relatório visual no DOM se estiver disponível no browser
   if (typeof atualizarRelatorioFiltroNaTela === 'function') {
     atualizarRelatorioFiltroNaTela(res);
   }
@@ -2048,25 +2134,35 @@ function atualizarRelatorioFiltroNaTela(filtroRes) {
 function limitarFrasesHistoricas(texto) {
   if (!texto || typeof texto !== 'string') return texto;
 
-  const patterns = [
-    /\b(?:not\s+(?:legends?\s+or\s+myths?|myths?\s+or\s+legends?)|n[aã]o\s+(?:s[aã]o\s+)?(?:lendas?\s+ou\s+mitos?|mitos?\s+ou\s+lendas?))\b/gi,
-    /\b(?:historical\s+fact|fato\s+hist[oó]rico)\b/gi,
-    /\b(?:(?:the\s+)?scripture\s+treats\s+this\s+as|as\s+escrituras\s+tratam\s+isso\s+como)\b/gi
-  ];
-
   let res = texto;
   let contagem = 0;
 
-  for (const pat of patterns) {
-    res = res.replace(pat, (match) => {
-      contagem++;
-      if (contagem > 2) {
-        return 'the biblical record';
-      }
-      return match;
-    });
-  }
+  // 1. "not legends or myths"
+  res = res.replace(/\b(?:(?:they\s+were\s+)?not\s+(?:legends?\s+or\s+myths?|myths?\s+or\s+legends?))\b/gi, (match) => {
+    contagem++;
+    if (contagem > 2) return '';
+    return match;
+  });
 
+  // 2. "The historical fact of..." ou "historical fact"
+  res = res.replace(/\b(?:The\s+)?historical\s+fact(?:\s+of)?\b/gi, (match) => {
+    contagem++;
+    if (contagem > 2) {
+      return match.toLowerCase().startsWith('the') ? 'The reality' : 'reality';
+    }
+    return match;
+  });
+
+  // 3. "the Scripture treats this as..." / "the Scripture treats these giants as..."
+  res = res.replace(/\b(?:the\s+)?scripture\s+treats\s+(?:this|these\s+giants)\s+as\s*[^.,;!?]*[.,;!?]/gi, (match) => {
+    contagem++;
+    if (contagem > 2) return '';
+    return match;
+  });
+
+  // Limpa possíveis espaços horizontais duplos sem destruir quebras de linha entre parágrafos
+  res = res.replace(/[^\S\r\n]{2,}/g, ' ').replace(/[^\S\r\n]+([.,;:!?])/g, '$1');
+  res = res.replace(/\n{3,}/g, '\n\n').trim();
   return res;
 }
 
@@ -2398,7 +2494,7 @@ FINAL DIRECTIVES:
   },
 
   /**
-   * ITEM 2: Passo 1 - Gerar Esboço Estruturado de 7 Seções Bíblicas Canônicas
+   * ITEM 2: Passo 1 - Gerar Esboço Estruturado de 7 Seções Bíblicas Canônicas (Ajuste 5)
    */
   generateOutlinePrompt({ ideia, idioma, tomVoz }) {
     const lang = this.getLanguageConfig(idioma);
@@ -2408,21 +2504,21 @@ Tone of voice: '${tomVoz}'.
 Language: 100% in ${lang.name}.
 
 MANDATORY CANONICAL OUTLINE RULES:
-1. EXACTLY 7 SECTIONS: Provide exactly 7 numbered sections, where each section addresses a COMPLETELY DIFFERENT biblical point or historical episode.
-2. STRICT BIBLICAL FIDELITY (ZERO SPECULATION):
-   - Never contradict explicit canonical scripture (e.g., Genesis 7:23 explicitly states that only Noah and those with him in the ark remained alive).
-   - When Scripture does not explain how something occurred (such as post-Flood mentions of giant lineages like Anakim or Rephaim), state in ONE sentence that the Bible does not detail the mechanism, and move on. NEVER speculate (strictly forbidden: "perhaps some survived", "increasingly human", "did not perish in the waters").
-   - Do NOT assert connections that Scripture never makes (e.g., never link giants to the fall of Jericho).
-   - Battles (e.g. 2 Samuel 21) must be scheduled for ONLY ONE section across the entire outline, narrated strictly from literal biblical citations without evaluating or justifying the destruction of peoples.
-   - Do not include extra-biblical lore or Book of Enoch concepts.
-3. STRUCTURE:
-   Section 1: Opening Hook & Pre-Flood Genesis Account (Genesis 6:1-4).
-   Section 2: The Pre-Flood World, Moral Corruption, and the Divine Decree.
-   Section 3: The Global Deluge and Solemn Survival (Genesis 7:23 - Noah only remained alive).
-   Section 4: The Canonical Boundary: What Scripture Declares vs. What It Leaves Unexplained (One sentence acknowledging silence, zero speculation).
-   Section 5: The Spies in Canaan and Hebron (Numbers 13:28-33 - literal report of the sons of Anak, with no invented links to Jericho).
-   Section 6: The Wars of David and the Giants of Gath (2 Samuel 21:15-22 / 1 Chronicles 20 - literal chronicle narrated only once).
-   Section 7: Solemn Conclusion & Final Canonical Verdict (1 Samuel 17:47 - "the battle is the LORD's", sacred synthesis and call to subscribe).
+1. STRICT PROHIBITION OF TOPIC DUPLICATION (ZERO OVERLAP):
+   - Every single one of the 7 sections MUST cover a completely different historical episode or canonical chapter.
+   - STRICTLY FORBIDDEN: Having two sections discussing the same event (e.g. the Flood and Noah's Ark must be covered in ONLY Section 3, NEVER split across two consecutive sections).
+2. FIXED CHRONOLOGICAL CANONICAL STRUCTURE:
+   Section 1: The Pre-Flood Hook & Genesis 6:1-4 (The sons of God, the daughters of men, and the antediluvian giants as mighty men of renown).
+   Section 2: Antediluvian Civilization & The 120-Year Warning (Genesis 6:3 & 6:5: widespread corruption, the physical conditions of the ancient world, and the decree of restraint BEFORE the floodwaters).
+   Section 3: The Global Deluge & The Ark's Exclusive Survival (Genesis 7:23: the cataclysm of the deep, the total destruction of all flesh outside, and Noah alone remaining alive).
+   Section 4: The Canonical Boundary: Post-Flood Silence (Acknowledge in ONE sentence that Scripture does not detail the biological or physical mechanism of later giant lineages, with ZERO speculation).
+   Section 5: The Spies in Canaan & The Sons of Anak in Hebron (Numbers 13:28-33: the literal report of the Anakim and the terror of the spies, with ZERO invented links to Jericho).
+   Section 6: The Wars of David and the Giants of Gath (2 Samuel 21:15-22 / 1 Chronicles 20: the specific skirmishes with Goliath's kin, narrated as literal history without justifying destruction of peoples).
+   Section 7: Solemn Conclusion & Divine Sovereignty (1 Samuel 17:47: "the battle is the LORD's", the final theological verdict, and the channel subscription call).
+3. STRICT BIBLICAL FIDELITY (ZERO SPECULATION):
+   - Never contradict explicit canonical scripture (Genesis 7:23; 1 Samuel 17:47).
+   - Zero extra-biblical lore or Book of Enoch concepts.
+   - Zero backstage meta-language ("in the next section", "as we transition", "we will explore", "moving ahead", "annals").
 
 OUTPUT FORMAT:
 Output EXACTLY 7 lines, formatted as:
@@ -2460,30 +2556,33 @@ VERSES ALREADY QUOTED VERBATIM (STRICTLY FORBIDDEN TO QUOTE VERBATIM AGAIN):
 ${versiculosJaCitados && versiculosJaCitados.length > 0 ? versiculosJaCitados.join(', ') : 'None yet.'}
 
 LENGTH REQUIREMENT:
-- TARGET LENGTH: STRICTLY 380 TO 420 WORDS.
+- TARGET LENGTH: STRICTLY 420 TO 460 WORDS PER SECTION.
 - Write dense, immersive, multi-paragraph narrative text. Do NOT write a summary or bullet points.
 
 CRITICAL RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
-1. ${isFirst ? `OPENING HOOK (FIRST 2-3 SENTENCES):
-   - Open immediately with a concrete, striking factual statement drawn directly from canonical Scripture.
-   - PROHIBITED: "The biblical narrative includes...", "In the biblical narrative...", "The Bible tells us...", "Throughout history...".` : 'CONTINUITY: Begin directly continuing the living chronicle with narrative momentum. No meta-intro or welcome back.'}
-2. REPETITION CONTROLS:
+1. ${isFirst ? `MANDATORY OPENING HOOK (FIRST 2-3 SENTENCES - AJUSTE 4):
+   - The VERY FIRST sentence of Section 1 MUST be a concrete, striking factual statement drawn directly from canonical Scripture (Genesis 6:1-4).
+   - Halts the listener immediately with divine authority and the physical reality of the pre-Flood world.
+   - STRICTLY FORBIDDEN: Starting with weak intros like "In the days before the Flood, the earth was not as we know it now", "The biblical narrative includes...", "In the biblical narrative...", "The Bible tells us...", "Throughout history...".` : 'CONTINUITY: Begin directly continuing the living chronicle with narrative momentum. No meta-intro or welcome back.'}
+2. ZERO BACKSTAGE / META-LANGUAGE (AJUSTE 3):
+   - STRICTLY FORBIDDEN to use presentation or backstage phrases like "in the next section", "as we transition", "we will explore", "as we continue our exploration", "moving ahead", "as the narrative unfolds". Speak directly as an ancient chronicle without stepping out of the story.
+3. REPETITION CONTROLS:
    - NEVER quote the same verse verbatim more than once in the entire script.
    - NEVER narrate a biblical story or battle (such as 2 Samuel 21 or Numbers 13) if already covered in previous sections.
    - Limit phrases like "not legends or myths", "historical fact", and "the Scripture treats this as" — use at most once if not already used.
-3. CANONICAL FIDELITY & ZERO SPECULATION:
+4. CANONICAL FIDELITY & ZERO SPECULATION:
    - NEVER contradict explicit canonical scripture (e.g. Genesis 7:23: "Noah only remained alive, and they that were with him in the ark"; 1 Samuel 17:47: "the battle is the LORD's").
    - When the Bible does not explain a detail or mechanism, state that in ONE honest sentence and move on. STRICTLY PROHIBITED to speculate ("perhaps some survived", "increasingly human", "did not perish in the waters").
    - Never assert connections the text does not make (e.g. never connect giants to the walls of Jericho).
-4. BATTLES & SOLEMN RESTRAINT:
+5. BATTLES & SOLEMN RESTRAINT:
    - Narrate battles strictly with literal scripture citations from ${lang.bibleTranslation}.
    - Do NOT evaluate, moralize, or justify the destruction of populations.
    - STRICTLY PROHIBITED WORDS: "eliminated", "hunted down", "not an injustice", "populations were".
-5. FORBIDDEN CLICHÉS & WORDS:
-   - NEVER use: "tonight", "this morning", "profound", "fabric", "stark", "debate", "shrouded in mystery", "figuratively", "loomed large", "captivated minds", "what if I told you", "in the annals", "embark", "journey through", "delve", "dive deep", "enigmatic", "the very fabric", "challenge everything you thought", "testament to", "tapestry", "stark reminder", "serves as a reminder", "insurmountable", "unwavering", "glimmer of hope", "quintessential", "navigate", "multifaceted".
-6. VERBATIM SCRIPTURE:
+6. FORBIDDEN CLICHÉS & WORDS:
+   - NEVER use: "annals", "in the annals", "tonight", "this morning", "profound", "fabric", "stark", "debate", "shrouded in mystery", "figuratively", "loomed large", "captivated minds", "what if I told you", "embark", "journey through", "delve", "dive deep", "enigmatic", "the very fabric", "challenge everything you thought", "testament to", "tapestry", "stark reminder", "serves as a reminder", "insurmountable", "unwavering", "glimmer of hope", "quintessential", "navigate", "multifaceted".
+7. VERBATIM SCRIPTURE:
    - When quoting scripture, quote word-for-word from ${lang.bibleTranslation} (${lang.citationRule}).
-7. ${isLast ? 'FINAL CLIMAX & CTA: Deliver a solemn, awe-inspiring synthesis of what Scripture reveals, ending with a reverent call to subscribe to the channel.' : 'NARRATIVE BRIDGE: End this section with natural narrative momentum leading into the next historical point.'}
+8. ${isLast ? 'FINAL CLIMAX & CTA: Deliver a solemn, awe-inspiring synthesis of what Scripture reveals, ending with a reverent call to subscribe to the channel.' : 'NARRATIVE BRIDGE: End this section with natural narrative momentum leading into the next historical point.'}
 
 OUTPUT FORMAT:
 Output EXCLUSIVELY the narration text for Section ${secaoNumero}.
@@ -3385,22 +3484,28 @@ async function gerarRoteiroEmSeteSecoes({
   updateProgress(7, 7, 'Consolidando as 7 seções e validando métricas de extensão...', 95);
 
   let scriptFinal = secoesGeradas.join('\n\n');
+  scriptFinal = removerParagrafosDuplicadosPorSimilaridade(scriptFinal, 0.6);
 
-  // Controle estrito de palavras: Entre 2.800 e 3.200 palavras. NUNCA passar de 3.200.
-  let contagem = (scriptFinal.match(/\S+/g) || []).length;
-  console.log(`[Geração em 7 Seções] Contagem bruta gerada: ${contagem} palavras.`);
+  const obterPalavrasLimpo = (t) => {
+    const limpo = (typeof limparTextoParaNarracao === 'function') ? limparTextoParaNarracao(t) : t;
+    return (limpo.match(/\S+/g) || []).length;
+  };
+
+  // Controle estrito de palavras na Narração Limpa: Entre 2.800 e 3.200 palavras. NUNCA passar de 3.200.
+  let contagem = obterPalavrasLimpo(scriptFinal);
+  console.log(`[Geração em 7 Seções] Contagem na narração limpa: ${contagem} palavras.`);
 
   if (contagem > 3200) {
     scriptFinal = apararParaLimiteMaximo(scriptFinal, 3200);
-    contagem = (scriptFinal.match(/\S+/g) || []).length;
+    contagem = obterPalavrasLimpo(scriptFinal);
     console.log(`[Geração em 7 Seções] Ajustado estritamente para o teto de 3.200 palavras: ${contagem} palavras.`);
   } else if (contagem < 2800) {
     const faltam = 2800 - contagem;
-    console.log(`[Geração em 7 Seções] Contagem em ${contagem} palavras. Complementando ${faltam} palavras para cumprir meta de 2.800...`);
+    console.log(`[Geração em 7 Seções] Narração limpa em ${contagem} palavras. Complementando ${faltam} palavras para cumprir meta de 2.800...`);
     const promptExpansao = `Act as the same senior biblical documentary scriptwriter.
-The script on '${ideia}' is currently at ${contagem} words. The required documentary minimum is 2,800 words.
-Without repeating any stories, without speculating, and without forbidden clichés, write a dense and reverent 2-paragraph expansion on the profound biblical truth of 1 Samuel 17:47 ("the battle is the LORD's") and the eternal sovereignty of the Creator over all terrestrial powers to conclude the script.
-Length: at least ${faltam + 30} words.
+The clean narration of the documentary on '${ideia}' is currently at ${contagem} words. The required documentary minimum is 2,800 words.
+Without repeating any stories, without speculating, without backstage phrases, and without forbidden clichés, write a dense and reverent 2-paragraph expansion on the profound biblical truth of 1 Samuel 17:47 ("the battle is the LORD's"), the eternal sovereignty of the Creator over all terrestrial powers throughout biblical history, and the sacred preservation of the faithful remnant.
+Length: at least ${faltam + 50} words.
 Language: 100% in ${lang.name}. Literal quotes from ${lang.bibleTranslation}.
 Output EXCLUSIVELY the final 2 paragraphs.`;
 
@@ -3408,7 +3513,8 @@ Output EXCLUSIVELY the final 2 paragraphs.`;
       const extra = await OpenRouterAPI.generateContent(promptExpansao, modelo, SCRIPT_SYSTEM_PROMPT);
       if (extra && extra.trim()) {
         scriptFinal = scriptFinal.trim() + '\n\n' + extra.trim();
-        contagem = (scriptFinal.match(/\S+/g) || []).length;
+        scriptFinal = removerParagrafosDuplicadosPorSimilaridade(scriptFinal, 0.6);
+        contagem = obterPalavrasLimpo(scriptFinal);
         if (contagem > 3200) {
           scriptFinal = apararParaLimiteMaximo(scriptFinal, 3200);
         }
