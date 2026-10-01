@@ -1567,15 +1567,103 @@ const OpenRouterAPI = {
   DEFAULT_MODEL_IDEAS: 'openai/gpt-4o-mini',
   DEFAULT_MODEL_ROTEIRO: 'anthropic/claude-sonnet-4.5',
 
+  migrarChavesLocalStorage() {
+    try {
+      // 1. Migração de API Key: busca em todas as chaves históricas possíveis
+      const chavesKey = [
+        this.KEY_STORAGE_KEY,
+        'openrouter_api_key',
+        'dark_studio_api_key',
+        'api_key',
+        'openrouter_key'
+      ];
+      let keyEncontrada = '';
+      for (const k of chavesKey) {
+        const v = localStorage.getItem(k);
+        if (v && v.trim().length > 0) {
+          keyEncontrada = v.trim();
+          break;
+        }
+      }
+
+      // Se ainda não encontrou, busca no JSON das sessões de AutoSave
+      if (!keyEncontrada) {
+        for (const sKey of ['dark_studio_session_v1', 'dark_studio_session']) {
+          const rawSess = localStorage.getItem(sKey);
+          if (rawSess) {
+            try {
+              const parsed = JSON.parse(rawSess);
+              if (parsed && parsed['input-api-key'] && parsed['input-api-key'].trim().length > 0) {
+                keyEncontrada = parsed['input-api-key'].trim();
+                break;
+              }
+            } catch (e) {}
+          }
+        }
+      }
+
+      if (keyEncontrada) {
+        localStorage.setItem(this.KEY_STORAGE_KEY, keyEncontrada);
+        localStorage.setItem('openrouter_api_key', keyEncontrada);
+      }
+
+      // 2. Migração de Modelo de Ideias
+      const chavesIdeias = [
+        this.MODEL_IDEAS_STORAGE_KEY,
+        'openrouter_model_ideas'
+      ];
+      let ideiasModel = '';
+      for (const k of chavesIdeias) {
+        const v = localStorage.getItem(k);
+        if (v && v.trim().length > 0) {
+          ideiasModel = v.trim();
+          break;
+        }
+      }
+      if (!ideiasModel) ideiasModel = this.DEFAULT_MODEL_IDEAS;
+      localStorage.setItem(this.MODEL_IDEAS_STORAGE_KEY, ideiasModel);
+
+      // 3. Migração de Modelo de Roteiro
+      const chavesRoteiro = [
+        this.MODEL_ROTEIRO_STORAGE_KEY,
+        'openrouter_model_roteiro'
+      ];
+      let roteiroModel = '';
+      for (const k of chavesRoteiro) {
+        const v = localStorage.getItem(k);
+        if (v && v.trim().length > 0) {
+          roteiroModel = v.trim();
+          break;
+        }
+      }
+      if (!roteiroModel || roteiroModel === 'openai/gpt-4o-mini') {
+        roteiroModel = this.DEFAULT_MODEL_ROTEIRO;
+      }
+      localStorage.setItem(this.MODEL_ROTEIRO_STORAGE_KEY, roteiroModel);
+
+      // 4. Migração de Sessão de AutoSave
+      const sessaoV1 = localStorage.getItem('dark_studio_session_v1');
+      const sessaoLegada = localStorage.getItem('dark_studio_session');
+      if (!sessaoV1 && sessaoLegada) {
+        localStorage.setItem('dark_studio_session_v1', sessaoLegada);
+      }
+    } catch (e) {
+      console.warn('AutoSave/OpenRouterAPI: migração silenciosa de chaves concluída com avisos.', e);
+    }
+  },
+
   getApiKey() {
+    this.migrarChavesLocalStorage();
     return localStorage.getItem(this.KEY_STORAGE_KEY) || '';
   },
 
   getModelIdeas() {
+    this.migrarChavesLocalStorage();
     return localStorage.getItem(this.MODEL_IDEAS_STORAGE_KEY) || this.DEFAULT_MODEL_IDEAS;
   },
 
   getModelRoteiro() {
+    this.migrarChavesLocalStorage();
     return localStorage.getItem(this.MODEL_ROTEIRO_STORAGE_KEY) || this.DEFAULT_MODEL_ROTEIRO;
   },
 
@@ -1585,6 +1673,7 @@ const OpenRouterAPI = {
     const cleanModelRoteiro = (modelRoteiro && modelRoteiro.trim()) ? modelRoteiro.trim() : this.DEFAULT_MODEL_ROTEIRO;
 
     localStorage.setItem(this.KEY_STORAGE_KEY, cleanKey);
+    localStorage.setItem('openrouter_api_key', cleanKey);
     localStorage.setItem(this.MODEL_IDEAS_STORAGE_KEY, cleanModelIdeas);
     localStorage.setItem(this.MODEL_ROTEIRO_STORAGE_KEY, cleanModelRoteiro);
     return { apiKey: cleanKey, modelIdeas: cleanModelIdeas, modelRoteiro: cleanModelRoteiro };
@@ -1798,6 +1887,8 @@ const FORBIDDEN_TERMS = [
   { term: 'quintessential', pattern: /\bquintessential\b/i },
   { term: 'quintessencial', pattern: /\bquintessencia(?:l|is)\b/i },
   { term: 'navigate', pattern: /\bnavigat(?:e|es|ing|ed)\b/i },
+  { term: 'pivotal', pattern: /\bpivotal(?:ly)?\b/i },
+  { term: 'pivô', pattern: /\bpiv[oô]\b/i },
   { term: 'multifaceted', pattern: /\bmultifaceted\b/i },
   { term: 'multifacetado', pattern: /\bmultifacetad[oa]s?\b/i },
 
@@ -1919,6 +2010,130 @@ function removerParagrafosDuplicadosPorSimilaridade(texto, threshold = 0.6) {
   }
 
   return resultado.join('\n\n');
+}
+
+/**
+ * Filtro rigoroso e substituição contextual limpa para termos proibidos nas 10 IDEIAS
+ * Garante que clichês como "profound", "navigates", "pivotal" e "Dive deep" nunca vazem.
+ */
+function filtrarTermosProibidosNasIdeias(texto, idioma = 'pt') {
+  if (!texto || typeof texto !== 'string') return texto;
+
+  let limpo = texto;
+
+  const substituicoes = [
+    // profound / profoundly / profundo / profunda / profundamente
+    { pattern: /\bprofoundly\b/gi, replace: 'deeply' },
+    { pattern: /\bprofound\b/gi, replace: 'significant' },
+    { pattern: /\bprofundamente\b/gi, replace: 'intensamente' },
+    { pattern: /\bprofunda\b/gi, replace: 'marcante' },
+    { pattern: /\bprofundo\b/gi, replace: 'marcante' },
+    { pattern: /\bprofundos\b/gi, replace: 'marcantes' },
+    { pattern: /\bprofundas\b/gi, replace: 'marcantes' },
+
+    // navigate / navigates / navigated / navigating / navega / navegando
+    { pattern: /\bnavigates\s+through\b/gi, replace: 'examines' },
+    { pattern: /\bnavigating\s+through\b/gi, replace: 'exploring' },
+    { pattern: /\bnavigate\s+through\b/gi, replace: 'explore' },
+    { pattern: /\bnavigates\b/gi, replace: 'explores' },
+    { pattern: /\bnavigated\b/gi, replace: 'explored' },
+    { pattern: /\bnavigating\b/gi, replace: 'exploring' },
+    { pattern: /\bnavigate\b/gi, replace: 'explore' },
+    { pattern: /\bnavega\s+por\b/gi, replace: 'examina' },
+    { pattern: /\bnavegando\s+por\b/gi, replace: 'examinando' },
+    { pattern: /\bnavega\b/gi, replace: 'percorre' },
+    { pattern: /\bnavegando\b/gi, replace: 'percorrendo' },
+    { pattern: /\bnavegar\b/gi, replace: 'percorrer' },
+
+    // pivotal / pivotally / pivô
+    { pattern: /\ba\s+pivotal\b/gi, replace: 'a crucial' },
+    { pattern: /\ban\s+pivotal\b/gi, replace: 'a decisive' },
+    { pattern: /\bpivotally\b/gi, replace: 'decisively' },
+    { pattern: /\bpivotal\b/gi, replace: 'crucial' },
+    { pattern: /\bpiv[oô]\b/gi, replace: 'centro' },
+
+    // dive deep / diving deep / dives deep / deep dive / deep dives
+    { pattern: /\bdive\s+deep\s+into\b/gi, replace: 'examine' },
+    { pattern: /\bdives\s+deep\s+into\b/gi, replace: 'examines' },
+    { pattern: /\bdiving\s+deep\s+into\b/gi, replace: 'examining' },
+    { pattern: /\bdived\s+deep\s+into\b/gi, replace: 'examined' },
+    { pattern: /\bdive\s+deep\b/gi, replace: 'uncover the truth' },
+    { pattern: /\bdives\s+deep\b/gi, replace: 'uncovers the truth' },
+    { pattern: /\bdiving\s+deep\b/gi, replace: 'uncovering the truth' },
+    { pattern: /\bdeep\s+dive\s+into\b/gi, replace: 'examination of' },
+    { pattern: /\bdeep\s+dives\s+into\b/gi, replace: 'examinations of' },
+    { pattern: /\bdeep\s+dive\b/gi, replace: 'complete investigation' },
+    { pattern: /\bmergulh(?:e|ar)\s+fundo\s+(?:em|no|na|nos|nas)\b/gi, replace: 'investigue' },
+    { pattern: /\bmergulh(?:e|ar)\s+fundo\b/gi, replace: 'investigue a verdade' },
+    { pattern: /\bmergulhando\s+fundo\b/gi, replace: 'investigando a fundo' },
+    { pattern: /\bmergulho\s+profundo\b/gi, replace: 'estudo minucioso' },
+
+    // delve / delves / delved / delving
+    { pattern: /\bdelves\s+into\b/gi, replace: 'examines' },
+    { pattern: /\bdelving\s+into\b/gi, replace: 'examining' },
+    { pattern: /\bdelve\s+into\b/gi, replace: 'examine' },
+    { pattern: /\bdelved\s+into\b/gi, replace: 'examined' },
+    { pattern: /\bdelves\b/gi, replace: 'examines' },
+    { pattern: /\bdelve\b/gi, replace: 'examine' },
+    { pattern: /\bdesvende\b/gi, replace: 'entenda' },
+    { pattern: /\bdesvendar\b/gi, replace: 'compreender' },
+
+    // shrouded in mystery / envolto em mistério
+    { pattern: /\bshrouded\s+in\s+mystery\b/gi, replace: 'rarely understood' },
+    { pattern: /\benvolto\s+em\s+mist[eé]rio\b/gi, replace: 'pouco compreendido' },
+
+    // debate / debates
+    { pattern: /\bdebates?\b/gi, replace: 'inquiries' },
+
+    // stark / starkly
+    { pattern: /\bstark\s+reminder\b/gi, replace: 'clear warning' },
+    { pattern: /\bstarkly\b/gi, replace: 'clearly' },
+    { pattern: /\bstark\b/gi, replace: 'clear' },
+
+    // fabric (tecido)
+    { pattern: /\bthe\s+very\s+fabric\s+of\b/gi, replace: 'the core of' },
+    { pattern: /\bfabric\s+of\b/gi, replace: 'foundation of' },
+
+    // enigmatic / enigmático
+    { pattern: /\benigmatic\b/gi, replace: 'mysterious' },
+    { pattern: /\benigm[aá]tic[oa]s?\b/gi, replace: 'misterioso' },
+
+    // fascinating / fascinante
+    { pattern: /\bfascinating\b/gi, replace: 'revealing' },
+    { pattern: /\bfascinante\b/gi, replace: 'revelador' },
+
+    // journey through / jornada através
+    { pattern: /\bjourney\s+through\b/gi, replace: 'chronicle of' },
+    { pattern: /\bjornada\s+atrav[eé]s\b/gi, replace: 'relato de' },
+
+    // annals / in the annals / nos anais
+    { pattern: /\bin\s+the\s+annals\s+of\b/gi, replace: 'in the history of' },
+    { pattern: /\bannals\b/gi, replace: 'chronicles' },
+    { pattern: /\bnos\s+anais\s+de\b/gi, replace: 'na história de' },
+    { pattern: /\banais\b/gi, replace: 'crônicas' },
+
+    // testament to / testemunho de
+    { pattern: /\btestament\s+to\b/gi, replace: 'evidence of' },
+    { pattern: /\btestemunho\s+de\b/gi, replace: 'evidência de' },
+
+    // sacred texts / textos sagrados
+    { pattern: /\bsacred\s+texts?\b/gi, replace: 'Scripture' },
+    { pattern: /\btextos?\s+sagrados?\b/gi, replace: 'as Escrituras' }
+  ];
+
+  for (const s of substituicoes) {
+    limpo = limpo.replace(s.pattern, s.replace);
+  }
+
+  // Limpeza de pontuações e espaços duplicados
+  limpo = limpo
+    .replace(/[^\S\r\n]{2,}/g, ' ')
+    .replace(/,\s*,/g, ',')
+    .replace(/:\s*:/g, ':')
+    .replace(/\(\s*\)/g, '')
+    .trim();
+
+  return limpo;
 }
 
 /**
@@ -2938,8 +3153,8 @@ CRITICAL MANDATORY GUIDELINES:
 4. STRICT BIBLICAL FIDELITY & FACTUAL ACCURACY:
    - Every hook premise and title must be 100% faithful to what canonical Scripture actually states.
    - NEVER attribute false events, misattributed trials, or unscriptural actions to biblical figures (e.g. Nicodemus questioned the Pharisees in John 7:50-51, but that was NOT Jesus' trial before the Sanhedrin).
-5. ZERO FORBIDDEN CLICHÉS & BUZZWORDS:
-   - STRICTLY FORBIDDEN to use words such as: "profound", "navigated", "navigate", "delve", "dive deep", "shrouded in mystery", "debate", "stark", "fabric", "enigmatic", "fascinating", "journey through", "annals", or equivalents in ${lang.name}.
+5. ZERO FORBIDDEN CLICHÉS & BUZZWORDS (STRICTLY PROHIBITED):
+   - STRICTLY FORBIDDEN to use words such as: "profound" (or "profoundly"), "navigate" (or "navigates", "navigated", "navigating"), "pivotal" (or "pivotally"), "delve" (or "delves", "delved", "delving"), "dive deep" (or "dives deep", "diving deep", "deep dive"), "shrouded in mystery", "debate", "stark", "fabric", "enigmatic", "fascinating", "journey through", "annals", "testament to", "sacred texts", or equivalents in ${lang.name} (e.g. "profundo", "navega", "pivô", "mergulhe fundo", "desvendar", "enigmático").
 6. MANDATORY TITLE VARIETY & FORMATTING (HIGH CTR - ITEM 5):
    - MAXIMUM OF 1 WORD IN CAPS LOCK per title (e.g., "${lang.titleHookSample}").
    - NEVER write an entire title in uppercase. Never use more than 1 word in ALL CAPS.
@@ -3545,11 +3760,13 @@ const UI = {
  */
 const AutoSave = {
   SESSION_KEY: 'dark_studio_session_v1',
+  LEGACY_SESSION_KEY: 'dark_studio_session',
   DEBOUNCE_DELAY: 600,
   _debounceTimer: null,
 
   // Todos os campos monitorados
   FIELD_IDS: [
+    'input-api-key',
     'input-api-model-ideias', 'input-api-model-roteiro',
     'select-tema', 'input-tema-custom',
     'select-idioma', 'input-idioma-custom',
@@ -3576,8 +3793,30 @@ const AutoSave = {
       const el = document.getElementById(id);
       if (el) session[id] = el.value;
     });
+
+    // Proteção: se o input-api-key no DOM estiver vazio, mas houver chave salva no storage,
+    // nunca apaga por acidente a chave existente!
+    const keyStorage = OpenRouterAPI.getApiKey();
+    if ((!session['input-api-key'] || !session['input-api-key'].trim()) && keyStorage) {
+      session['input-api-key'] = keyStorage;
+    }
+
     try {
-      localStorage.setItem(this.SESSION_KEY, JSON.stringify(session));
+      const serialized = JSON.stringify(session);
+      localStorage.setItem(this.SESSION_KEY, serialized);
+      localStorage.setItem(this.LEGACY_SESSION_KEY, serialized);
+
+      // Sincroniza também nas chaves canônicas da OpenRouterAPI
+      const domKey = document.getElementById('input-api-key');
+      const domModelIdeias = document.getElementById('input-api-model-ideias');
+      const domModelRoteiro = document.getElementById('input-api-model-roteiro');
+      if (domKey && domKey.value.trim()) {
+        OpenRouterAPI.saveConfig(
+          domKey.value.trim(),
+          domModelIdeias ? domModelIdeias.value : '',
+          domModelRoteiro ? domModelRoteiro.value : ''
+        );
+      }
     } catch (e) {
       console.warn('AutoSave: não foi possível salvar no localStorage.', e);
     }
@@ -3585,15 +3824,29 @@ const AutoSave = {
 
   restore() {
     try {
-      const raw = localStorage.getItem(this.SESSION_KEY);
+      // 1. Migra chaves de versões e deploys anteriores
+      OpenRouterAPI.migrarChavesLocalStorage();
+
+      let raw = localStorage.getItem(this.SESSION_KEY);
+      if (!raw) {
+        raw = localStorage.getItem(this.LEGACY_SESSION_KEY);
+        if (raw) {
+          localStorage.setItem(this.SESSION_KEY, raw);
+        }
+      }
+
       if (!raw) {
         this.garantirPadroesSelects();
+        UI.updateApiStatusBadge();
         return false;
       }
-      const session = JSON.parse(raw);
-      const hasContent = Object.values(session).some(v => v && v.trim() !== '');
-      if (!hasContent) {
+
+      let session = {};
+      try {
+        session = JSON.parse(raw);
+      } catch (errJson) {
         this.garantirPadroesSelects();
+        UI.updateApiStatusBadge();
         return false;
       }
 
@@ -3604,13 +3857,31 @@ const AutoSave = {
         'Shorts/Reels Estendido — YouTube, Instagram, Facebook (até 3 minutos)'
       ];
 
-      // 1ª passagem: define todos os valores silenciosamente
+      // 1ª passagem: restaura valores com proteção total de API Key e Modelos
       this.FIELD_IDS.forEach(id => {
         const el = document.getElementById(id);
-        if (!el || session[id] === undefined) return;
+        if (!el) return;
 
-        // Correção de Bug (Item 6): Campo Estilo de Roteiro nunca fica vazio
-        if (id === 'select-estilo-roteiro') {
+        if (id === 'input-api-key') {
+          const valSessao = session[id];
+          const valStorage = OpenRouterAPI.getApiKey();
+          // REGRA DE OURO: Se houver chave na sessão ou no storage, restaura sem apagar
+          if (valSessao && valSessao.trim()) {
+            el.value = valSessao.trim();
+          } else if (valStorage && valStorage.trim()) {
+            el.value = valStorage.trim();
+          }
+        } else if (id === 'input-api-model-ideias') {
+          const val = session[id];
+          el.value = (val && val.trim()) ? val.trim() : OpenRouterAPI.getModelIdeas();
+        } else if (id === 'input-api-model-roteiro') {
+          const val = session[id];
+          if (val && val.trim() && val.trim() !== 'openai/gpt-4o-mini') {
+            el.value = val.trim();
+          } else {
+            el.value = OpenRouterAPI.getModelRoteiro();
+          }
+        } else if (id === 'select-estilo-roteiro') {
           const val = session[id];
           if (validEstilos.includes(val)) {
             el.value = val;
@@ -3626,13 +3897,15 @@ const AutoSave = {
             el.value = 'YouTube Longo (18-20 minutos)';
           }
         } else {
-          el.value = session[id];
+          if (session[id] !== undefined && session[id] !== null) {
+            el.value = session[id];
+          }
         }
       });
 
       this.garantirPadroesSelects();
 
-      // 2ª passagem: dispara eventos de change nos selects para mostrar/ocultar campos custom
+      // 2ª passagem: dispara eventos de change nos selects para atualizar combos dinâmicos
       this.FIELD_IDS.forEach(id => {
         const el = document.getElementById(id);
         if (el && el.tagName === 'SELECT' && session[id] !== undefined) {
@@ -3647,9 +3920,12 @@ const AutoSave = {
         cardLegenda.classList.remove('hidden');
       }
 
+      UI.updateApiStatusBadge();
       return true;
     } catch (e) {
       console.warn('AutoSave: erro ao restaurar sessão.', e);
+      this.garantirPadroesSelects();
+      UI.updateApiStatusBadge();
       return false;
     }
   },
@@ -3657,6 +3933,7 @@ const AutoSave = {
   clear() {
     try {
       localStorage.removeItem(this.SESSION_KEY);
+      localStorage.removeItem(this.LEGACY_SESSION_KEY);
     } catch (e) {
       console.warn('AutoSave: erro ao limpar sessão.', e);
     }
@@ -3668,15 +3945,22 @@ const AutoSave = {
       elEstilo.value = 'YouTube Longo (18-20 minutos)';
     }
 
+    const inputApiKey = document.getElementById('input-api-key');
+    if (inputApiKey && !inputApiKey.value.trim()) {
+      inputApiKey.value = OpenRouterAPI.getApiKey();
+    }
+
     const inputModelIdeias = document.getElementById('input-api-model-ideias');
     if (inputModelIdeias && !inputModelIdeias.value.trim()) {
       inputModelIdeias.value = OpenRouterAPI.getModelIdeas();
     }
 
     const inputModelRoteiro = document.getElementById('input-api-model-roteiro');
-    if (inputModelRoteiro && !inputModelRoteiro.value.trim()) {
+    if (inputModelRoteiro && (!inputModelRoteiro.value.trim() || inputModelRoteiro.value.trim() === 'openai/gpt-4o-mini')) {
       inputModelRoteiro.value = OpenRouterAPI.getModelRoteiro();
     }
+
+    UI.updateApiStatusBadge();
   },
 
   debouncedSave() {
@@ -3961,17 +4245,22 @@ document.addEventListener('DOMContentLoaded', () => {
   async function executeApiCall(btnId, promptText, outputTextareaId, successMessage, specificModel, customSystemPrompt) {
     const btn = document.getElementById(btnId);
     const outputEl = document.getElementById(outputTextareaId);
-    const hasApiKey = Boolean(OpenRouterAPI.getApiKey());
+    const hasKey = Boolean(OpenRouterAPI.getApiKey());
 
     UI.setButtonLoading(btn, true);
 
     try {
-      if (hasApiKey) {
+      if (hasKey) {
         const aiResponse = await OpenRouterAPI.generateContent(promptText, specificModel, customSystemPrompt);
-        if (outputEl) outputEl.value = aiResponse;
+        let finalResponse = aiResponse;
+        if (outputTextareaId === 'output-prompt-ideias') {
+          const idiomaAtual = UI.getValue('select-idioma', 'input-idioma-custom');
+          finalResponse = filtrarTermosProibidosNasIdeias(finalResponse, idiomaAtual);
+        }
+        if (outputEl) outputEl.value = finalResponse;
         UI.showToast(successMessage || 'Conteúdo gerado com sucesso via OpenRouter!');
         AutoSave.save();
-        return aiResponse;
+        return finalResponse;
       } else {
         if (outputEl) outputEl.value = promptText;
         UI.showToast('Prompt gerado! Insira sua API Key no topo para gerar diretamente com IA.', 'warning');
@@ -3999,39 +4288,12 @@ document.addEventListener('DOMContentLoaded', () => {
       OpenRouterAPI.getModelIdeas()
     );
 
-    // Sanitização pós-geração de termos proibidos nas ideias (Ponto 6)
+    // Sanitização pós-geração garantida de termos proibidos nas ideias (Garantia dupla)
     if (rawIdeias && typeof rawIdeias === 'string') {
-      const termosProibidosIdeias = [
-        /\bprofound\b/gi,
-        /\bnavigated\b/gi,
-        /\bnavigate\b/gi,
-        /\bdelve\b/gi,
-        /\bdive\s+deep\b/gi,
-        /\bshrouded\s+in\s+mystery\b/gi,
-        /\bdebate\b/gi,
-        /\bstark\b/gi,
-        /\bfabric\b/gi,
-        /\benigmatic\b/gi,
-        /\bjourney\s+through\b/gi,
-        /\bannals\b/gi,
-        /\bprofundo\b/gi,
-        /\bprofunda\b/gi,
-        /\bmergulh(?:e|ar|ando)\b/gi,
-        /\benigm[aá]tico\b/gi
-      ];
-      let ideiasLimpas = rawIdeias;
-      let houveTroca = false;
-      for (const rx of termosProibidosIdeias) {
-        if (rx.test(ideiasLimpas)) {
-          houveTroca = true;
-          ideiasLimpas = ideiasLimpas.replace(rx, '');
-        }
-      }
-      if (houveTroca) {
-        ideiasLimpas = ideiasLimpas.replace(/[^\S\r\n]{2,}/g, ' ').trim();
-        const outEl = document.getElementById('output-prompt-ideias');
-        if (outEl) outEl.value = ideiasLimpas;
-      }
+      const ideiasLimpas = filtrarTermosProibidosNasIdeias(rawIdeias, idioma);
+      const outEl = document.getElementById('output-prompt-ideias');
+      if (outEl) outEl.value = ideiasLimpas;
+      AutoSave.save();
     }
   });
 
@@ -4535,7 +4797,6 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
          estiloRoteiro.includes('3 minutos') ? SCRIPT_DURATION_CONFIGS['Shorts/Reels Estendido — YouTube, Instagram, Facebook (até 3 minutos)'] :
          SCRIPT_DURATION_CONFIGS['Shorts/Reels — YouTube, Instagram, Facebook (50-60 segundos)']);
 
-      const hasApiKey = Boolean(OpenRouterAPI.getApiKey());
       if (hasApiKey && configDuracao && totalPalavras < configDuracao.limite85) {
         setTimeout(() => {
           UI.showToast(
