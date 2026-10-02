@@ -1027,19 +1027,27 @@ textarea.h-180 {
           </summary>
           <div class="step-guide-body">
             <ol>
-              <li><strong>Escolha o Tema:</strong> No campo "Tema do Vídeo", selecione <em>"-- Personalizável --"</em> e digite o tema específico com as referências bíblicas. <em>Exemplo pronto:</em> <code>O encontro noturno de Nicodemos com Jesus — João 3:1-21 e Números 21:9</code>.</li>
-              <li><strong>Selecione o Idioma:</strong> Escolha Português (Brasil), Inglês ou Espanhol.</li>
-              <li><strong>Gere as Ideias:</strong> Clique em <em>"Gerar Ideias de Vídeo com IA"</em> (aguarde ~10s). O sistema gerará 10 títulos com estruturas gramaticais variadas e sem clichês.</li>
-              <li><strong>Copie UMA Ideia:</strong> Escolha o melhor título e cole no campo <em>"Passo B: Ideia Escolhida para o Roteiro"</em>.</li>
-              <li><strong>Configure o Estilo:</strong> Selecione o Estilo do Roteiro (ex: <em>YouTube Longo 18-20 minutos</em>), o Tom de Voz e o Tipo de Gancho.</li>
-              <li><strong>Gere o Roteiro:</strong> Clique em <em>"Gerar Roteiro Completo com IA"</em> e aguarde a geração das 7 seções sequenciais, validação bíblica KJV e auditoria automática do revisor.</li>
-              <li><strong>Resultado Pronto:</strong> O roteiro limpo e o relatório de auditoria aparecerão na tela, e o título e resumo serão enviados automaticamente para as etapas seguintes!</li>
+              <li><strong>Padrão do Canal:</strong> Clique no botão <em>"Preencher com o padrão do canal"</em> para carregar instantaneamente as opções ideais: Idioma = <code>Inglês</code>, Estilo = <code>YouTube Longo (18-20 minutos)</code>, Tom = <code>Investigativo e Curioso</code>, Gancho = <code>Afirmação Provocativa</code> e Tema = <code>-- Personalizável --</code>.</li>
+              <li><strong>Tema do Vídeo:</strong> No campo "Tema Personalizado", digite o tema em inglês com as passagens bíblicas. <em>Exemplo pronto para copiar:</em> <code>Og, king of Bashan: the last of the giants (Numbers 21:33-35, Deuteronomy 3:1-11)</code>.</li>
+              <li><strong>Gerar e Avaliar Ideias:</strong> Clique no botão <em>"Gerar Ideias de Vídeo com IA"</em>. O sistema gera 10 títulos com estruturas variadas, valida se há palavras proibidas e exibe o <strong>Avaliador da IA</strong> indicando a ideia recomendada e qual evitar.</li>
+              <li><strong>Copie a Ideia Escolhida:</strong> Selecione o título escolhido e cole no campo <em>"Passo B: Ideia Escolhida para o Roteiro"</em>.</li>
+              <li><strong>Gerar Roteiro Completo:</strong> Clique em <em>"Gerar Roteiro Completo com IA"</em> e aguarde a geração das 7 seções com auditoria e validação KJV automática.</li>
             </ol>
             <div class="step-guide-alert">
               <span>⚠️ <strong>Lembrete:</strong> Ao iniciar um novo vídeo, gere de novo antes de copiar, para não usar o resultado de outro vídeo.</span>
             </div>
           </div>
         </details>
+
+        <!-- Botão: Preencher com o padrão do canal -->
+        <div style="margin: 18px 0 10px 0;">
+          <button id="btn-preencher-padrao-canal" type="button" class="btn btn-secondary" style="background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.4); color: #c7d2fe; display: inline-flex; align-items: center; gap: 8px; font-weight: 600; padding: 10px 18px; cursor: pointer;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+            Preencher com o padrão do canal
+          </button>
+        </div>
 
         <div class="form-grid">
           <!-- Combobox: Tema do Vídeo -->
@@ -1066,30 +1074,30 @@ textarea.h-180 {
             </div>
           </div>
 
-          <!-- Combobox: Idioma -->
+          <!-- Combobox: Idioma (Apenas Inglês exibido na UI conforme regra, código e demais idiomas preservados) -->
           <div class="form-group">
             <label for="select-idioma">
               Idioma do Conteúdo
               <span class="tooltip-wrapper" data-tooltip="Selecione o idioma em que o conteúdo será gerado.">?</span>
             </label>
             <select id="select-idioma" class="form-control">
-              <option value="Português (Brasil)">Português (Brasil)</option>
-              <option value="Inglês">Inglês</option>
-              <option value="Espanhol">Espanhol</option>
-              <option value="Espanhol (LATAM)">Espanhol (LATAM)</option>
-              <option value="Francês">Francês</option>
-              <option value="Alemão">Alemão</option>
-              <option value="Italiano">Italiano</option>
-              <option value="Japonês">Japonês</option>
-              <option value="Coreano">Coreano</option>
-              <option value="Mandarim">Mandarim</option>
-              <option value="Russo">Russo</option>
-              <option value="Árabe">Árabe</option>
-              <option value="Hindi">Hindi</option>
-              <option value="Holandês">Holandês</option>
-              <option value="Sueco">Sueco</option>
-              <option value="Polonês">Polonês</option>
-              <option value="Personalizável">-- Personalizável --</option>
+              <option value="Português (Brasil)" style="display: none;">Português (Brasil)</option>
+              <option value="Inglês" selected>Inglês</option>
+              <option value="Espanhol" style="display: none;">Espanhol</option>
+              <option value="Espanhol (LATAM)" style="display: none;">Espanhol (LATAM)</option>
+              <option value="Francês" style="display: none;">Francês</option>
+              <option value="Alemão" style="display: none;">Alemão</option>
+              <option value="Italiano" style="display: none;">Italiano</option>
+              <option value="Japonês" style="display: none;">Japonês</option>
+              <option value="Coreano" style="display: none;">Coreano</option>
+              <option value="Mandarim" style="display: none;">Mandarim</option>
+              <option value="Russo" style="display: none;">Russo</option>
+              <option value="Árabe" style="display: none;">Árabe</option>
+              <option value="Hindi" style="display: none;">Hindi</option>
+              <option value="Holandês" style="display: none;">Holandês</option>
+              <option value="Sueco" style="display: none;">Sueco</option>
+              <option value="Polonês" style="display: none;">Polonês</option>
+              <option value="Personalizável" style="display: none;">-- Personalizável --</option>
             </select>
             <div id="container-idioma-custom" class="custom-input-container hidden">
               <input type="text" id="input-idioma-custom" class="form-control mt-2" placeholder="Digite o idioma desejado...">
@@ -1171,6 +1179,17 @@ textarea.h-180 {
             </button>
           </div>
           <textarea id="output-prompt-ideias" class="form-control prompt-output" readonly placeholder="As 10 ideias de vídeos geradas pela IA aparecerão aqui..."></textarea>
+        </div>
+
+        <!-- Card Avaliador de Ideias (Item 4) -->
+        <div id="card-avaliador-ideias" class="hidden" style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 8px; padding: 14px 18px; margin-top: 14px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #fbbf24; margin-bottom: 6px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+            <span>⚡ Avaliação Estratégica da IA</span>
+          </div>
+          <div id="conteudo-avaliador-ideias" style="line-height: 1.6; color: #f8fafc; font-size: 0.92rem; white-space: pre-wrap;"></div>
         </div>
 
         <hr class="divider">
@@ -1386,11 +1405,11 @@ textarea.h-180 {
           </summary>
           <div class="step-guide-body">
             <ol>
-              <li><strong>Tema Sincronizado:</strong> O campo <em>"Tema do Vídeo para Thumbnail"</em> é preenchido automaticamente com o título da ideia escolhida no Passo B da Etapa 1.</li>
-              <li><strong>Escolha o Estilo e Cores:</strong> Selecione o Estilo visual da thumbnail (ex: <em>Impacto Visual Dramático</em>), Paleta de Cores e Elementos.</li>
-              <li><strong>Gerar 3 Variações:</strong> Clique em <em>"Gerar Prompts para Thumbnails com IA"</em> (tempo de espera: ~10s).</li>
-              <li><strong>Resultados A/B/C:</strong> A IA gera 3 opções no formato 16:9 widescreen sem texto embutido na imagem, além de sugerir textos curtos de impacto (overlay text) que complementam o título sem repeti-lo.</li>
-              <li><strong>Uso:</strong> Copie a Opção A, B ou C com os botões <em>"Copiar"</em> para gerar sua thumbnail com alta curiosidade e contraste.</li>
+              <li><strong>Tema Sincronizado:</strong> O campo <em>"Tema do Vídeo para Thumbnail"</em> é carregado automaticamente com o título selecionado na Etapa 1.</li>
+              <li><strong>Configurações Recomendadas:</strong> Estilo da Thumbnail = <code>Impacto Visual Dramático</code>; Paleta de Cores = <code>Contraste Alto (Luz e Sombra Profunda)</code>; Elementos Chave = <code>Personagem Central e Cenário Misterioso</code>.</li>
+              <li><strong>Gerar 3 Variações:</strong> Clique no botão <em>"Gerar 3 Prompts de Thumbnail com IA (A/B/C)"</em>. A IA usará o detalhe mais concreto do roteiro (objeto, número ou escala) e gerará textos de overlay específicos (número ou nome, ex.: "13 FEET"), sem texto embutido na imagem e sem sangue/gore.</li>
+              <li><strong>Recomendação da IA:</strong> O card <em>"Recomendação de Thumbnail da IA"</em> indicará a melhor opção entre A, B e C com a devida justificativa estratégica de CTR.</li>
+              <li><strong>Uso dos Prompts:</strong> Clique no botão <em>"Copiar"</em> na Opção recomendada e cole no seu gerador de imagem preferido.</li>
             </ol>
             <div class="step-guide-alert">
               <span>⚠️ <strong>Lembrete:</strong> Gere de novo antes de copiar, para não usar o resultado de outro vídeo.</span>
@@ -1535,6 +1554,17 @@ textarea.h-180 {
             <textarea id="output-thumb-c" class="form-control prompt-output" readonly placeholder="Prompt Thumbnail C gerado pela IA aparecerá aqui..."></textarea>
           </div>
         </div>
+
+        <!-- Card Avaliador de Thumbnails (Item 7) -->
+        <div id="card-avaliador-thumb" class="hidden" style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 8px; padding: 14px 18px; margin-top: 14px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #fbbf24; margin-bottom: 6px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+            <span>⚡ Recomendação de Thumbnail da IA</span>
+          </div>
+          <div id="conteudo-avaliador-thumb" style="line-height: 1.6; color: #f8fafc; font-size: 0.92rem; white-space: pre-wrap;"></div>
+        </div>
       </section>
 
       <!-- SEÇÃO 2.4: Prompts para SEO Completo -->
@@ -1556,10 +1586,10 @@ textarea.h-180 {
           </summary>
           <div class="step-guide-body">
             <ol>
-              <li><strong>Tema e Resumo Sincronizados:</strong> O campo <em>"Tema do Vídeo para SEO"</em> é preenchido com a ideia escolhida no Passo B da Etapa 1, e o roteiro completo já vem carregado no resumo.</li>
-              <li><strong>Gerar Pacote SEO:</strong> Clique em <em>"Gerar SEO Completo com IA"</em> (tempo de espera: ~10-15s).</li>
-              <li><strong>Conteúdo Gerado:</strong> A IA cria 3 títulos com alto CTR, tags estratégicas separadas por vírgula, hashtags e a <strong>Descrição Completa do Vídeo</strong> em 2-3 parágrafos em inglês com contexto bíblico e chamada para inscrição.</li>
-              <li><strong>Uso:</strong> Copie com o botão <em>"Copiar SEO"</em> e cole diretamente no YouTube Studio ao publicar seu vídeo.</li>
+              <li><strong>Tema e Resumo Sincronizados:</strong> O campo <em>"Tema do Vídeo para SEO"</em> é preenchido com a ideia escolhida na Etapa 1, e o roteiro completo já vem carregado no resumo.</li>
+              <li><strong>Gerar Pacote SEO:</strong> Clique no botão <em>"Gerar SEO Completo com IA"</em>. A IA gerará 3 títulos com alto CTR (respeitando fidelidade bíblica, gancho irresistível e alinhamento com a thumbnail), tags, hashtags e a <strong>Descrição Completa do Vídeo</strong> em inglês sem clichês proibidos (como <em>"dive into"</em>, <em>"profound"</em>, <em>"meticulously"</em>, <em>"unpack"</em>, <em>"serves as a reminder"</em>).</li>
+              <li><strong>Recomendação da IA:</strong> O card <em>"Recomendação de Título da IA"</em> avaliará os 3 títulos e destacará o título nº 1, 2 ou 3 com maior potencial de cliques e fidelidade.</li>
+              <li><strong>Uso:</strong> Clique no botão <em>"Copiar SEO"</em> e cole diretamente no YouTube Studio ao publicar seu vídeo.</li>
             </ol>
             <div class="step-guide-alert">
               <span>⚠️ <strong>Lembrete:</strong> Gere de novo antes de copiar, para não usar o resultado de outro vídeo.</span>
@@ -1611,6 +1641,17 @@ textarea.h-180 {
             </button>
           </div>
           <textarea id="output-prompt-seo" class="form-control prompt-output" readonly placeholder="Os títulos, descrição completa, tags e hashtags gerados pela IA aparecerão aqui..."></textarea>
+        </div>
+
+        <!-- Card Avaliador de SEO (Item 8) -->
+        <div id="card-avaliador-seo" class="hidden" style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 8px; padding: 14px 18px; margin-top: 14px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #fbbf24; margin-bottom: 6px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+            <span>⚡ Recomendação de Título da IA</span>
+          </div>
+          <div id="conteudo-avaliador-seo" style="line-height: 1.6; color: #f8fafc; font-size: 0.92rem; white-space: pre-wrap;"></div>
         </div>
       </section>
 
@@ -2010,9 +2051,11 @@ ABSOLUTE CANONICAL & STORYTELLING RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
    - When the Bible does not detail a specific mechanism, origin, physical process, or explanation, acknowledge that silence in EXACTLY ONE single sentence in the entire script and NEVER repeat it elsewhere.
    - STRICTLY FORBIDDEN to invent speculative theories, unwritten mechanisms, or extra-biblical conjectures not explicitly stated in the canonical text.
    - NEVER fabricate historical or geographic connections that the canonical text itself does not make.
-5. BATTLES & SOLEMN RESTRAINT (ITEM 5):
+   - NEVER attribute a biblical description of one place or region to another (e.g. Deuteronomy 1:28 describes the cities of Canaan as 'great and walled up to heaven'; NEVER apply 'walls reaching toward heaven' or equivalent borrowed descriptions to Bashan or other locations unless canonical Scripture explicitly uses that exact wording for that specific place).
+5. BATTLES & SOLEMN RESTRAINT (ITEM 5 & ITEM 9):
    - Narrate ancient biblical events and battles strictly through literal canonical quotes from the target translation.
    - STRICTLY FORBIDDEN to evaluate, philosophize, or justify the destruction or wiping out of peoples.
+   - NEVER invent physical or tactical details of battle scenes as factual history (e.g. 'blackened shells', 'gates ripped from their hinges', 'within a matter of days', or hand-to-hand combat specifics). Narrate biblical conflicts strictly with solemn restraint according to the exact biblical citation.
    - PROHIBITED PHRASES: "eliminated", "hunted down", "not an injustice", "populations were", "rightfully destroyed".
 6. REPETITION & HISTORICITY LIMITS (ITEM 3):
    - Quoting the exact same verse by extenso is allowed at most ONCE in the entire script.
@@ -2026,7 +2069,7 @@ ABSOLUTE CANONICAL & STORYTELLING RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
    - STRICTLY FORBIDDEN: Any content derived from apocryphal or pseudepigraphal books (Book of Enoch, Jasher, Jubilees, etc.).
    - STRICTLY FORBIDDEN: Immediate temporal markers ("tonight", "this morning", "today in this video").
 8. FORBIDDEN CLICHÉS, INTERNAL LABELS & AI PHRASES:
-   - STRICTLY FORBIDDEN: "tonight", "this morning", "profound", "fabric", "stark", "debate", "shrouded in mystery", "figuratively", "loomed large", "captivated minds", "what if I told you", "in the annals", "annals", "embark", "journey through", "delve", "dive deep", "enigmatic", "the very fabric", "challenge everything you thought", "testament to", "testaments to", "sacred texts", "sacred text", "tapestry", "stark reminder", "serves as a reminder", "insurmountable", "unwavering", "glimmer of hope", "quintessential", "navigate", "multifaceted", "eliminated", "hunted down", "not an injustice", "populations were".
+   - STRICTLY FORBIDDEN: "tonight", "this morning", "profound", "fabric", "stark", "debate", "shrouded in mystery", "figuratively", "loomed large", "captivated minds", "what if I told you", "in the annals", "annals", "embark", "journey through", "delve", "dive deep", "dive into", "unpack", "meticulously", "enigmatic", "the very fabric", "challenge everything you thought", "testament to", "testaments to", "sacred texts", "sacred text", "tapestry", "stark reminder", "serves as a reminder", "insurmountable", "unwavering", "glimmer of hope", "quintessential", "navigate", "multifaceted", "eliminated", "hunted down", "not an injustice", "populations were".
    - STRICTLY FORBIDDEN INTERNAL LABELS: NEVER speak or write internal editorial labels such as "Canonical Boundary", "Opening Hook", "Section", "Point", "Outline", "Part".
    - STRICTLY FORBIDDEN BACKSTAGE PHRASES: "in the next section", "as we transition", "we will explore", "as we continue our exploration", "moving ahead", "as the narrative unfolds".
 9. LITERAL SCRIPTURE FIDELITY & LANGUAGE COMPLIANCE:
@@ -2045,6 +2088,10 @@ const FORBIDDEN_TERMS = [
   { term: 'esta manhã', pattern: /\besta\s+manh[aã]\b/i },
   { term: 'profound', pattern: /\bprofound(?:ly)?\b/i },
   { term: 'profundo', pattern: /\bprofund[oa]s?\b/i },
+  { term: 'meticulously', pattern: /\bmeticulous(?:ly)?\b/i },
+  { term: 'meticulosamente', pattern: /\bmeticulosamente\b/i },
+  { term: 'unpack', pattern: /\bunpack(?:s|ing|ed)?\b/i },
+  { term: 'dive into', pattern: /\bdive\s+into\b/i },
   { term: 'fabric', pattern: /\bfabric\b/i },
   { term: 'stark', pattern: /\bstark(?:ly)?\b/i },
   { term: 'debate', pattern: /\bdebates?\b/i },
@@ -2236,157 +2283,291 @@ function removerParagrafosDuplicadosPorSimilaridade(texto, threshold = 0.6) {
 }
 
 /**
- * Substitui padrão regex preservando a capitalização da palavra original
+ * ITEM 1 & ITEM 4: Validação e regeneração de termos proibidos nos TÍTULOS das ideias
+ * Regra: NUNCA trocar palavras automaticamente com regex/sinônimos.
+ * Se houver termo proibido, regenera O TÍTULO com a IA. As descrições permanecem intactas.
+ * Se ainda persistir após a tentativa, mantém como está e registra aviso.
  */
-function replacePreservingCase(str, pattern, replacement) {
-  return str.replace(pattern, (match) => {
-    if (!match) return replacement;
-    // Se o match original estiver todo em MAIÚSCULAS
-    if (match === match.toUpperCase() && match.length > 1) {
-      return replacement.toUpperCase();
+async function validarERegenerarTitulosIdeias(textoIdeias, tema, modelo) {
+  if (!textoIdeias || typeof textoIdeias !== 'string') return textoIdeias;
+
+  const linhas = textoIdeias.split('\n');
+  let linhasAtualizadas = [...linhas];
+  let avisosPersistentes = [];
+
+  const regexTitulo = /^\s*(\d{1,2})[\.\)\-:]\s*(.+)$/;
+
+  for (let i = 0; i < linhas.length; i++) {
+    const linha = linhas[i].trim();
+    const match = linha.match(regexTitulo);
+
+    if (match) {
+      const numero = match[1];
+      let titulo = match[2].trim();
+
+      // Checa APENAS o título contra FORBIDDEN_TERMS (Item 1: descrições ficam como a IA escreveu)
+      const termosEncontrados = FORBIDDEN_TERMS.filter(f => f.pattern.test(titulo));
+
+      if (termosEncontrados.length > 0) {
+        const nomesTermos = termosEncontrados.map(t => `"${t.term}"`).join(', ');
+        console.log(`[Ideias] Termo proibido detectado no Título #${numero}: ${nomesTermos} -> "${titulo}"`);
+
+        try {
+          const promptRegenerarTitulo = `Act as an expert YouTube title strategist for biblical dark documentaries.
+Rewrite ONLY this single video title to eliminate the forbidden term(s): ${nomesTermos}.
+Original title: "${titulo}"
+Video theme: "${tema}"
+
+MANDATORY RULES:
+1. STRICT BIBLICAL FIDELITY: Never contradict canonical Scripture and never claim what the Bible does not say (never use "as foretold" unless explicitly documented).
+2. CONCRETE HOOK: Use a curious question or concrete tangible biblical detail.
+3. HIGH CTR FORMAT: Maximum 1 word in ALL CAPS. No parentheses unless strictly necessary.
+4. ZERO FORBIDDEN TERMS: Absolutely do not use ${nomesTermos}, nor "profound", "pivotal", "delve", "dive deep", "navigates", "stark", "shrouded in mystery".
+5. OUTPUT: Return EXCLUSIVELY the rewritten title text on a single line, without quotes, without numbering, without preamble.`;
+
+          const novoTituloRaw = await OpenRouterAPI.generateContent(
+            promptRegenerarTitulo,
+            modelo || OpenRouterAPI.getModelIdeas()
+          );
+
+          if (novoTituloRaw && novoTituloRaw.trim()) {
+            let novoTitulo = novoTituloRaw.trim().replace(/^["']|["']$/g, '').replace(/^\d+[\.\)\-:]\s*/, '').trim();
+            const termosRestantes = FORBIDDEN_TERMS.filter(f => f.pattern.test(novoTitulo));
+            if (termosRestantes.length === 0) {
+              linhasAtualizadas[i] = `${numero}. ${novoTitulo}`;
+              console.log(`[Ideias] Título #${numero} regenerado com sucesso: "${novoTitulo}"`);
+            } else {
+              console.warn(`[Ideias] Termo proibido persistiu no Título #${numero}. Mantido com aviso.`);
+              avisosPersistentes.push(`Título #${numero} (${termosRestantes.map(t => t.term).join(', ')})`);
+            }
+          }
+        } catch (errRegen) {
+          console.warn(`[Ideias] Falha ao regenerar Título #${numero}:`, errRegen);
+          avisosPersistentes.push(`Título #${numero} (falha na conexão)`);
+        }
+      }
     }
-    // Se a primeira letra do match original for MAIÚSCULA
-    const firstChar = match.charAt(0);
-    if (firstChar === firstChar.toUpperCase() && firstChar !== firstChar.toLowerCase()) {
-      return replacement.charAt(0).toUpperCase() + replacement.slice(1);
-    }
-    return replacement;
-  });
+  }
+
+  if (avisosPersistentes.length > 0 && typeof UI !== 'undefined' && UI.showToast) {
+    UI.showToast(`⚠️ Termos proibidos persistentes mantidos com aviso: ${avisosPersistentes.join('; ')}`, 'warning');
+  }
+
+  return linhasAtualizadas.join('\n');
 }
 
 /**
- * Filtro rigoroso e substituição contextual limpa para termos proibidos nas 10 IDEIAS
- * Garante que clichês como "profound", "navigates", "pivotal" e "Dive deep" nunca vazem
- * e preserva rigorosamente as maiúsculas no início de frases.
+ * Função mantida sem substituição automática de palavras (Item 1)
  */
-function filtrarTermosProibidosNasIdeias(texto, idioma = 'pt') {
-  if (!texto || typeof texto !== 'string') return texto;
+function filtrarTermosProibidosNasIdeias(texto) {
+  return texto;
+}
 
-  let limpo = texto;
+/**
+ * Avaliador de Ideias via IA (Item 4)
+ * Mostra na tela:
+ * ⭐ Recomendada: nº X, porque…
+ * ⚠️ Evite: nº Y, porque…
+ */
+async function avaliarIdeiasComIA(ideiasTexto, tema, modelo) {
+  const card = document.getElementById('card-avaliador-ideias');
+  const conteudo = document.getElementById('conteudo-avaliador-ideias');
+  if (!card || !conteudo) return;
 
-  const substituicoes = [
-    // profound / profoundly / profundo / profunda / profundamente
-    { pattern: /\bprofoundly\b/gi, replace: 'deeply' },
-    { pattern: /\bprofound\b/gi, replace: 'significant' },
-    { pattern: /\bprofundamente\b/gi, replace: 'intensamente' },
-    { pattern: /\bprofunda\b/gi, replace: 'marcante' },
-    { pattern: /\bprofundo\b/gi, replace: 'marcante' },
-    { pattern: /\bprofundos\b/gi, replace: 'marcantes' },
-    { pattern: /\bprofundas\b/gi, replace: 'marcantes' },
+  conteudo.textContent = 'Avaliando as 10 ideias com IA...';
+  card.classList.remove('hidden');
 
-    // navigate / navigates / navigated / navigating / navega / navegando
-    { pattern: /\bnavigates\s+through\b/gi, replace: 'examines' },
-    { pattern: /\bnavigating\s+through\b/gi, replace: 'exploring' },
-    { pattern: /\bnavigate\s+through\b/gi, replace: 'explore' },
-    { pattern: /\bnavigates\b/gi, replace: 'explores' },
-    { pattern: /\bnavigated\b/gi, replace: 'explored' },
-    { pattern: /\bnavigating\b/gi, replace: 'exploring' },
-    { pattern: /\bnavigate\b/gi, replace: 'explore' },
-    { pattern: /\bnavega\s+por\b/gi, replace: 'examina' },
-    { pattern: /\bnavegando\s+por\b/gi, replace: 'examinando' },
-    { pattern: /\bnavega\b/gi, replace: 'percorre' },
-    { pattern: /\bnavegando\b/gi, replace: 'percorrendo' },
-    { pattern: /\bnavegar\b/gi, replace: 'percorrer' },
+  const promptAvaliador = `Act as a senior YouTube content strategist and biblical scholar for dark documentary channels ('Explicador Bíblico').
+Carefully evaluate these 10 generated video ideas for the theme: "${tema}".
 
-    // pivotal / pivotally / pivô
-    { pattern: /\ba\s+pivotal\b/gi, replace: 'a crucial' },
-    { pattern: /\ban\s+pivotal\b/gi, replace: 'a decisive' },
-    { pattern: /\bpivotally\b/gi, replace: 'decisively' },
-    { pattern: /\bpivotal\b/gi, replace: 'crucial' },
-    { pattern: /\bpiv[oô]\b/gi, replace: 'centro' },
+IDEAS TO EVALUATE:
+"""
+${ideiasTexto}
+"""
 
-    // dive deep / diving deep / dives deep / deep dive / deep dives
-    { pattern: /\bdive\s+deep\s+into\b/gi, replace: 'examine' },
-    { pattern: /\bdives\s+deep\s+into\b/gi, replace: 'examines' },
-    { pattern: /\bdiving\s+deep\s+into\b/gi, replace: 'examining' },
-    { pattern: /\bdived\s+deep\s+into\b/gi, replace: 'examined' },
-    { pattern: /\bdive\s+deep\b/gi, replace: 'uncover the truth' },
-    { pattern: /\bdives\s+deep\b/gi, replace: 'uncovers the truth' },
-    { pattern: /\bdiving\s+deep\b/gi, replace: 'uncovering the truth' },
-    { pattern: /\bdeep\s+dive\s+into\b/gi, replace: 'examination of' },
-    { pattern: /\bdeep\s+dives\s+into\b/gi, replace: 'examinations of' },
-    { pattern: /\bdeep\s+dive\b/gi, replace: 'complete investigation' },
-    { pattern: /\bmergulh(?:e|ar)\s+fundo\s+(?:em|no|na|nos|nas)\b/gi, replace: 'investigue' },
-    { pattern: /\bmergulh(?:e|ar)\s+fundo\b/gi, replace: 'investigue a verdade' },
-    { pattern: /\bmergulhando\s+fundo\b/gi, replace: 'investigando a fundo' },
-    { pattern: /\bmergulho\s+profundo\b/gi, replace: 'estudo minucioso' },
+EVALUATION CRITERIA:
+1. Biblical Fidelity: Strictly adheres to canonical Scripture without inventing prophecies, timeframes, or unwritten claims (e.g. never accept "as foretold" when Scripture is silent).
+2. Concrete Hook: Contains a curious question or tangible, physical detail (e.g. dimensions, Og's iron bed, specific geography, concrete biblical numbers).
+3. Thumbnail Visual Potential: High imagery potential with dramatic contrast and scale.
+4. Safe Solemn Theme: Reverent tone, zero justification or rejoicing in destruction of peoples.
 
-    // delve / delves / delved / delving
-    { pattern: /\bdelves\s+into\b/gi, replace: 'examines' },
-    { pattern: /\bdelving\s+into\b/gi, replace: 'examining' },
-    { pattern: /\bdelve\s+into\b/gi, replace: 'examine' },
-    { pattern: /\bdelved\s+into\b/gi, replace: 'examined' },
-    { pattern: /\bdelves\b/gi, replace: 'examines' },
-    { pattern: /\bdelve\b/gi, replace: 'examine' },
-    { pattern: /\bdesvende\b/gi, replace: 'entenda' },
-    { pattern: /\bdesvendar\b/gi, replace: 'compreender' },
+MANDATORY OUTPUT FORMAT (Write the explanations in Portuguese Brasil):
+⭐ Recomendada: nº [número da melhor ideia], porque [justificativa clara e convincente destacando a fidelidade ao texto bíblico, gancho concreto e potencial visual para thumbnail].
 
-    // defended Jesus during critical moments -> correção factual bíblica (registrado apenas uma defesa em João 7)
-    { pattern: /\bdefended\s+Jesus\s+(?:during\s+critical\s+moments|several\s+times|repeatedly)\b/gi, replace: 'questioned the Sanhedrin in John 7' },
-    { pattern: /\bdefendeu\s+Jesus\s+(?:em\s+momentos\s+cr[ií]ticos|v[aá]rias\s+vezes|repetidamente)\b/gi, replace: 'questionou o Sinédrio em João 7' },
+⚠️ Evite: nº [número da ideia menos recomendada], porque [justificativa apontando fraqueza no gancho, falta de detalhe concreto, risco de interpretação ou tema sensível].
 
-    // shrouded in mystery / envolto em mistério
-    { pattern: /\bshrouded\s+in\s+mystery\b/gi, replace: 'rarely understood' },
-    { pattern: /\benvolto\s+em\s+mist[eé]rio\b/gi, replace: 'pouco compreendido' },
+Output EXCLUSIVELY the two lines above.`;
 
-    // debate / debates
-    { pattern: /\bdebates?\b/gi, replace: 'inquiries' },
+  try {
+    const avaliacao = await OpenRouterAPI.generateContent(
+      promptAvaliador,
+      modelo || OpenRouterAPI.getModelIdeas()
+    );
+    if (avaliacao && avaliacao.trim()) {
+      conteudo.textContent = avaliacao.trim();
+    } else {
+      conteudo.textContent = 'Não foi possível gerar a avaliação no momento.';
+    }
+  } catch (err) {
+    console.warn('[Avaliador de Ideias] Erro:', err);
+    conteudo.textContent = 'Erro ao avaliar ideias: ' + err.message;
+  }
+}
 
-    // stark / starkly
-    { pattern: /\bstark\s+reminder\b/gi, replace: 'clear warning' },
-    { pattern: /\bstarkly\b/gi, replace: 'clearly' },
-    { pattern: /\bstark\b/gi, replace: 'clear' },
+/**
+ * Avaliador de Thumbnails via IA (Item 7)
+ * Mostra na tela:
+ * ⭐ Recomendada: Opção X, porque…
+ */
+async function avaliarThumbnailsComIA(opcoesThumb, tema, modelo) {
+  const card = document.getElementById('card-avaliador-thumb');
+  const conteudo = document.getElementById('conteudo-avaliador-thumb');
+  if (!card || !conteudo) return;
 
-    // fabric (tecido)
-    { pattern: /\bthe\s+very\s+fabric\s+of\b/gi, replace: 'the core of' },
-    { pattern: /\bfabric\s+of\b/gi, replace: 'foundation of' },
+  conteudo.textContent = 'Avaliando opções de thumbnail com IA...';
+  card.classList.remove('hidden');
 
-    // enigmatic / enigmático
-    { pattern: /\benigmatic\b/gi, replace: 'mysterious' },
-    { pattern: /\benigm[aá]tic[oa]s?\b/gi, replace: 'misterioso' },
+  const promptAvaliador = `Act as an expert YouTube thumbnail and CTR director for biblical dark documentary channels ('Explicador Bíblico').
+Evaluate these 3 thumbnail concepts generated for the video: "${tema}".
 
-    // fascinating / fascinante
-    { pattern: /\bfascinating\b/gi, replace: 'revealing' },
-    { pattern: /\bfascinante\b/gi, replace: 'revelador' },
+THUMBNAIL CONCEPTS:
+Opção A:
+${opcoesThumb.a}
 
-    // journey through / jornada através
-    { pattern: /\bjourney\s+through\b/gi, replace: 'chronicle of' },
-    { pattern: /\bjornada\s+atrav[eé]s\b/gi, replace: 'relato de' },
+Opção B:
+${opcoesThumb.b}
 
-    // annals / in the annals / nos anais
-    { pattern: /\bin\s+the\s+annals\s+of\b/gi, replace: 'in the history of' },
-    { pattern: /\bannals\b/gi, replace: 'chronicles' },
-    { pattern: /\bnos\s+anais\s+de\b/gi, replace: 'na história de' },
-    { pattern: /\banais\b/gi, replace: 'crônicas' },
+Opção C:
+${opcoesThumb.c}
 
-    // testament to / testemunho de
-    { pattern: /\btestament\s+to\b/gi, replace: 'evidence of' },
-    { pattern: /\btestemunho\s+de\b/gi, replace: 'evidência de' },
+EVALUATION CRITERIA:
+1. Most concrete detail from script (physical scale, tangible biblical object like iron bed with human figure for scale, specific number).
+2. Specific overlay text (number or name like "13 FEET", NOT generic clichés like "Hidden Secrets").
+3. Overlay text complements the title, never repeats it.
+4. Cinematic chiaroscuro photorealistic visual style with intense contrast.
 
-    // sacred texts / textos sagrados
-    { pattern: /\bsacred\s+texts?\b/gi, replace: 'Scripture' },
-    { pattern: /\btextos?\s+sagrados?\b/gi, replace: 'as Escrituras' }
-  ];
+MANDATORY OUTPUT FORMAT (in Portuguese Brasil):
+⭐ Recomendada: Opção [A, B ou C], porque [justificativa detalhada destacando o detalhe concreto, escala, contraste visual e impacto do texto de overlay].
 
-  for (const s of substituicoes) {
-    limpo = replacePreservingCase(limpo, s.pattern, s.replace);
+Output EXCLUSIVELY the line above.`;
+
+  try {
+    const avaliacao = await OpenRouterAPI.generateContent(
+      promptAvaliador,
+      modelo || OpenRouterAPI.getModelIdeas()
+    );
+    if (avaliacao && avaliacao.trim()) {
+      conteudo.textContent = avaliacao.trim();
+    } else {
+      conteudo.textContent = 'Não foi possível gerar a recomendação de thumbnail.';
+    }
+  } catch (err) {
+    console.warn('[Avaliador de Thumbnail] Erro:', err);
+    conteudo.textContent = 'Erro ao avaliar thumbnail: ' + err.message;
+  }
+}
+
+/**
+ * ITEM 1 & ITEM 8: Valida e regenera frases com termos proibidos na descrição do SEO
+ * Se houver termo proibido, regenera a frase com a IA. Se persistir, mantém e exibe aviso.
+ */
+async function validarERegenerarDescricaoSeo(textoSeo, tema, modelo) {
+  if (!textoSeo || typeof textoSeo !== 'string') return textoSeo;
+
+  const descMatch = textoSeo.match(/(?:Descrição|Description)[\s\S]*?(?=(?:Tags|Search Tags|Hashtags|Palavras-chave|\[\[|$))/i);
+  if (!descMatch) return textoSeo;
+
+  let textoDescricao = descMatch[0];
+  let textoDescricaoModificado = textoDescricao;
+
+  const frases = textoDescricao.match(/[^.!?\n]+(?:[.!?]+["']?|$)/g) || [];
+
+  for (let frase of frases) {
+    const fraseTrim = frase.trim();
+    if (!fraseTrim) continue;
+
+    const termosEncontrados = FORBIDDEN_TERMS.filter(f => f.pattern.test(fraseTrim));
+    if (termosEncontrados.length > 0) {
+      const nomes = termosEncontrados.map(t => `"${t.term}"`).join(', ');
+      console.log(`[SEO] Termo proibido na descrição: ${nomes} -> "${fraseTrim}"`);
+
+      try {
+        const promptFraseSeo = `Act as an expert YouTube SEO copywriter for biblical dark channels ('Explicador Bíblico').
+Rewrite the following single sentence from a video description about "${tema}" to completely eliminate the forbidden cliché(s): ${nomes} (especially terms like "dive into", "profound", "meticulously", "unpack", "serves as a reminder").
+Original sentence: """${fraseTrim}"""
+
+RULES:
+- Preserve solemn biblical narrative tone and clarity.
+- Output ONLY the single rewritten sentence, without quotes, without preamble.`;
+
+        const novaFraseRaw = await OpenRouterAPI.generateContent(promptFraseSeo, modelo || OpenRouterAPI.getModelIdeas());
+        if (novaFraseRaw && novaFraseRaw.trim()) {
+          const novaFrase = novaFraseRaw.trim().replace(/^["']|["']$/g, '');
+          const termosRestantes = FORBIDDEN_TERMS.filter(f => f.pattern.test(novaFrase));
+          if (termosRestantes.length === 0) {
+            textoDescricaoModificado = textoDescricaoModificado.replace(fraseTrim, novaFrase);
+          } else {
+            console.warn('[SEO] Termo persistiu na frase da descrição após tentativa de regeneração. Mantido com aviso.');
+            if (typeof UI !== 'undefined' && UI.showToast) {
+              UI.showToast(`⚠️ Termo na descrição mantido com aviso: ${termosRestantes.map(t => t.term).join(', ')}`, 'warning');
+            }
+          }
+        }
+      } catch (errFrase) {
+        console.warn('[SEO] Erro ao regenerar frase da descrição:', errFrase);
+      }
+    }
   }
 
-  // Limpeza de pontuações e espaços duplicados
-  limpo = limpo
-    .replace(/[^\S\r\n]{2,}/g, ' ')
-    .replace(/,\s*,/g, ',')
-    .replace(/:\s*:/g, ':')
-    .replace(/\(\s*\)/g, '')
-    .trim();
+  return textoSeo.replace(textoDescricao, textoDescricaoModificado);
+}
 
-  // Pós-processamento obrigatório: Garante que a primeira letra após início de linha,
-  // número de item (ex: "1. "), pontuação final (. ? !), dois pontos (:) ou aspas seja MAIÚSCULA
-  limpo = limpo.replace(/(^|[\r\n]+|^\s*\d+[\.\)\-]\s+|[.!?]\s+|:\s+|["'“‘]\s*)([a-zà-ú])/g, (m, prefix, letter) => {
-    return prefix + letter.toUpperCase();
-  });
+/**
+ * Avaliador de Título SEO via IA (Item 8)
+ * Mostra na tela:
+ * ⭐ Recomendado: título nº X, porque…
+ */
+async function avaliarTitulosSeoComIA(textoSeo, tema, modelo) {
+  const card = document.getElementById('card-avaliador-seo');
+  const conteudo = document.getElementById('conteudo-avaliador-seo');
+  if (!card || !conteudo) return;
 
-  return limpo;
+  conteudo.textContent = 'Avaliando títulos de SEO com IA...';
+  card.classList.remove('hidden');
+
+  const promptAvaliador = `Act as a senior YouTube SEO strategist for biblical dark channels ('Explicador Bíblico').
+Review the 3 generated title options in this SEO package for the theme: "${tema}".
+
+SEO PACKAGE:
+"""
+${textoSeo}
+"""
+
+CRITERIA:
+1. Strict biblical fidelity (no false or unscriptural claims).
+2. Gripping curiosity hook without cheap clickbait.
+3. Perfect alignment with the chosen theme and thumbnail premise.
+4. Formatting: maximum 1 word in ALL CAPS.
+
+MANDATORY OUTPUT FORMAT (in Portuguese Brasil):
+⭐ Recomendado: título nº [1, 2 ou 3], porque [justificativa detalhada em português destacando a fidelidade, curiosidade do gancho e potencial de CTR].
+
+Output EXCLUSIVELY the line above.`;
+
+  try {
+    const avaliacao = await OpenRouterAPI.generateContent(
+      promptAvaliador,
+      modelo || OpenRouterAPI.getModelIdeas()
+    );
+    if (avaliacao && avaliacao.trim()) {
+      conteudo.textContent = avaliacao.trim();
+    } else {
+      conteudo.textContent = 'Não foi possível gerar a recomendação de título SEO.';
+    }
+  } catch (err) {
+    console.warn('[Avaliador SEO] Erro:', err);
+    conteudo.textContent = 'Erro ao avaliar títulos SEO: ' + err.message;
+  }
 }
 
 /**
@@ -2504,20 +2685,14 @@ Rules:
                 totalCorrigidos += termosFrase.length;
                 modificado = true;
               } else {
-                console.log(`[Filtro] Termo persistiu na frase após regeneração. Apagando frase: "${frase}"`);
-                frase = '';
-                totalCorrigidos += termosFrase.length;
-                modificado = true;
+                console.warn(`[Filtro] Termo persistiu na frase após regeneração. Mantendo frase original e registrando aviso: "${frase}"`);
+                // Item 1: NUNCA trocar palavras automaticamente nem apagar a frase; deixa como está e mostra aviso
               }
             } else {
-              frase = '';
-              totalCorrigidos += termosFrase.length;
-              modificado = true;
+              console.warn(`[Filtro] Resposta vazia na regeneração da frase. Mantendo frase original e registrando aviso.`);
             }
           } catch (eFrase) {
-            frase = '';
-            totalCorrigidos += termosFrase.length;
-            modificado = true;
+            console.warn(`[Filtro] Erro ao regenerar frase:`, eFrase);
           }
         }
 
@@ -3133,6 +3308,8 @@ CHECK ACROSS THE ENTIRE SCRIPT FOR EXACTLY THESE 9 CATEGORIES:
    c) UNINDICATED EYEWITNESS CLAIMS: NEVER claim who witnessed or was present at an event when canonical Scripture does not explicitly name that person (e.g. claiming "the apostle who was present", "John watched in silence", or specifying an unnamed disciple). Unless Scripture explicitly names the person as an eyewitness, describe the scene without inventing witnesses.
    d) Invented scenes, physical actions, or psychological feelings presented as factual (e.g. a creaking door, "his heart raced with dread", nervous pacing). Short atmospheric context is allowed, but NEVER invent physical actions, words, or emotional reactions not recorded in Scripture.
    e) Interpretations presented as undisputed fact (e.g. the identity of the "sons of God"): must be framed with scholarly restraint like "many understand...", never as undisputed biblical dogma.
+   f) BORROWED GEOGRAPHICAL DESCRIPTIONS: NEVER attribute a biblical description of one location to another (e.g. applying "walls reaching toward heaven" to Bashan; that expression is from Deuteronomy regarding the cities of Canaan). Correct to the exact biblical description of that specific location, or remove.
+   g) INVENTED BATTLE DETAILS: NEVER invent tactical or physical battle details as factual history (e.g. "blackened shells", "gates ripped from their hinges", "within a matter of days"). Narrate biblical conflicts strictly according to literal canonical Scripture with solemn restraint.
 7. FRASE QUEBRADA / ASPAS: Sentences with missing words, ungrammatical phrasing, broken fragments, or mismatched quotation marks.
 8. REFERÊNCIA BÍBLICA CRUZADA AUSENTE: Citing or reciting a passage/verse from another biblical book without introducing its origin. Whenever a verse or account from another book is introduced (e.g. Numbers 21:9 regarding the bronze serpent within Jesus' conversation with Nicodemus in John 3), it MUST ALWAYS be introduced with its biblical origin (e.g. "referencing Moses in the wilderness in Numbers", "as written centuries earlier in Numbers"). Never paste an Old Testament quote into a dialogue without identifying its origin.
 9. INCONSISTÊNCIA DE CENÁRIO: The physical environment must remain strictly uniform and consistent throughout the scene. If the narrative establishes an enclosed private room ("room"), it CANNOT suddenly change to a "rooftop" or courtyard without an explicit scriptural movement. Any contradictory shift in physical location must be corrected to maintain uniform consistency.
@@ -3143,7 +3320,7 @@ Format:
 [
   {
     "fraseOriginal": "The exact verbatim sentence or phrase from the script to be replaced",
-    "tipo": "EVENTO REPETIDO" | "CONCLUSÃO PREMATURA" | "SILÊNCIO REPETIDO" | "CITAÇÃO BÍBLICA" | "CRONOLOGIA" | "AFIRMAÇÃO ALÉM DO TEXTO" | "FRASE QUEBRADA / ASPAS" | "REFERÊNCIA AUSENTE" | "INCONSISTÊNCIA DE CENÁRIO",
+    "tipo": "EVENTO REPETIDO" | "CONCLUSÃO PREMATURA" | "SILÊNCIO REPETIDO" | "CITAÇÃO BÍBLICA" | "CRONOLOGIA" | "AFIRMAÇÃO ALÉM DO TEXTO" | "FRASE QUEBRADA / ASPAS" | "REFERÊNCIA AUSENTE" | "INCONSISTÊNCIA DE CENÁRIO" | "DESCRICAO BORROWED" | "DETALHE BATALHA",
     "fraseCorrigida": "The corrected sentence (or empty string \"\" if the sentence should be removed)"
   }
 ]
@@ -3398,36 +3575,26 @@ const PromptEngine = {
     return `Act as a senior YouTube content strategist for biblical documentary dark channels following the proven formula of 'Explicador Bíblico'.
 Generate exactly 10 viral video title and theme ideas for a video about: '${tema}'.
 
-CRITICAL MANDATORY GUIDELINES:
-1. STRICT LANGUAGE COMPLIANCE: All 10 titles, themes, and premises MUST be written 100% in ${lang.name}. Never output in any other language.
-2. BIBLICAL TRUTH (SACRED FACT): Always treat the biblical narrative as literal truth and real sacred history.
-   - STRICTLY FORBIDDEN: Never use skepticism, doubts, or secular speculative framing.
-   - PROHIBITED WORDS/CONCEPTS: Never use terms like "myth", "legend", "debate", "were they real", "scholars suggest", "traditional theology may not reveal", or equivalents in any language ("mito", "lenda", "debate", "se eram reais", "estudiosos sugerem", "a teologia tradicional oculta").
-3. CANONICAL SCRIPTURE ONLY: Restrict all content strictly to the 66 canonical books of the Bible.
-   - STRICTLY FORBIDDEN: Never cite or include extra-biblical theories, secular ancient civilizational speculations, evolutionary human ancestry theories, or apocryphal/pseudepigraphal books (such as the Book of Enoch / Livro de Enoque).
-4. STRICT BIBLICAL FIDELITY & NO FACTUAL EXAGGERATION:
+CRITICAL MANDATORY GUIDELINES & 4 EVALUATION PILLARS (ITEM 4):
+1. STRICT BIBLICAL FIDELITY (DO NOT CLAIM WHAT SCRIPTURE DOES NOT SAY):
    - Every hook premise and title must be 100% faithful to what canonical Scripture actually states.
-   - NEVER inflate, exaggerate, or pluralize singular biblical events. If a biblical figure acted once (e.g. Nicodemus questioned the Pharisees once in John 7:50-51, and brought spices at Jesus' burial in John 19:39), NEVER state 'defended Jesus during critical moments' or make it sound like multiple defenses. Describe events with exact biblical precision and sober restraint.
-   - NEVER attribute false events, unscriptural trials, or unrecorded actions to biblical figures.
-5. ZERO FORBIDDEN CLICHÉS & BUZZWORDS (STRICTLY PROHIBITED):
-   - STRICTLY FORBIDDEN to use words such as: "profound" (or "profoundly"), "navigate" (or "navigates", "navigated", "navigating"), "pivotal" (or "pivotally"), "delve" (or "delves", "delved", "delving"), "dive deep" (or "dives deep", "diving deep", "deep dive"), "shrouded in mystery", "debate", "stark", "fabric", "enigmatic", "fascinating", "journey through", "annals", "testament to", "sacred texts", or equivalents in ${lang.name} (e.g. "profundo", "navega", "pivô", "mergulhe fundo", "desvendar", "enigmático").
-6. MANDATORY TITLE VARIETY & FORMATTING (HIGH CTR):
-   - MAXIMUM OF 1 WORD IN CAPS LOCK per title (e.g., "${lang.titleHookSample}").
-   - NEVER write an entire title in uppercase. Never use more than 1 word in ALL CAPS.
-   - STRICT PROHIBITION ON REPETITIVE STRUCTURES:
-     * It is STRICTLY FORBIDDEN to use the pattern "The [Noun]... (Parentheses)" on every title!
-     * Use parentheses on a MAXIMUM OF 2 out of the 10 titles.
-     * All 10 titles MUST exhibit distinct grammatical structures, such as:
-       1) Direct Investigative Question (e.g., "Why Did God Order the Bronze Serpent in the Desert?")
-       2) Historical Revelation with Action (e.g., "What Nicodemus ACTUALLY Asked Jesus Under Cover of Darkness")
-       3) Moment of Conflict / Crisis (e.g., "When the Pharisees Tried to Silence Christ")
-       4) Factual Paradox (e.g., "The Forgotten Commandment of Mount Sinai")
-       5) Chronological Turning Point (e.g., "The Exact Night Ancient Jerusalem Trembled")
-       6) Verse Focus (e.g., "The Words in Genesis Most Readers Overlook")
-       7) Provocative Query (e.g., "Who Really Came to the Garden at Midnight?")
-       8) Solemn Narrative (e.g., "How Moses Stopped the Plague in Numbers")
-       9) Curiosity Parenthesis (MAX 2 titles) (e.g., "The UNTOLD Story of John 3 (What Many Miss)")
-       10) Short Punchy Statement (e.g., "The Final Warning Given to Israel")
+   - NEVER state or invent claims that the biblical text does not make (e.g. NEVER use "as foretold" unless explicitly documented in canonical Scripture).
+   - Restrict content strictly to the 66 canonical books of the Bible. Do NOT use extra-biblical theories, secular speculations, or apocryphal books (e.g. Book of Enoch).
+2. CONCRETE HOOK (CURIOSITY & TANGIBLE BIBLICAL DETAIL):
+   - Every idea must feature either a curious, gripping investigative question or a concrete, tangible biblical detail (e.g. dimensions, Og's iron bed, specific geographical locations, numbers, artifacts).
+   - Avoid vague theological abstractions.
+3. THUMBNAIL VISUAL POTENTIAL:
+   - Ideas must lend themselves to powerful, high-contrast visual scenes with dramatic scale, focal objects, and mystery (e.g. massive iron bed with human figure for scale, ancient shadows, monoliths).
+4. SAFE & SOLEMN REVERENT THEME:
+   - Narrate with solemn historical reverence.
+   - STRICTLY FORBIDDEN to evaluate, moralize, or justify the destruction or wiping out of peoples.
+5. STRICT LANGUAGE COMPLIANCE: All 10 titles, premises, and descriptions MUST be written 100% in ${lang.name}. Never output in any other language.
+6. ZERO FORBIDDEN CLICHÉS:
+   - STRICTLY FORBIDDEN to use words such as: "profound", "pivotal", "delve", "dive deep", "dive into", "unpack", "meticulously", "shrouded in mystery", "debate", "stark", "fabric", "enigmatic", "fascinating", "journey through", "annals", "testament to", "sacred texts", "navigate", or equivalents in ${lang.name}.
+7. MANDATORY TITLE VARIETY & FORMATTING (HIGH CTR):
+   - MAXIMUM OF 1 WORD IN CAPS LOCK per title (e.g., "${lang.titleHookSample}"). Never write an entire title in uppercase.
+   - MAXIMUM OF 2 out of the 10 titles may use parentheses.
+   - All 10 titles MUST exhibit distinct grammatical structures (direct question, historical revelation, moment of crisis, factual paradox, chronological turning point, verse focus, provocative query, solemn narrative, curiosity parenthesis, punchy statement).
 
 OUTPUT FORMAT:
 Provide the 10 ideas numbered 1 to 10 in ${lang.name}, with Title (max 1 word in CAPS, varied structure without repetitive parentheses) followed by a short 1-2 sentence hook premise.`;
@@ -3731,31 +3898,45 @@ Based on the following script, generate a curated list of exactly 25 to 35 high-
 
 MANDATORY RULES:
 1. 100% IN ENGLISH: All keywords must be in English.
-2. STRICTLY CONCRETE AND FILMBALE / PHOTOGRAPHABLE SUBJECTS ONLY:
-   - Physical ancient objects (e.g. 'oil lamp flame', 'ancient clay jar', 'parchment scroll close up', 'leather sandals on dust', 'bronze serpent pole', 'ancient bronze coins', 'woven biblical robe', 'stone tomb entrance').
-   - Tangible historical environments (e.g. 'ancient Jerusalem night street', 'desert mountain twilight', 'stone courtyard at night', 'flickering firelight room', 'dark olive grove', 'ancient Judean stone house').
-   - Tangible human actions & poses (e.g. 'cloaked man walking at night', 'hands unrolling ancient parchment', 'two men speaking in shadows', 'crowd of ancient travelers', 'silhouette with lantern').
-3. STRICTLY PROHIBITED — ZERO ABSTRACT CONCEPTS:
-   - It is STRICTLY FORBIDDEN to include abstract ideas, theological concepts, or titles (e.g. NEVER use 'Requisitos para o Reino de Deus', 'Salvation', 'Inscrição no canal', 'Divine Sovereignty', 'Faith', 'Grace', 'Call to Action', 'Subscribe', 'Spiritual Rebirth', 'Discipleship').
-   - NEVER output sections, chapter titles, commentary, or excerpts from the script.
-4. CLEAN OUTPUT FORMAT:
-   Output ONLY the numbered list (1 to 30) of concrete, filmable search phrases in English, one per line, ready to copy and paste into stock footage platforms.`;
+2. EXTRACT EXCLUSIVELY FROM THE CURRENT SCRIPT ONLY (CRITICAL - NO LEAKS):
+   - Every keyword must originate strictly and exclusively from the physical subjects, historical figures, geography, objects, and scenes described in THIS SPECIFIC SCRIPT below.
+   - It is STRICTLY FORBIDDEN to use keywords, objects, or figures from other biblical stories or topics. NEVER include terms from other videos (no bronze serpents, no tombs, no shadows) unless explicitly present in the provided script text.
+3. CONCRETE AND FILMBALE / PHOTOGRAPHABLE SUBJECTS ONLY:
+   - Tangible ancient artifacts, architecture, weapons, and garments mentioned in the script.
+   - Physical ancient environments, landscapes, rock formations, and lighting described in the script.
+   - Character physical actions, postures, silhouettes, and historical interactions described in the script.
+4. STRICTLY PROHIBITED — ZERO ABSTRACT CONCEPTS:
+   - NEVER include abstract ideas, theological doctrines, or channel meta-terms (e.g. NEVER use 'Salvation', 'Faith', 'Grace', 'Divine Sovereignty', 'Subscribe', 'Channel CTA', 'Chapter').
+   - NEVER output section labels, commentary, or excerpts from the script.
+5. CLEAN OUTPUT FORMAT:
+   Output ONLY the numbered list (1 to 30) of concrete, filmable search phrases in English, one per line, ready to copy and paste into stock footage platforms.
+
+SCRIPT:
+"""
+${roteiro}
+"""`;
   },
 
   generateAiVisualPrompts({ roteiro }) {
-    const fixedStyleBlock = ', cinematic lighting, chiaroscuro atmosphere, deep solemn shadows, historical biblical realism, Rembrandt oil painting texture, 8k resolution, photorealistic cinematic composition, 16:9 widescreen, no text, no letters, no words';
+    // Bloco fixo único: Cinematográfico realista (Rembrandt removido conforme Item 6)
+    const fixedStyleBlock = ', cinematic lighting, chiaroscuro atmosphere, deep solemn shadows, historical biblical realism, 8k resolution, photorealistic cinematic composition, 16:9 widescreen, no text, no letters, no words';
 
     return `Act as a master art director and AI prompt engineer for cinematic biblical documentaries following the dark visual aesthetic of 'Explicador Bíblico'.
 Read the entire script below in strict chronological order and generate between 30 and 40 detailed visual prompts (numbered Prompt 1 to Prompt 35) covering the script from the very first opening hook to the final scene.
 
 MANDATORY RULES:
 1. QUANTITY & CHRONOLOGICAL COVERAGE: Generate exactly 30 to 40 prompts, walking through the entire narrative progression of the script without skipping any section.
-2. NO ON-SCREEN TEXT OR LETTERS: Absolutely NEVER request visible letters, words, titles, signs, banners, or typography in the image. AI generators fail with text; describe only pure visual scenes.
-3. NO MIDJOURNEY SYNTAX: Do NOT use '--ar 16:9'. The aspect ratio must be stated as '16:9 widescreen'.
-4. MANDATORY FIXED VISUAL STYLE BLOCK AT THE END OF EVERY PROMPT:
+2. NO ON-SCREEN TEXT, LETTERS OR INSCRIBED OBJECTS (STRICT):
+   - Absolutely NEVER request visible letters, words, titles, signs, banners, or typography in the image.
+   - NEVER request inscriptions or words carved on objects (e.g. STRICTLY FORBIDDEN: "stone tablet inscribed...", "stone inscribed with the words...", "words engraved on metal"). If depicting stones, monoliths, or tablets, describe only their ancient physical texture, weathered fractures, and mineral grain without legible text.
+3. NO BLOOD OR FALLEN CORPSES (AVOID CONTENT MODERATION REFUSAL):
+   - To prevent AI image generators from triggering safety filters, NEVER depict blood, gore, pools of blood, or fallen dead bodies.
+   - Convey the aftermath of battles through abandoned ancient weapons stuck in the ground, ruined stone ramparts, charred debris, and distant columns of smoke against the sky.
+4. NO MIDJOURNEY SYNTAX: Do NOT use '--ar 16:9'. The aspect ratio must be stated as '16:9 widescreen'.
+5. MANDATORY FIXED VISUAL STYLE BLOCK AT THE END OF EVERY PROMPT:
    Every single prompt MUST end with this EXACT fixed visual style block:
    "${fixedStyleBlock}"
-5. SCENE CONTENT: Each prompt must describe concrete subjects, camera angles (e.g. extreme close-up, dramatic low-angle, atmospheric wide shot), ancient costumes, dramatic lighting, and authentic historical biblical environments.
+6. SCENE CONTENT: Each prompt must describe concrete subjects, camera angles (e.g. extreme close-up, dramatic low-angle, atmospheric wide shot), ancient costumes, dramatic lighting, and authentic historical biblical environments.
 
 SCRIPT:
 ${roteiro}
@@ -3766,6 +3947,9 @@ Output the numbered prompts (Prompt 1 to Prompt 35) in English, each containing 
 
   generateThumbnailPrompts({ tema, estilo, cores, elementos, styleRef }) {
     const styleRefLine = styleRef ? `\n- Technical Style Reference (en): ${styleRef}` : '';
+    // Mesma estética cinematográfica fotorrealista da etapa 2 (Item 7)
+    const thumbStyleBlock = ', cinematic lighting, chiaroscuro atmosphere, deep solemn shadows, historical biblical realism, 8k resolution, photorealistic cinematic composition, 16:9 widescreen, no text, no letters, no words';
+
     return `Act as a senior YouTube thumbnail designer for biblical dark channels following the proven high-CTR formula of 'Explicador Bíblico'.
 Generate 3 distinct thumbnail concepts (Options A, B, and C) in ENGLISH for an A/B/C test for a video entitled: '${tema}'.
 
@@ -3774,25 +3958,31 @@ User Preferences:
 - Color Palette: ${cores}
 - Key Symbolic Elements: ${elementos}
 
-MANDATORY THUMBNAIL RULES:
-1. FORMAT: Always specify '16:9 widescreen' (DO NOT use Midjourney '--ar 16:9' syntax).
-2. NO EMBEDDED TEXT IN AI IMAGE: Instruct the image AI to produce high-contrast, dramatic imagery with clean negative space and NO written words or letters.
-3. OVERLAY TEXT MUST COMPLEMENT THE TITLE, NEVER REPEAT IT:
-   - For each option, provide a suggested 'Overlay Text' (short punchy text for Photoshop/Canva, 2 to 4 words max).
-   - CRITICAL RULE: The overlay text MUST COMPLEMENT the title '${tema}' by adding mystery, urgency, or curiosity. It is STRICTLY FORBIDDEN to repeat words from the title!
-   - (e.g. If the title is about Nicodemus visiting Jesus at night, the overlay text CANNOT say 'Nicodemus'. It should say: 'BEFORE DAWN...', 'HE HID HIS FACE', or 'THE SECRET VISITOR').
+MANDATORY THUMBNAIL RULES (ITEM 7):
+1. USE THE MOST CONCRETE DETAIL FROM SCRIPT:
+   - Center each concept on the most concrete tangible detail from the script (e.g. a striking ancient biblical object, number, or scale comparison, such as King Og's massive iron bed with a standard-sized human standing beside it to dramatically illustrate the scale).
+2. FORMAT: Always specify '16:9 widescreen' (DO NOT use Midjourney '--ar 16:9' syntax).
+3. NO EMBEDDED TEXT IN AI IMAGE:
+   - Produce high-contrast, dramatic imagery with clean negative space and NO written words, signs, or letters in the generated image. Every prompt MUST conclude with: "${thumbStyleBlock}".
+4. NO BLOOD OR CORPSES:
+   - Depict battle consequences with broken shields, fallen weapons in soil, and smoke, avoiding blood or gore to ensure AI generators never refuse generation.
+5. SPECIFIC OVERLAY TEXT (NUMBER OR SPECIFIC NAME):
+   - For each option, provide a suggested 'Overlay Text' (short punchy text for graphic editors, 1 to 3 words max).
+   - MUST BE SPECIFIC: Use specific numbers, dimensions, or exact proper names (e.g. "13 FEET", "9 CUBITS", "MOUNT HERMON", "THE IRON BED").
+   - STRICTLY FORBIDDEN to use generic, meaningless clichés (e.g. NEVER use "Unveiling the Mystery", "Hidden Secrets", "Beyond Humanity", "The Truth Revealed", "Secret Power").
+   - The overlay text MUST COMPLEMENT the title '${tema}' and NEVER repeat words from the title!
 
 MANDATORY OUTPUT FORMAT — Use exactly these markers, each on its own isolated line:
 
 [[OPCAO_A]]
-Prompt Visual (en): (High-contrast mystery visual prompt ending with '16:9 widescreen, no text, no words')
-Texto da Thumbnail (Overlay Text): (2-4 words that COMPLEMENT the title without repeating it)
+Prompt Visual (en): (High-contrast concrete detail visual prompt ending with '${thumbStyleBlock}')
+Texto da Thumbnail (Overlay Text): (1-3 specific words with number/name, complementing without repeating the title)
 [[OPCAO_B]]
-Prompt Visual (en): (Intense symbolic chiaroscuro visual prompt ending with '16:9 widescreen, no text, no words')
-Texto da Thumbnail (Overlay Text): (2-4 words that COMPLEMENT the title without repeating it)
+Prompt Visual (en): (Intense symbolic scale visual prompt ending with '${thumbStyleBlock}')
+Texto da Thumbnail (Overlay Text): (1-3 specific words with number/name, complementing without repeating the title)
 [[OPCAO_C]]
-Prompt Visual (en): (Dramatic revelation duality visual prompt ending with '16:9 widescreen, no text, no words')
-Texto da Thumbnail (Overlay Text): (2-4 words that COMPLEMENT the title without repeating it)
+Prompt Visual (en): (Dramatic revelation duality visual prompt ending with '${thumbStyleBlock}')
+Texto da Thumbnail (Overlay Text): (1-3 specific words with number/name, complementing without repeating the title)
 [[FIM]]`;
   },
 
@@ -3803,15 +3993,17 @@ Texto da Thumbnail (Overlay Text): (2-4 words that COMPLEMENT the title without 
 Generate an optimized YouTube SEO package for a biblical video about '${tema}' based on the following script/summary:
 ${resumo || tema}
 
-MANDATORY OUTPUT GUIDELINES:
+MANDATORY OUTPUT GUIDELINES (ITEM 8):
 1. 3 HIGH-CTR TITLE OPTIONS:
    - Written 100% in ${lang.name}.
+   - Strict biblical fidelity: do NOT state or invent claims unrecorded in canonical Scripture.
+   - Gripping curiosity hook aligned with the chosen idea and thumbnail premise.
    - MAXIMUM OF 1 WORD IN CAPS LOCK per title (e.g. "${lang.titleHookSample}"). Never write an entire title in uppercase.
-   - Irresistible curiosity hooks without clickbait dishonesty.
 2. FULL VIDEO DESCRIPTION (2-3 DENSE PARAGRAPHS IN ENGLISH):
    - Paragraph 1: Gripping overview of the historical and canonical biblical chronicle presented in the documentary, hooking the reader immediately.
    - Paragraph 2: Comprehensive breakdown of the exact biblical chapters, books, and verses explored (e.g. explicit scripture citations, context, and canonical meaning).
    - Paragraph 3: Solemn spiritual reflection and strong call to action inviting viewers to subscribe to the channel, like the video, and explore more biblical investigations.
+   - STRICT PROHIBITION OF FORBIDDEN CLICHÉS: Absolutely do NOT use words like "Dive into", "dive deep", "profound", "meticulously", "unpack", "serves as a reminder", "stark", "delve", "fabric". Write with natural, authoritative historical gravity.
 3. SEARCH TAGS (15-20 TAGS):
    - High-volume relevant search tags separated by commas.
 4. HASHTAGS (5-7 HASHTAGS):
@@ -4630,6 +4822,37 @@ document.addEventListener('DOMContentLoaded', () => {
   if (inputTomCustom) inputTomCustom.addEventListener('input', syncTomAudio);
   syncTomAudio();
 
+  // Botão: Preencher com o padrão do canal (Item 3)
+  const btnPadraoCanal = document.getElementById('btn-preencher-padrao-canal');
+  if (btnPadraoCanal) {
+    btnPadraoCanal.addEventListener('click', () => {
+      const selectTema = document.getElementById('select-tema');
+      const containerTemaCustom = document.getElementById('container-tema-custom');
+      const inputTemaCustom = document.getElementById('input-tema-custom');
+      const selectIdioma = document.getElementById('select-idioma');
+      const containerIdiomaCustom = document.getElementById('container-idioma-custom');
+      const selectEstilo = document.getElementById('select-estilo-roteiro');
+      const selectTom = document.getElementById('select-tom');
+      const selectGancho = document.getElementById('select-gancho');
+
+      if (selectTema) selectTema.value = 'Personalizável';
+      if (containerTemaCustom) containerTemaCustom.classList.remove('hidden');
+      if (inputTemaCustom) {
+        inputTemaCustom.value = 'Og, king of Bashan: the last of the giants (Numbers 21:33-35, Deuteronomy 3:1-11)';
+      }
+      if (selectIdioma) selectIdioma.value = 'Inglês';
+      if (containerIdiomaCustom) containerIdiomaCustom.classList.add('hidden');
+      if (selectEstilo) selectEstilo.value = 'YouTube Longo (18-20 minutos)';
+      if (selectTom) selectTom.value = 'Investigativo e Curioso';
+      if (selectGancho) selectGancho.value = 'Afirmação Provocativa';
+
+      syncTema();
+      syncTomAudio();
+      AutoSave.save();
+      UI.showToast('Campos preenchidos com o padrão do canal!', 'success');
+    });
+  }
+
   async function executeApiCall(btnId, promptText, outputTextareaId, successMessage, specificModel, customSystemPrompt) {
     const btn = document.getElementById(btnId);
     const outputEl = document.getElementById(outputTextareaId);
@@ -4641,10 +4864,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (hasKey) {
         const aiResponse = await OpenRouterAPI.generateContent(promptText, specificModel, customSystemPrompt);
         let finalResponse = aiResponse;
-        if (outputTextareaId === 'output-prompt-ideias') {
-          const idiomaAtual = UI.getValue('select-idioma', 'input-idioma-custom');
-          finalResponse = filtrarTermosProibidosNasIdeias(finalResponse, idiomaAtual);
-        }
         if (outputEl) outputEl.value = finalResponse;
         UI.showToast(successMessage || 'Conteúdo gerado com sucesso via OpenRouter!');
         AutoSave.save();
@@ -4667,21 +4886,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const tema = UI.getValue('select-tema', 'input-tema-custom');
     const idioma = UI.getValue('select-idioma', 'input-idioma-custom');
     const promptText = PromptEngine.generateIdeasPrompt({ tema, idioma });
+    const modeloIdeias = OpenRouterAPI.getModelIdeas();
 
     const rawIdeias = await executeApiCall(
       'btn-gerar-prompt-ideias',
       promptText,
       'output-prompt-ideias',
-      '10 Ideias virais geradas com sucesso!',
-      OpenRouterAPI.getModelIdeas()
+      '10 Ideias geradas com sucesso!',
+      modeloIdeias
     );
 
-    // Sanitização pós-geração garantida de termos proibidos nas ideias (Garantia dupla)
-    if (rawIdeias && typeof rawIdeias === 'string') {
-      const ideiasLimpas = filtrarTermosProibidosNasIdeias(rawIdeias, idioma);
+    // Ordem estrita (Item 4): gerar 10 ideias -> checar títulos e regenerar com IA -> avaliador
+    if (rawIdeias && typeof rawIdeias === 'string' && OpenRouterAPI.getApiKey()) {
+      const ideiasLimpas = await validarERegenerarTitulosIdeias(rawIdeias, tema, modeloIdeias);
       const outEl = document.getElementById('output-prompt-ideias');
       if (outEl) outEl.value = ideiasLimpas;
       AutoSave.save();
+
+      // Avaliador de Ideias com IA
+      await avaliarIdeiasComIA(ideiasLimpas, tema, modeloIdeias);
     }
   });
 
@@ -5315,7 +5538,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
         UI.showToast('30-40 Prompts para IA visual gerados em ordem cronológica!');
         AutoSave.save();
       } else {
-        const fixedStyle = ', cinematic lighting, chiaroscuro atmosphere, deep solemn shadows, historical biblical realism, Rembrandt oil painting texture, 8k resolution, photorealistic cinematic composition, 16:9 widescreen, no text, no letters, no words';
+        const fixedStyle = ', cinematic lighting, chiaroscuro atmosphere, deep solemn shadows, historical biblical realism, 8k resolution, photorealistic cinematic composition, 16:9 widescreen, no text, no letters, no words';
         const samplePrompts = [
           `Prompt 1: Extreme close-up of an ancient bronze oil lamp flickering in a dark Jerusalem room, warm amber flame casting deep shadows against rough limestone walls${fixedStyle}`,
           `Prompt 2: Low-angle medium shot of a cloaked Judean elder walking through narrow dark cobblestone alleyways of ancient Jerusalem under midnight moonlight${fixedStyle}`,
@@ -5346,12 +5569,13 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
     const promptText = PromptEngine.generateThumbnailPrompts({ tema, estilo, cores, elementos, styleRef });
     const btn = document.getElementById('btn-gerar-prompts-thumb');
     const hasApiKey = Boolean(OpenRouterAPI.getApiKey());
+    const modeloIdeias = OpenRouterAPI.getModelIdeas();
 
     UI.setButtonLoading(btn, true);
 
     try {
       if (hasApiKey) {
-        const aiResponse = await OpenRouterAPI.generateContent(promptText, OpenRouterAPI.getModelIdeas());
+        const aiResponse = await OpenRouterAPI.generateContent(promptText, modeloIdeias);
         const parsed = parseThumbnailResponse(aiResponse);
 
         document.getElementById('output-thumb-a').value = parsed.a;
@@ -5367,11 +5591,14 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
         }
         atualizarSeloAba(3, true);
         AutoSave.save();
+
+        // Avaliador de Thumbnails com IA (Item 7)
+        await avaliarThumbnailsComIA(parsed, tema, modeloIdeias);
       } else {
         const styleAppend = styleRef ? `, ${styleRef}` : '';
-        document.getElementById('output-thumb-a').value = `Option A (Visual Mystery & Contrast):\nPrompt Visual: Cinematic YouTube thumbnail composition for "${tema}". High contrast dark aesthetic, single dramatic ancient oil lamp in golden spotlight, deep stone textures${styleAppend}, 16:9 widescreen, no text, no words.\nTexto da Thumbnail (Overlay Text): BEFORE DAWN...`;
-        document.getElementById('output-thumb-b').value = `Option B (Symbolic & Dramatic):\nPrompt Visual: Dramatic historical painting thumbnail for "${tema}". Deep crimson and charcoal color scheme, central ancient scroll with chiaroscuro rim lighting${styleAppend}, 16:9 widescreen, no text, no words.\nTexto da Thumbnail (Overlay Text): THE UNWRITTEN WORDS`;
-        document.getElementById('output-thumb-c').value = `Option C (Revelation & Duality):\nPrompt Visual: Mysterious YouTube thumbnail for "${tema}". Split composition between ancient illuminated parchment and deep shadowy abyss${styleAppend}, maximum curiosity, 16:9 widescreen, no text, no words.\nTexto da Thumbnail (Overlay Text): HE HID HIS FACE`;
+        document.getElementById('output-thumb-a').value = `Option A (Visual Scale & Contrast):\nPrompt Visual: Massive ancient iron bed of King Og with a standard-sized man standing beside it to reveal biblical scale, dramatic low-angle chiaroscuro, rough basalt stonework${styleAppend}, 16:9 widescreen, no text, no words.\nTexto da Thumbnail (Overlay Text): 13 FEET`;
+        document.getElementById('output-thumb-b').value = `Option B (Symbolic & Dramatic):\nPrompt Visual: Solemn ancient bronze armor and heavy battlements at Edrei under stormy twilight sky${styleAppend}, 16:9 widescreen, no text, no words.\nTexto da Thumbnail (Overlay Text): 9 CUBITS`;
+        document.getElementById('output-thumb-c').value = `Option C (Revelation & Geography):\nPrompt Visual: Mountainous stronghold of Bashan rising dramatically against an ominous crimson sunset${styleAppend}, 16:9 widescreen, no text, no words.\nTexto da Thumbnail (Overlay Text): KING OG`;
 
         atualizarSeloAba(3, true);
         UI.showToast('3 Prompts de Thumbnail gerados (Modo Modelo)! Insira a API Key para IA.', 'warning');
@@ -5388,16 +5615,29 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
     const tema = (inputIdeiaEscolhida ? inputIdeiaEscolhida.value.trim() : '') || inputTemaSeo.value.trim() || UI.getValue('select-tema', 'input-tema-custom');
     const resumo = document.getElementById('textarea-resumo-seo').value.trim();
     const idioma = UI.getValue('select-idioma', 'input-idioma-custom');
+    const modeloIdeias = OpenRouterAPI.getModelIdeas();
 
     const promptText = PromptEngine.generateSeoPrompt({ tema, resumo, idioma });
 
-    await executeApiCall(
+    const rawSeo = await executeApiCall(
       'btn-gerar-prompt-seo',
       promptText,
       'output-prompt-seo',
       'SEO Completo e Descrição gerados com sucesso!',
-      OpenRouterAPI.getModelIdeas()
+      modeloIdeias
     );
+
+    if (rawSeo && typeof rawSeo === 'string' && OpenRouterAPI.getApiKey()) {
+      // Validação e regeneração de termos proibidos na descrição (Item 1 & Item 8)
+      const seoLimpo = await validarERegenerarDescricaoSeo(rawSeo, tema, modeloIdeias);
+      const outEl = document.getElementById('output-prompt-seo');
+      if (outEl) outEl.value = seoLimpo;
+      AutoSave.save();
+
+      // Avaliador de Títulos de SEO com IA (Item 8)
+      await avaliarTitulosSeoComIA(seoLimpo, tema, modeloIdeias);
+    }
+
     atualizarSeloAba(4, true);
   });
 
@@ -5648,7 +5888,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
   // === PRESET DEMONSTRATIVO ===
   document.getElementById('btn-load-preset').addEventListener('click', () => {
     selectTema.value = 'Fins Trágicos Bíblicos';
-    document.getElementById('select-idioma').value = 'Português (Brasil)';
+    document.getElementById('select-idioma').value = 'Inglês';
     document.getElementById('select-estilo-roteiro').value = 'YouTube Longo (18-20 minutos)';
     document.getElementById('select-tom').value = 'Investigativo e Curioso';
     document.getElementById('select-gancho').value = 'Pergunta Intrigante';
@@ -5689,7 +5929,7 @@ Desenvolvimento: Para entender essa aparente contradição histórica, precisamo
       });
       document.querySelectorAll('textarea').forEach(t => t.value = '');
       selectTema.value = 'Fins Trágicos Bíblicos';
-      document.getElementById('select-idioma').value = 'Português (Brasil)';
+      document.getElementById('select-idioma').value = 'Inglês';
       document.getElementById('select-estilo-roteiro').value = 'YouTube Longo (18-20 minutos)';
       document.getElementById('select-tom').value = 'Investigativo e Curioso';
       document.getElementById('select-voz-audio').value = 'onyx';
