@@ -356,6 +356,103 @@ body {
   font-weight: 600;
 }
 
+.tab-badge-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-left: 6px;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+}
+
+.tab-badge-status.complete {
+  opacity: 1;
+  transform: scale(1);
+  background: #10b981;
+  color: #ffffff;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+}
+
+/* Bloco Recolhível de Passo a Passo (Guia de Preenchimento) */
+.step-guide-collapsible {
+  margin-bottom: 24px;
+  background: rgba(229, 184, 105, 0.04);
+  border: 1px solid rgba(229, 184, 105, 0.22);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.step-guide-collapsible[open] {
+  border-color: rgba(229, 184, 105, 0.45);
+  background: rgba(229, 184, 105, 0.06);
+}
+
+.step-guide-summary {
+  padding: 12px 18px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--accent-gold);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  user-select: none;
+  background: rgba(0, 0, 0, 0.25);
+  outline: none;
+}
+
+.step-guide-summary:hover {
+  color: #ffffff;
+  background: rgba(229, 184, 105, 0.1);
+}
+
+.step-guide-summary svg {
+  flex-shrink: 0;
+  color: var(--accent-gold);
+}
+
+.step-guide-body {
+  padding: 16px 20px;
+  font-size: 0.88rem;
+  color: var(--text-main);
+  line-height: 1.65;
+  border-top: 1px solid rgba(229, 184, 105, 0.12);
+}
+
+.step-guide-body ol {
+  margin: 0 0 12px 22px;
+  padding: 0;
+}
+
+.step-guide-body li {
+  margin-bottom: 8px;
+}
+
+.step-guide-body li strong {
+  color: var(--accent-gold);
+}
+
+.step-guide-alert {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fde68a;
+  font-size: 0.84rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* ==========================================================================
    Main Cards & Section Layout
    ========================================================================== */
@@ -853,7 +950,7 @@ textarea.h-180 {
         <div class="form-group">
           <label for="input-api-model-ideias">
             Modelo para Ideias/SEO
-            <span class="tooltip-wrapper" data-tooltip="Modelo de IA usado para ideias de vídeo, títulos, thumbnails e SEO (padrão: openai/gpt-4o-mini).">?</span>
+            <span class="tooltip-wrapper" data-tooltip="Usado em: Etapa 1 (10 Ideias Virais), Etapa 2 (Keywords de Mídia e Prompts Visuais), Etapa 3 (Prompts de Thumbnails A/B/C) e Etapa 4 (SEO Completo e Descrição). Padrão recomendado: openai/gpt-4o-mini.">?</span>
           </label>
           <input type="text" id="input-api-model-ideias" class="form-control" placeholder="openai/gpt-4o-mini">
         </div>
@@ -861,7 +958,7 @@ textarea.h-180 {
         <div class="form-group">
           <label for="input-api-model-roteiro">
             Modelo para Roteiro
-            <span class="tooltip-wrapper" data-tooltip="Modelo de IA usado para a geração do roteiro longo e completo (padrão: anthropic/claude-sonnet-4.5).">?</span>
+            <span class="tooltip-wrapper" data-tooltip="Usado em: Etapa 1 (Geração do Esboço, 7 Seções do Roteiro, Filtro de Clichês e Revisor Automático de Integridade). Padrão recomendado: anthropic/claude-sonnet-4.5.">?</span>
           </label>
           <input type="text" id="input-api-model-roteiro" class="form-control" placeholder="anthropic/claude-sonnet-4.5">
         </div>
@@ -884,22 +981,27 @@ textarea.h-180 {
       <button class="nav-tab active" data-target="sec-roteiros">
         <span class="tab-step">1</span>
         <span class="tab-label">Ideias & Roteiros</span>
+        <span class="tab-badge-status" id="badge-tab-1" title="Etapa concluída">✓</span>
       </button>
       <button class="nav-tab" data-target="sec-midia">
         <span class="tab-step">2</span>
         <span class="tab-label">Mídias & IA Visual</span>
+        <span class="tab-badge-status" id="badge-tab-2" title="Etapa concluída">✓</span>
       </button>
       <button class="nav-tab" data-target="sec-thumbnails">
         <span class="tab-step">3</span>
         <span class="tab-label">Thumbnails (A/B/C)</span>
+        <span class="tab-badge-status" id="badge-tab-3" title="Etapa concluída">✓</span>
       </button>
       <button class="nav-tab" data-target="sec-seo">
         <span class="tab-step">4</span>
         <span class="tab-label">SEO & Títulos</span>
+        <span class="tab-badge-status" id="badge-tab-4" title="Etapa concluída">✓</span>
       </button>
       <button class="nav-tab" data-target="sec-audio">
         <span class="tab-step">5</span>
         <span class="tab-label">Narração & Legendas</span>
+        <span class="tab-badge-status" id="badge-tab-5" title="Etapa concluída">✓</span>
       </button>
     </nav>
 
@@ -912,6 +1014,32 @@ textarea.h-180 {
           <h2>1. Geração de Ideias e Roteiro Completo</h2>
           <p class="section-description">Gere ideias de vídeos virais e roteiros completos, adaptados ao estilo do canal 'Explicador Bíblico'.</p>
         </div>
+
+        <!-- Guia Passo a Passo Etapa 1 -->
+        <details class="step-guide-collapsible">
+          <summary class="step-guide-summary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <span>Como preencher esta etapa (Passo a Passo)</span>
+          </summary>
+          <div class="step-guide-body">
+            <ol>
+              <li><strong>Escolha o Tema:</strong> No campo "Tema do Vídeo", selecione <em>"-- Personalizável --"</em> e digite o tema específico com as referências bíblicas. <em>Exemplo pronto:</em> <code>O encontro noturno de Nicodemos com Jesus — João 3:1-21 e Números 21:9</code>.</li>
+              <li><strong>Selecione o Idioma:</strong> Escolha Português (Brasil), Inglês ou Espanhol.</li>
+              <li><strong>Gere as Ideias:</strong> Clique em <em>"Gerar Ideias de Vídeo com IA"</em> (aguarde ~10s). O sistema gerará 10 títulos com estruturas gramaticais variadas e sem clichês.</li>
+              <li><strong>Copie UMA Ideia:</strong> Escolha o melhor título e cole no campo <em>"Passo B: Ideia Escolhida para o Roteiro"</em>.</li>
+              <li><strong>Configure o Estilo:</strong> Selecione o Estilo do Roteiro (ex: <em>YouTube Longo 18-20 minutos</em>), o Tom de Voz e o Tipo de Gancho.</li>
+              <li><strong>Gere o Roteiro:</strong> Clique em <em>"Gerar Roteiro Completo com IA"</em> e aguarde a geração das 7 seções sequenciais, validação bíblica KJV e auditoria automática do revisor.</li>
+              <li><strong>Resultado Pronto:</strong> O roteiro limpo e o relatório de auditoria aparecerão na tela, e o título e resumo serão enviados automaticamente para as etapas seguintes!</li>
+            </ol>
+            <div class="step-guide-alert">
+              <span>⚠️ <strong>Lembrete:</strong> Ao iniciar um novo vídeo, gere de novo antes de copiar, para não usar o resultado de outro vídeo.</span>
+            </div>
+          </div>
+        </details>
 
         <div class="form-grid">
           <!-- Combobox: Tema do Vídeo -->
@@ -1156,6 +1284,29 @@ textarea.h-180 {
           <p class="section-description">Obtenha palavras-chave para bancos de mídia e prompts para IAs visuais, ilustrando seu roteiro.</p>
         </div>
 
+        <!-- Guia Passo a Passo Etapa 2 -->
+        <details class="step-guide-collapsible">
+          <summary class="step-guide-summary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <span>Como preencher esta etapa (Passo a Passo)</span>
+          </summary>
+          <div class="step-guide-body">
+            <ol>
+              <li><strong>Roteiro Sincronizado:</strong> O roteiro completo gerado na Etapa 1 já é carregado automaticamente no campo <em>"Roteiro Gerado"</em>.</li>
+              <li><strong>Gerar Keywords de Mídia:</strong> Clique em <em>"Gerar Keywords de Mídia com IA"</em> (tempo de espera: ~5-10s). A IA extrairá termos exclusivamente em inglês de elementos físicos, objetos antigos e cenários filmáveis (sem conceitos abstratos). Copie com o botão <em>"Copiar Keywords"</em> e busque no Pixabay, Pexels ou Envato.</li>
+              <li><strong>Gerar Prompts Visuais:</strong> Clique em <em>"Gerar Prompts para Imagens/Vídeos com IA"</em> (tempo de espera: ~15-25s). A IA gerará de 30 a 40 prompts cinematográficos cobrindo o roteiro do início ao fim em ordem cronológica, no formato 16:9 widescreen, com estilo visual fixo e sem texto na imagem.</li>
+              <li><strong>Uso dos Prompts:</strong> Clique em <em>"Copiar Prompts Visuais"</em> e cole em ferramentas de geração em lote (ex: Meta Explosion, Midjourney, Runway, Leonardo).</li>
+            </ol>
+            <div class="step-guide-alert">
+              <span>⚠️ <strong>Lembrete:</strong> Gere de novo antes de copiar, para não usar o resultado de outro vídeo.</span>
+            </div>
+          </div>
+        </details>
+
         <div class="form-group form-group-full">
           <label for="textarea-roteiro-gerado">
             Roteiro Gerado
@@ -1222,6 +1373,30 @@ textarea.h-180 {
           <h2>3. Geração de Prompts para Thumbnails A/B/C</h2>
           <p class="section-description">Crie 3 prompts distintos para IAs de imagem, otimizados para testes A/B/C e inspirados no estilo do canal modelo.</p>
         </div>
+
+        <!-- Guia Passo a Passo Etapa 3 -->
+        <details class="step-guide-collapsible">
+          <summary class="step-guide-summary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <span>Como preencher esta etapa (Passo a Passo)</span>
+          </summary>
+          <div class="step-guide-body">
+            <ol>
+              <li><strong>Tema Sincronizado:</strong> O campo <em>"Tema do Vídeo para Thumbnail"</em> é preenchido automaticamente com o título da ideia escolhida no Passo B da Etapa 1.</li>
+              <li><strong>Escolha o Estilo e Cores:</strong> Selecione o Estilo visual da thumbnail (ex: <em>Impacto Visual Dramático</em>), Paleta de Cores e Elementos.</li>
+              <li><strong>Gerar 3 Variações:</strong> Clique em <em>"Gerar Prompts para Thumbnails com IA"</em> (tempo de espera: ~10s).</li>
+              <li><strong>Resultados A/B/C:</strong> A IA gera 3 opções no formato 16:9 widescreen sem texto embutido na imagem, além de sugerir textos curtos de impacto (overlay text) que complementam o título sem repeti-lo.</li>
+              <li><strong>Uso:</strong> Copie a Opção A, B ou C com os botões <em>"Copiar"</em> para gerar sua thumbnail com alta curiosidade e contraste.</li>
+            </ol>
+            <div class="step-guide-alert">
+              <span>⚠️ <strong>Lembrete:</strong> Gere de novo antes de copiar, para não usar o resultado de outro vídeo.</span>
+            </div>
+          </div>
+        </details>
 
         <div class="form-grid">
           <!-- Input: Tema da Thumbnail -->
@@ -1369,6 +1544,29 @@ textarea.h-180 {
           <p class="section-description">Gere títulos otimizados, tags e hashtags para maximizar a visibilidade do seu vídeo.</p>
         </div>
 
+        <!-- Guia Passo a Passo Etapa 4 -->
+        <details class="step-guide-collapsible">
+          <summary class="step-guide-summary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <span>Como preencher esta etapa (Passo a Passo)</span>
+          </summary>
+          <div class="step-guide-body">
+            <ol>
+              <li><strong>Tema e Resumo Sincronizados:</strong> O campo <em>"Tema do Vídeo para SEO"</em> é preenchido com a ideia escolhida no Passo B da Etapa 1, e o roteiro completo já vem carregado no resumo.</li>
+              <li><strong>Gerar Pacote SEO:</strong> Clique em <em>"Gerar SEO Completo com IA"</em> (tempo de espera: ~10-15s).</li>
+              <li><strong>Conteúdo Gerado:</strong> A IA cria 3 títulos com alto CTR, tags estratégicas separadas por vírgula, hashtags e a <strong>Descrição Completa do Vídeo</strong> em 2-3 parágrafos em inglês com contexto bíblico e chamada para inscrição.</li>
+              <li><strong>Uso:</strong> Copie com o botão <em>"Copiar SEO"</em> e cole diretamente no YouTube Studio ao publicar seu vídeo.</li>
+            </ol>
+            <div class="step-guide-alert">
+              <span>⚠️ <strong>Lembrete:</strong> Gere de novo antes de copiar, para não usar o resultado de outro vídeo.</span>
+            </div>
+          </div>
+        </details>
+
         <div class="form-grid">
           <!-- Input: Tema para SEO -->
           <div class="form-group form-group-full">
@@ -1403,7 +1601,7 @@ textarea.h-180 {
         <!-- Output SEO -->
         <div class="output-card mt-4">
           <div class="output-header">
-            <span class="output-title">SEO Completo (3 Títulos, Tags e Hashtags)</span>
+            <span class="output-title">SEO Completo (3 Títulos, Descrição Completa, Tags e Hashtags)</span>
             <button class="btn btn-copy" data-clipboard-target="output-prompt-seo">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -1412,7 +1610,7 @@ textarea.h-180 {
               Copiar SEO
             </button>
           </div>
-          <textarea id="output-prompt-seo" class="form-control prompt-output" readonly placeholder="Os títulos, tags e hashtags gerados pela IA aparecerão aqui..."></textarea>
+          <textarea id="output-prompt-seo" class="form-control prompt-output" readonly placeholder="Os títulos, descrição completa, tags e hashtags gerados pela IA aparecerão aqui..."></textarea>
         </div>
       </section>
 
@@ -1422,6 +1620,31 @@ textarea.h-180 {
           <h2>5. Narração & Legendas Automatizadas</h2>
           <p class="section-description">Gere a locução do seu roteiro em áudio MP3 com IA neural (OpenAI TTS) e transcreva legendas sincronizadas em formato .SRT (AssemblyAI).</p>
         </div>
+
+        <!-- Guia Passo a Passo Etapa 5 -->
+        <details class="step-guide-collapsible">
+          <summary class="step-guide-summary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <span>Como preencher esta etapa (Passo a Passo)</span>
+          </summary>
+          <div class="step-guide-body">
+            <ol>
+              <li><strong>Narração Limpa:</strong> O texto da narração já vem carregado automaticamente da Etapa 1, sem marcações ou rótulos.</li>
+              <li><strong>Escolha a Voz:</strong> Selecione a voz neural da OpenAI (ex: <em>Onyx</em> para tom grave e solene).</li>
+              <li><strong>Gerar Áudio:</strong> Clique no botão <em>"1. Gerar Áudio da Narração com IA"</em> (tempo de espera: ~1 a 3 min para roteiros longos de 18-20 min).</li>
+              <li><strong>Baixar Áudio:</strong> Ouça no player de prévia e clique em <em>"Baixar Narração (.mp3)"</em> para usar na linha do tempo do seu editor de vídeo.</li>
+              <li><strong>Gerar Legenda (.srt):</strong> Com o áudio pronto, clique em <em>"2. Gerar Legenda Sincronizada (.srt via AssemblyAI)"</em> (tempo de espera: ~30-50s). O áudio é enviado diretamente para a AssemblyAI sem erro de tamanho (suporta 18+ minutos).</li>
+              <li><strong>Baixar Legenda:</strong> Clique em <em>"Baixar Legenda (.srt)"</em> e importe no Premiere, DaVinci Resolve ou CapCut.</li>
+            </ol>
+            <div class="step-guide-alert">
+              <span>⚠️ <strong>Lembrete:</strong> Gere de novo antes de copiar, para não usar o resultado de outro vídeo.</span>
+            </div>
+          </div>
+        </details>
 
         <div class="form-grid">
           <!-- Dropdown: Narrador (Voz) -->
@@ -2013,8 +2236,28 @@ function removerParagrafosDuplicadosPorSimilaridade(texto, threshold = 0.6) {
 }
 
 /**
+ * Substitui padrão regex preservando a capitalização da palavra original
+ */
+function replacePreservingCase(str, pattern, replacement) {
+  return str.replace(pattern, (match) => {
+    if (!match) return replacement;
+    // Se o match original estiver todo em MAIÚSCULAS
+    if (match === match.toUpperCase() && match.length > 1) {
+      return replacement.toUpperCase();
+    }
+    // Se a primeira letra do match original for MAIÚSCULA
+    const firstChar = match.charAt(0);
+    if (firstChar === firstChar.toUpperCase() && firstChar !== firstChar.toLowerCase()) {
+      return replacement.charAt(0).toUpperCase() + replacement.slice(1);
+    }
+    return replacement;
+  });
+}
+
+/**
  * Filtro rigoroso e substituição contextual limpa para termos proibidos nas 10 IDEIAS
- * Garante que clichês como "profound", "navigates", "pivotal" e "Dive deep" nunca vazem.
+ * Garante que clichês como "profound", "navigates", "pivotal" e "Dive deep" nunca vazem
+ * e preserva rigorosamente as maiúsculas no início de frases.
  */
 function filtrarTermosProibidosNasIdeias(texto, idioma = 'pt') {
   if (!texto || typeof texto !== 'string') return texto;
@@ -2078,6 +2321,10 @@ function filtrarTermosProibidosNasIdeias(texto, idioma = 'pt') {
     { pattern: /\bdesvende\b/gi, replace: 'entenda' },
     { pattern: /\bdesvendar\b/gi, replace: 'compreender' },
 
+    // defended Jesus during critical moments -> correção factual bíblica (registrado apenas uma defesa em João 7)
+    { pattern: /\bdefended\s+Jesus\s+(?:during\s+critical\s+moments|several\s+times|repeatedly)\b/gi, replace: 'questioned the Sanhedrin in John 7' },
+    { pattern: /\bdefendeu\s+Jesus\s+(?:em\s+momentos\s+cr[ií]ticos|v[aá]rias\s+vezes|repetidamente)\b/gi, replace: 'questionou o Sinédrio em João 7' },
+
     // shrouded in mystery / envolto em mistério
     { pattern: /\bshrouded\s+in\s+mystery\b/gi, replace: 'rarely understood' },
     { pattern: /\benvolto\s+em\s+mist[eé]rio\b/gi, replace: 'pouco compreendido' },
@@ -2122,7 +2369,7 @@ function filtrarTermosProibidosNasIdeias(texto, idioma = 'pt') {
   ];
 
   for (const s of substituicoes) {
-    limpo = limpo.replace(s.pattern, s.replace);
+    limpo = replacePreservingCase(limpo, s.pattern, s.replace);
   }
 
   // Limpeza de pontuações e espaços duplicados
@@ -2132,6 +2379,12 @@ function filtrarTermosProibidosNasIdeias(texto, idioma = 'pt') {
     .replace(/:\s*:/g, ':')
     .replace(/\(\s*\)/g, '')
     .trim();
+
+  // Pós-processamento obrigatório: Garante que a primeira letra após início de linha,
+  // número de item (ex: "1. "), pontuação final (. ? !), dois pontos (:) ou aspas seja MAIÚSCULA
+  limpo = limpo.replace(/(^|[\r\n]+|^\s*\d+[\.\)\-]\s+|[.!?]\s+|:\s+|["'“‘]\s*)([a-zà-ú])/g, (m, prefix, letter) => {
+    return prefix + letter.toUpperCase();
+  });
 
   return limpo;
 }
@@ -2858,7 +3111,7 @@ MANDATORY EDITING RULES:
 const REVIEWER_SYSTEM_PROMPT = `You are a senior biblical documentary script editor, fact-checker, and canonical auditor for the YouTube channel 'Explicador Bíblico'.
 Your role is to rigorously inspect the provided complete 7-section documentary script across the ENTIRE text (comparing all sections, not just adjacent ones) and return a strictly structured JSON array of every genuine error, repetition, premature conclusion, or flaw found.
 
-CHECK ACROSS THE ENTIRE SCRIPT FOR EXACTLY THESE 7 CATEGORIES:
+CHECK ACROSS THE ENTIRE SCRIPT FOR EXACTLY THESE 9 CATEGORIES:
 1. EVENTO REPETIDO: The exact same biblical event, narrative episode, battle, or passage narrated or retold across more than one section (e.g. Numbers 13 retold multiple times, King Og's iron bed retold multiple times, the Genesis 7 Flood retold multiple times, Genesis 6:5 retold multiple times).
    - RULE: Any biblical event must remain ONLY in its designated home section.
    - For any repeated occurrence in other sections, provide the exact duplicate sentence/phrase as "fraseOriginal" and set "fraseCorrigida" to either an empty string "" to delete it, or to a smooth transition sentence that does NOT re-narrate the event.
@@ -2877,10 +3130,12 @@ CHECK ACROSS THE ENTIRE SCRIPT FOR EXACTLY THESE 7 CATEGORIES:
    RIGOROUSLY CHECK AND CORRECT:
    a) Dates, calendar years, or seasons not given in the Bible (e.g. "in the spring of the year 30 AD", "in 28 AD" — Scripture does not give Julian calendar years).
    b) Unrecorded events or time intervals (e.g. "One hundred and twenty years passed. The ark stood complete." — Genesis 6:3 gives 120 years as a divine decree for mankind, not that 120 years passed constructing the ark).
-   c) Unindicated eyewitness claims (e.g. claiming "John witnessed these events firsthand" for scenes where the Gospel of John does not record him as an eyewitness).
-   d) Invented scenes, actions, or psychological feelings presented as factual (e.g. a creaking door, "his heart raced with dread", nervous pacing). Short atmospheric context is allowed, but NEVER invent physical actions, words, or emotional reactions not recorded in Scripture.
+   c) UNINDICATED EYEWITNESS CLAIMS: NEVER claim who witnessed or was present at an event when canonical Scripture does not explicitly name that person (e.g. claiming "the apostle who was present", "John watched in silence", or specifying an unnamed disciple). Unless Scripture explicitly names the person as an eyewitness, describe the scene without inventing witnesses.
+   d) Invented scenes, physical actions, or psychological feelings presented as factual (e.g. a creaking door, "his heart raced with dread", nervous pacing). Short atmospheric context is allowed, but NEVER invent physical actions, words, or emotional reactions not recorded in Scripture.
    e) Interpretations presented as undisputed fact (e.g. the identity of the "sons of God"): must be framed with scholarly restraint like "many understand...", never as undisputed biblical dogma.
 7. FRASE QUEBRADA / ASPAS: Sentences with missing words, ungrammatical phrasing, broken fragments, or mismatched quotation marks.
+8. REFERÊNCIA BÍBLICA CRUZADA AUSENTE: Citing or reciting a passage/verse from another biblical book without introducing its origin. Whenever a verse or account from another book is introduced (e.g. Numbers 21:9 regarding the bronze serpent within Jesus' conversation with Nicodemus in John 3), it MUST ALWAYS be introduced with its biblical origin (e.g. "referencing Moses in the wilderness in Numbers", "as written centuries earlier in Numbers"). Never paste an Old Testament quote into a dialogue without identifying its origin.
+9. INCONSISTÊNCIA DE CENÁRIO: The physical environment must remain strictly uniform and consistent throughout the scene. If the narrative establishes an enclosed private room ("room"), it CANNOT suddenly change to a "rooftop" or courtyard without an explicit scriptural movement. Any contradictory shift in physical location must be corrected to maintain uniform consistency.
 
 MANDATORY OUTPUT FORMAT:
 Respond EXCLUSIVELY with a valid JSON array of objects. Do NOT include markdown code blocks, do NOT write explanations before or after the JSON.
@@ -2888,8 +3143,8 @@ Format:
 [
   {
     "fraseOriginal": "The exact verbatim sentence or phrase from the script to be replaced",
-    "tipo": "EVENTO REPETIDO" | "CONCLUSÃO PREMATURA" | "SILÊNCIO REPETIDO" | "CITAÇÃO BÍBLICA" | "CRONOLOGIA" | "AFIRMAÇÃO ALÉM DO TEXTO" | "FRASE QUEBRADA / ASPAS",
-    "fraseCorrigida": "The corrected sentence (or empty string \\"\\" if the sentence should be removed)"
+    "tipo": "EVENTO REPETIDO" | "CONCLUSÃO PREMATURA" | "SILÊNCIO REPETIDO" | "CITAÇÃO BÍBLICA" | "CRONOLOGIA" | "AFIRMAÇÃO ALÉM DO TEXTO" | "FRASE QUEBRADA / ASPAS" | "REFERÊNCIA AUSENTE" | "INCONSISTÊNCIA DE CENÁRIO",
+    "fraseCorrigida": "The corrected sentence (or empty string \"\" if the sentence should be removed)"
   }
 ]
 If NO problems are detected, return strictly: []`;
@@ -3150,26 +3405,32 @@ CRITICAL MANDATORY GUIDELINES:
    - PROHIBITED WORDS/CONCEPTS: Never use terms like "myth", "legend", "debate", "were they real", "scholars suggest", "traditional theology may not reveal", or equivalents in any language ("mito", "lenda", "debate", "se eram reais", "estudiosos sugerem", "a teologia tradicional oculta").
 3. CANONICAL SCRIPTURE ONLY: Restrict all content strictly to the 66 canonical books of the Bible.
    - STRICTLY FORBIDDEN: Never cite or include extra-biblical theories, secular ancient civilizational speculations, evolutionary human ancestry theories, or apocryphal/pseudepigraphal books (such as the Book of Enoch / Livro de Enoque).
-4. STRICT BIBLICAL FIDELITY & FACTUAL ACCURACY:
+4. STRICT BIBLICAL FIDELITY & NO FACTUAL EXAGGERATION:
    - Every hook premise and title must be 100% faithful to what canonical Scripture actually states.
-   - NEVER attribute false events, misattributed trials, or unscriptural actions to biblical figures (e.g. Nicodemus questioned the Pharisees in John 7:50-51, but that was NOT Jesus' trial before the Sanhedrin).
+   - NEVER inflate, exaggerate, or pluralize singular biblical events. If a biblical figure acted once (e.g. Nicodemus questioned the Pharisees once in John 7:50-51, and brought spices at Jesus' burial in John 19:39), NEVER state 'defended Jesus during critical moments' or make it sound like multiple defenses. Describe events with exact biblical precision and sober restraint.
+   - NEVER attribute false events, unscriptural trials, or unrecorded actions to biblical figures.
 5. ZERO FORBIDDEN CLICHÉS & BUZZWORDS (STRICTLY PROHIBITED):
    - STRICTLY FORBIDDEN to use words such as: "profound" (or "profoundly"), "navigate" (or "navigates", "navigated", "navigating"), "pivotal" (or "pivotally"), "delve" (or "delves", "delved", "delving"), "dive deep" (or "dives deep", "diving deep", "deep dive"), "shrouded in mystery", "debate", "stark", "fabric", "enigmatic", "fascinating", "journey through", "annals", "testament to", "sacred texts", or equivalents in ${lang.name} (e.g. "profundo", "navega", "pivô", "mergulhe fundo", "desvendar", "enigmático").
-6. MANDATORY TITLE VARIETY & FORMATTING (HIGH CTR - ITEM 5):
+6. MANDATORY TITLE VARIETY & FORMATTING (HIGH CTR):
    - MAXIMUM OF 1 WORD IN CAPS LOCK per title (e.g., "${lang.titleHookSample}").
    - NEVER write an entire title in uppercase. Never use more than 1 word in ALL CAPS.
-   - DIVERSIFY TITLE STRUCTURES INTENTIONALLY across the 10 ideas!
-     * DO NOT repeat the same pattern like "The X... (Parentheses)" on every title.
-     * Vary the structures across:
-       a) Provocative Questions (e.g., "What REALLY Happened in the Ancient Valley?")
-       b) Direct Canonical Revelations (e.g., "What Scripture ACTUALLY Says About the Ancient Tabernacle")
-       c) Biblical Paradoxes / Sacred Events (e.g., "The Untold Account of Mount Sinai")
-       d) Parenthetical Curiosity Hooks (e.g., "The SACRED Prophecy (Many Miss This)")
-       e) Solemn Chronicles / Historic Accounts (e.g., "How the Ancient Kingdom Fell")
-     * Each of the 10 titles must have a distinct grammatical format.
+   - STRICT PROHIBITION ON REPETITIVE STRUCTURES:
+     * It is STRICTLY FORBIDDEN to use the pattern "The [Noun]... (Parentheses)" on every title!
+     * Use parentheses on a MAXIMUM OF 2 out of the 10 titles.
+     * All 10 titles MUST exhibit distinct grammatical structures, such as:
+       1) Direct Investigative Question (e.g., "Why Did God Order the Bronze Serpent in the Desert?")
+       2) Historical Revelation with Action (e.g., "What Nicodemus ACTUALLY Asked Jesus Under Cover of Darkness")
+       3) Moment of Conflict / Crisis (e.g., "When the Pharisees Tried to Silence Christ")
+       4) Factual Paradox (e.g., "The Forgotten Commandment of Mount Sinai")
+       5) Chronological Turning Point (e.g., "The Exact Night Ancient Jerusalem Trembled")
+       6) Verse Focus (e.g., "The Words in Genesis Most Readers Overlook")
+       7) Provocative Query (e.g., "Who Really Came to the Garden at Midnight?")
+       8) Solemn Narrative (e.g., "How Moses Stopped the Plague in Numbers")
+       9) Curiosity Parenthesis (MAX 2 titles) (e.g., "The UNTOLD Story of John 3 (What Many Miss)")
+       10) Short Punchy Statement (e.g., "The Final Warning Given to Israel")
 
 OUTPUT FORMAT:
-Provide the 10 ideas numbered 1 to 10 in ${lang.name}, with Title (max 1 word in CAPS, varied structure) followed by a short 1-2 sentence hook premise.`;
+Provide the 10 ideas numbered 1 to 10 in ${lang.name}, with Title (max 1 word in CAPS, varied structure without repetitive parentheses) followed by a short 1-2 sentence hook premise.`;
   },
 
   generateScriptPrompt({ ideia, estiloRoteiro, tomVoz, tipoGancho, idioma }) {
@@ -3465,70 +3726,103 @@ Just the pure, powerful spoken narration paragraphs.`;
   },
 
   generateMediaKeywordsPrompt({ roteiro }) {
-    return `Com base no roteiro a seguir, identifique e liste as principais keywords (palavras-chave) para buscar vídeos e imagens de banco de dados (Pixabay, Pexels, Envato) que ilustrem cada segmento do texto. Divida as keywords por seções do roteiro.
+    return `Act as a senior stock footage researcher and b-roll director for cinematic biblical documentaries (Explicador Bíblico).
+Based on the following script, generate a curated list of exactly 25 to 35 high-converting stock footage search keywords strictly in ENGLISH for Pixabay, Pexels, and Envato Elements.
 
-Roteiro:
-${roteiro}`;
+MANDATORY RULES:
+1. 100% IN ENGLISH: All keywords must be in English.
+2. STRICTLY CONCRETE AND FILMBALE / PHOTOGRAPHABLE SUBJECTS ONLY:
+   - Physical ancient objects (e.g. 'oil lamp flame', 'ancient clay jar', 'parchment scroll close up', 'leather sandals on dust', 'bronze serpent pole', 'ancient bronze coins', 'woven biblical robe', 'stone tomb entrance').
+   - Tangible historical environments (e.g. 'ancient Jerusalem night street', 'desert mountain twilight', 'stone courtyard at night', 'flickering firelight room', 'dark olive grove', 'ancient Judean stone house').
+   - Tangible human actions & poses (e.g. 'cloaked man walking at night', 'hands unrolling ancient parchment', 'two men speaking in shadows', 'crowd of ancient travelers', 'silhouette with lantern').
+3. STRICTLY PROHIBITED — ZERO ABSTRACT CONCEPTS:
+   - It is STRICTLY FORBIDDEN to include abstract ideas, theological concepts, or titles (e.g. NEVER use 'Requisitos para o Reino de Deus', 'Salvation', 'Inscrição no canal', 'Divine Sovereignty', 'Faith', 'Grace', 'Call to Action', 'Subscribe', 'Spiritual Rebirth', 'Discipleship').
+   - NEVER output sections, chapter titles, commentary, or excerpts from the script.
+4. CLEAN OUTPUT FORMAT:
+   Output ONLY the numbered list (1 to 30) of concrete, filmable search phrases in English, one per line, ready to copy and paste into stock footage platforms.`;
   },
 
   generateAiVisualPrompts({ roteiro }) {
-    return `Atuando como diretor de arte e prompt engineer, crie prompts detalhados para uma IA de geração de imagens/vídeos (como Midjourney v6, DALL-E 3, RunwayML) que ilustrem visualmente cada segmento do roteiro a seguir. 
+    const fixedStyleBlock = ', cinematic lighting, chiaroscuro atmosphere, deep solemn shadows, historical biblical realism, Rembrandt oil painting texture, 8k resolution, photorealistic cinematic composition, 16:9 widescreen, no text, no letters, no words';
 
-Os prompts devem capturar o estilo visual do canal 'Explicador Bíblico' (ilustrações simbólicas, cores sóbrias/dramáticas, impacto visual, estilo pintura histórica/iluminação chiaroscuro). 
-Use proporção 16:9. Os prompts devem ser em inglês.
+    return `Act as a master art director and AI prompt engineer for cinematic biblical documentaries following the dark visual aesthetic of 'Explicador Bíblico'.
+Read the entire script below in strict chronological order and generate between 30 and 40 detailed visual prompts (numbered Prompt 1 to Prompt 35) covering the script from the very first opening hook to the final scene.
 
-DIRETRIZ CRÍTICA E PERMANENTE — NUNCA INCLUIR TEXTO LEGÍVEL:
-NUNCA peça nem instrua que a imagem contenha texto, palavras, frases legíveis, títulos, cartazes ou letreiros (ex: NUNCA use "with text...", "with the words X visible", "letters reading..."). IAs de geração visual são ineficientes em renderizar tipografia legível. Os prompts devem focar exclusivamente em elementos puramente visuais: sujeitos, expressões, cenários históricos, atmosfera, iluminação chiaroscuro, ângulos de câmera, texturas e paletas de cores.
+MANDATORY RULES:
+1. QUANTITY & CHRONOLOGICAL COVERAGE: Generate exactly 30 to 40 prompts, walking through the entire narrative progression of the script without skipping any section.
+2. NO ON-SCREEN TEXT OR LETTERS: Absolutely NEVER request visible letters, words, titles, signs, banners, or typography in the image. AI generators fail with text; describe only pure visual scenes.
+3. NO MIDJOURNEY SYNTAX: Do NOT use '--ar 16:9'. The aspect ratio must be stated as '16:9 widescreen'.
+4. MANDATORY FIXED VISUAL STYLE BLOCK AT THE END OF EVERY PROMPT:
+   Every single prompt MUST end with this EXACT fixed visual style block:
+   "${fixedStyleBlock}"
+5. SCENE CONTENT: Each prompt must describe concrete subjects, camera angles (e.g. extreme close-up, dramatic low-angle, atmospheric wide shot), ancient costumes, dramatic lighting, and authentic historical biblical environments.
 
-Roteiro:
-${roteiro}`;
+SCRIPT:
+${roteiro}
+
+OUTPUT FORMAT:
+Output the numbered prompts (Prompt 1 to Prompt 35) in English, each containing the scene description followed immediately by the mandatory fixed style block.`;
   },
 
   generateThumbnailPrompts({ tema, estilo, cores, elementos, styleRef }) {
-    const styleRefLine = styleRef ? `\n- Referência Visual Técnica (en): ${styleRef}` : '';
-    return `Crie 3 prompts distintos para uma IA de geração de imagens (como Midjourney, DALL-E 3) para thumbnails de YouTube sobre '${tema}'. Cada prompt deve ser para um teste A/B/C, seguindo o estilo do canal 'Explicador Bíblico' (impacto visual, imagens simbólicas, cores sóbrias/dramáticas, composição clara, gerando curiosidade).
+    const styleRefLine = styleRef ? `\n- Technical Style Reference (en): ${styleRef}` : '';
+    return `Act as a senior YouTube thumbnail designer for biblical dark channels following the proven high-CTR formula of 'Explicador Bíblico'.
+Generate 3 distinct thumbnail concepts (Options A, B, and C) in ENGLISH for an A/B/C test for a video entitled: '${tema}'.
 
-Diretrizes Escolhidas pelo Usuário:
-- Estilo: ${estilo}${styleRefLine}
-- Cores: ${cores}
-- Elementos: ${elementos}
+User Preferences:
+- Visual Style: ${estilo}${styleRefLine}
+- Color Palette: ${cores}
+- Key Symbolic Elements: ${elementos}
 
-Os 3 prompts visuais devem ser escritos em INGLÊS e incluir a proporção '--ar 16:9' no final de cada um.
-IMPORTANTE: Foque na composição visual de alto contraste e atmosfera dramática para thumbnails.
+MANDATORY THUMBNAIL RULES:
+1. FORMAT: Always specify '16:9 widescreen' (DO NOT use Midjourney '--ar 16:9' syntax).
+2. NO EMBEDDED TEXT IN AI IMAGE: Instruct the image AI to produce high-contrast, dramatic imagery with clean negative space and NO written words or letters.
+3. OVERLAY TEXT MUST COMPLEMENT THE TITLE, NEVER REPEAT IT:
+   - For each option, provide a suggested 'Overlay Text' (short punchy text for Photoshop/Canva, 2 to 4 words max).
+   - CRITICAL RULE: The overlay text MUST COMPLEMENT the title '${tema}' by adding mystery, urgency, or curiosity. It is STRICTLY FORBIDDEN to repeat words from the title!
+   - (e.g. If the title is about Nicodemus visiting Jesus at night, the overlay text CANNOT say 'Nicodemus'. It should say: 'BEFORE DAWN...', 'HE HID HIS FACE', or 'THE SECRET VISITOR').
 
-FORMATO DE RESPOSTA OBRIGATÓRIO — use exatamente estes marcadores, cada um em sua própria linha isolada:
+MANDATORY OUTPUT FORMAT — Use exactly these markers, each on its own isolated line:
 
 [[OPCAO_A]]
-(Texto & Mistério): Prompt com foco em elemento visual de mistério, contraste e composição para thumbnail.
+Prompt Visual (en): (High-contrast mystery visual prompt ending with '16:9 widescreen, no text, no words')
+Texto da Thumbnail (Overlay Text): (2-4 words that COMPLEMENT the title without repeating it)
 [[OPCAO_B]]
-(Foco Simbólico & Dramático): Prompt com imagem simbólica central, iluminação dramática e riqueza de texturas.
+Prompt Visual (en): (Intense symbolic chiaroscuro visual prompt ending with '16:9 widescreen, no text, no words')
+Texto da Thumbnail (Overlay Text): (2-4 words that COMPLEMENT the title without repeating it)
 [[OPCAO_C]]
-(Revelação & Contraste): Prompt com elemento visual que sugere revelação, luz versus trevas e curiosidade intrigante.
-[[FIM]]
-
-Substitua as descrições entre parênteses acima pelos prompts reais e completos em inglês para cada opção, mantendo os marcadores exatamente como estão.`;
+Prompt Visual (en): (Dramatic revelation duality visual prompt ending with '16:9 widescreen, no text, no words')
+Texto da Thumbnail (Overlay Text): (2-4 words that COMPLEMENT the title without repeating it)
+[[FIM]]`;
   },
 
   generateSeoPrompt({ tema, resumo, idioma }) {
     const lang = this.getLanguageConfig(idioma);
 
     return `Act as a senior YouTube SEO and title strategist following the proven formula of the channel 'Explicador Bíblico'.
-Generate exactly 3 high-converting title options, a list of relevant tags (15-20), and 5-7 hashtags for a biblical video about '${tema}' based on the following script/summary:
+Generate an optimized YouTube SEO package for a biblical video about '${tema}' based on the following script/summary:
 ${resumo || tema}
 
 MANDATORY OUTPUT GUIDELINES:
-1. STRICT LANGUAGE COMPLIANCE:
-   - All 3 title options, tags, and hashtags MUST be 100% in ${lang.name}. Never output titles in English if the requested language is Portuguese or Spanish, and vice-versa.
-2. STRICT TITLE FORMATTING RULES (HIGH CTR):
-   - MAXIMUM OF 1 WORD IN CAPS LOCK per title (e.g. "${lang.titleHookSample}").
-   - NEVER write the whole title in uppercase. Never use more than 1 word in ALL CAPS.
-   - Include irresistible curiosity hooks (e.g. "The REAL...", "(Many Miss This)", "(What the Bible Actually Says)" in ${lang.name}).
-3. BIBLICAL TRUTH AND CANONICAL INTEGRITY:
-   - Treat the biblical account as literal fact and truth. Never use words like "myth", "legend", "debate", "were they real", "scholars suggest".
-4. TAGS (15-20 tags):
-   - Highly relevant search tags separated by commas in ${lang.name}.
-5. HASHTAGS (5-7 hashtags):
-   - 5 to 7 high-impact hashtags in ${lang.name} (#BibleTruth #BiblicalHistory, etc.).`;
+1. 3 HIGH-CTR TITLE OPTIONS:
+   - Written 100% in ${lang.name}.
+   - MAXIMUM OF 1 WORD IN CAPS LOCK per title (e.g. "${lang.titleHookSample}"). Never write an entire title in uppercase.
+   - Irresistible curiosity hooks without clickbait dishonesty.
+2. FULL VIDEO DESCRIPTION (2-3 DENSE PARAGRAPHS IN ENGLISH):
+   - Paragraph 1: Gripping overview of the historical and canonical biblical chronicle presented in the documentary, hooking the reader immediately.
+   - Paragraph 2: Comprehensive breakdown of the exact biblical chapters, books, and verses explored (e.g. explicit scripture citations, context, and canonical meaning).
+   - Paragraph 3: Solemn spiritual reflection and strong call to action inviting viewers to subscribe to the channel, like the video, and explore more biblical investigations.
+3. SEARCH TAGS (15-20 TAGS):
+   - High-volume relevant search tags separated by commas.
+4. HASHTAGS (5-7 HASHTAGS):
+   - 5 to 7 high-impact hashtags (#BiblicalHistory #ScriptureTruth, etc.).
+
+OUTPUT FORMAT:
+Present the complete SEO package clearly separated into:
+- 3 TITLES (High CTR)
+- FULL VIDEO DESCRIPTION (English, 2-3 paragraphs with scripture references & subscribe CTA)
+- SEARCH TAGS
+- HASHTAGS`;
   }
 };
 window.PromptEngine = PromptEngine;
@@ -3726,14 +4020,18 @@ const UI = {
       if (!btn) return;
 
       const targetId = btn.getAttribute('data-clipboard-target');
-      const targetTextarea = document.getElementById(targetId);
+      let targetTextarea = targetId ? document.getElementById(targetId) : null;
+      if (!targetTextarea) {
+        targetTextarea = btn.closest('.output-card, .output-group, .form-group')?.querySelector('textarea, input');
+      }
 
       if (!targetTextarea || !targetTextarea.value.trim()) {
-        UI.showToast('Nada para copiar. Gere o conteúdo primeiro!', 'warning');
+        UI.showToast('Esta caixa está vazia. Gere o conteúdo desta etapa antes de copiar!', 'warning');
         return;
       }
 
-      navigator.clipboard.writeText(targetTextarea.value)
+      const texto = targetTextarea.value;
+      navigator.clipboard.writeText(texto)
         .then(() => {
           const originalHTML = btn.innerHTML;
           btn.classList.add('copied');
@@ -3744,7 +4042,8 @@ const UI = {
             Copiado!
           `;
 
-          UI.showToast('Conteúdo copiado para a área de transferência!');
+          const nomeBotao = btn.textContent.replace('Copiado!', '').replace('Copiar', '').trim();
+          UI.showToast(nomeBotao ? `${nomeBotao} copiado com sucesso!` : 'Conteúdo copiado para a área de transferência!');
 
           setTimeout(() => {
             btn.classList.remove('copied');
@@ -4228,14 +4527,74 @@ document.addEventListener('DOMContentLoaded', () => {
   let audioGeneratedInSession = false;
   let srtGeneratedInSession = false;
 
+  function atualizarSeloAba(numeroEtapa, concluida = true) {
+    const badge = document.getElementById(`badge-tab-${numeroEtapa}`);
+    if (!badge) return;
+    if (concluida) {
+      badge.classList.add('complete');
+    } else {
+      badge.classList.remove('complete');
+    }
+  }
+
+  function limparResultadosEtapasPosteriores() {
+    // 1. Etapa 2: Mídias
+    const outKeywords = document.getElementById('output-prompt-keywords');
+    if (outKeywords) outKeywords.value = '';
+    const outImagensIa = document.getElementById('output-prompt-imagens-ia');
+    if (outImagensIa) outImagensIa.value = '';
+
+    // 2. Etapa 3: Thumbnails
+    const outThumbA = document.getElementById('output-thumb-a');
+    if (outThumbA) outThumbA.value = '';
+    const outThumbB = document.getElementById('output-thumb-b');
+    if (outThumbB) outThumbB.value = '';
+    const outThumbC = document.getElementById('output-thumb-c');
+    if (outThumbC) outThumbC.value = '';
+
+    // 3. Etapa 4: SEO
+    const outSeo = document.getElementById('output-prompt-seo');
+    if (outSeo) outSeo.value = '';
+
+    // 4. Etapa 5: Narração & Legendas
+    const outSrt = document.getElementById('output-legenda-srt');
+    if (outSrt) outSrt.value = '';
+    const cardSrt = document.getElementById('card-legenda-output');
+    if (cardSrt) cardSrt.classList.add('hidden');
+    const cardAudio = document.getElementById('card-audio-preview');
+    if (cardAudio) cardAudio.classList.add('hidden');
+    const audioPreview = document.getElementById('audio-player-preview');
+    if (audioPreview) {
+      audioPreview.pause();
+      audioPreview.src = '';
+    }
+    currentAudioBlob = null;
+    currentAudioUrl = null;
+    currentSrtContent = '';
+    audioGeneratedInSession = false;
+    srtGeneratedInSession = false;
+
+    // 5. Resetar selos das etapas 2 a 5
+    atualizarSeloAba(2, false);
+    atualizarSeloAba(3, false);
+    atualizarSeloAba(4, false);
+    atualizarSeloAba(5, false);
+
+    AutoSave.save();
+  }
+
   function syncTema() {
-    const temaAtual = UI.getValue('select-tema', 'input-tema-custom');
+    // Requisitos 6 e 8: Os campos de Thumbnail e SEO devem vir preenchidos com a ideia do Passo B (título)
+    const ideiaEscolhida = (inputIdeiaEscolhida ? inputIdeiaEscolhida.value.trim() : '');
+    const temaBase = UI.getValue('select-tema', 'input-tema-custom');
+    const valorSincronizado = ideiaEscolhida || temaBase;
+
     if (inputTemaThumb && (!inputTemaThumb.value || inputTemaThumb.dataset.autoSynced === 'true')) {
-      inputTemaThumb.value = temaAtual;
+      inputTemaThumb.value = valorSincronizado;
       inputTemaThumb.dataset.autoSynced = 'true';
     }
     if (inputTemaSeo && (!inputTemaSeo.value || inputTemaSeo.dataset.autoSynced === 'true')) {
-      inputTemaSeo.value = temaAtual;
+      inputTemaSeo.value = valorSincronizado;
       inputTemaSeo.dataset.autoSynced = 'true';
     }
   }
@@ -4250,6 +4609,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   selectTema.addEventListener('change', syncTema);
   if (inputTemaCustom) inputTemaCustom.addEventListener('input', syncTema);
+  if (inputIdeiaEscolhida) {
+    inputIdeiaEscolhida.addEventListener('input', () => {
+      // Quando o usuário preenche a ideia no Passo B, atualiza Thumbnail e SEO se eles estiverem auto-sincronizados
+      if (inputTemaThumb && inputTemaThumb.dataset.autoSynced !== 'false') {
+        inputTemaThumb.value = inputIdeiaEscolhida.value.trim() || UI.getValue('select-tema', 'input-tema-custom');
+      }
+      if (inputTemaSeo && inputTemaSeo.dataset.autoSynced !== 'false') {
+        inputTemaSeo.value = inputIdeiaEscolhida.value.trim() || UI.getValue('select-tema', 'input-tema-custom');
+      }
+    });
+  }
   if (inputTemaThumb) inputTemaThumb.addEventListener('input', () => inputTemaThumb.dataset.autoSynced = 'false');
   if (inputTemaSeo) inputTemaSeo.addEventListener('input', () => inputTemaSeo.dataset.autoSynced = 'false');
   syncTema();
@@ -4610,6 +4980,9 @@ window.apararParaLimiteMaximo = apararParaLimiteMaximo;
 window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
 
   document.getElementById('btn-gerar-prompt-roteiro').addEventListener('click', async () => {
+    // Requisito 11: Limpa as caixas de resultado das etapas 2 a 5 para não exibir dados do vídeo anterior
+    limparResultadosEtapasPosteriores();
+
     const ideia = inputIdeiaEscolhida.value.trim() || UI.getValue('select-tema', 'input-tema-custom');
     const estiloRoteiro = document.getElementById('select-estilo-roteiro').value;
     const tomVoz = UI.getValue('select-tom', 'input-tom-custom');
@@ -4829,6 +5202,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
         textareaResumoSeo.value = resultText;
         textareaResumoSeo.dataset.autoSynced = 'true';
       }
+      atualizarSeloAba(1, true);
       AutoSave.save();
     }
   });
@@ -4873,14 +5247,50 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
     }
 
     const promptText = PromptEngine.generateMediaKeywordsPrompt({ roteiro });
+    const hasKey = Boolean(OpenRouterAPI.getApiKey());
+    const btn = document.getElementById('btn-gerar-prompt-keywords');
+    const outputEl = document.getElementById('output-prompt-keywords');
 
-    await executeApiCall(
-      'btn-gerar-prompt-keywords',
-      promptText,
-      'output-prompt-keywords',
-      'Keywords de mídia geradas!',
-      OpenRouterAPI.getModelIdeas()
-    );
+    UI.setButtonLoading(btn, true);
+
+    try {
+      if (hasKey) {
+        const aiResponse = await OpenRouterAPI.generateContent(promptText, OpenRouterAPI.getModelIdeas());
+        if (outputEl) outputEl.value = aiResponse;
+        atualizarSeloAba(2, true);
+        UI.showToast('Keywords de mídia (stock footage) geradas com sucesso!');
+        AutoSave.save();
+      } else {
+        // Fallback estruturado de keywords filmáveis em inglês (sem conceitos abstratos e sem o roteiro)
+        const tema = (inputIdeiaEscolhida ? inputIdeiaEscolhida.value.trim() : '') || UI.getValue('select-tema', 'input-tema-custom');
+        const fallbackKeywords = [
+          `1. ancient Jerusalem stone streets at night`,
+          `2. flickering ancient oil lamp flame`,
+          `3. parchment scroll unrolling close up`,
+          `4. cloaked traveler walking in dark alley`,
+          `5. ancient olive grove in moonlight`,
+          `6. hands holding antique manuscript`,
+          `7. ancient bronze coins on wooden table`,
+          `8. stone courtyard shadows and torchlight`,
+          `9. bronze serpent pole in desert landscape`,
+          `10. ancient Judean stone house interior`,
+          `11. two figures in secret conversation at night`,
+          `12. ancient sandals walking on dusty path`,
+          `13. silhouette of cloaked man against night sky`,
+          `14. clay oil lamp burning in shadow`,
+          `15. ancient stone tomb entrance dusk`
+        ].join('\n');
+
+        if (outputEl) outputEl.value = fallbackKeywords;
+        atualizarSeloAba(2, true);
+        UI.showToast('Keywords modelo geradas! Insira sua API Key para gerar personalizadas.', 'warning');
+        AutoSave.save();
+      }
+    } catch (err) {
+      UI.showToast(err.message, 'error');
+    } finally {
+      UI.setButtonLoading(btn, false);
+    }
   });
 
   document.getElementById('btn-gerar-prompt-imagens-ia').addEventListener('click', async () => {
@@ -4891,18 +5301,43 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
     }
 
     const promptText = PromptEngine.generateAiVisualPrompts({ roteiro });
+    const hasKey = Boolean(OpenRouterAPI.getApiKey());
+    const btn = document.getElementById('btn-gerar-prompt-imagens-ia');
+    const outputEl = document.getElementById('output-prompt-imagens-ia');
 
-    await executeApiCall(
-      'btn-gerar-prompt-imagens-ia',
-      promptText,
-      'output-prompt-imagens-ia',
-      'Prompts para IA visual gerados!',
-      OpenRouterAPI.getModelIdeas()
-    );
+    UI.setButtonLoading(btn, true);
+
+    try {
+      if (hasKey) {
+        const aiResponse = await OpenRouterAPI.generateContent(promptText, OpenRouterAPI.getModelIdeas());
+        if (outputEl) outputEl.value = aiResponse;
+        atualizarSeloAba(2, true);
+        UI.showToast('30-40 Prompts para IA visual gerados em ordem cronológica!');
+        AutoSave.save();
+      } else {
+        const fixedStyle = ', cinematic lighting, chiaroscuro atmosphere, deep solemn shadows, historical biblical realism, Rembrandt oil painting texture, 8k resolution, photorealistic cinematic composition, 16:9 widescreen, no text, no letters, no words';
+        const samplePrompts = [
+          `Prompt 1: Extreme close-up of an ancient bronze oil lamp flickering in a dark Jerusalem room, warm amber flame casting deep shadows against rough limestone walls${fixedStyle}`,
+          `Prompt 2: Low-angle medium shot of a cloaked Judean elder walking through narrow dark cobblestone alleyways of ancient Jerusalem under midnight moonlight${fixedStyle}`,
+          `Prompt 3: Atmospheric wide shot of ancient Jerusalem at dusk, olive trees on the Mount of Olives swaying gently, distant torchlights flickering on stone ramparts${fixedStyle}`,
+          `Prompt 4: Two men seated in secret night consultation across a rustic wooden table, illuminated solely by a single oil lamp, deep chiaroscuro contrasts${fixedStyle}`,
+          `Prompt 5: Dramatic historical wide shot of the Sinai desert wilderness, towering bronze serpent elevated on a wooden pole against a stormy twilight sky${fixedStyle}`
+        ].join('\n\n');
+
+        if (outputEl) outputEl.value = samplePrompts;
+        atualizarSeloAba(2, true);
+        UI.showToast('Prompts modelo gerados! Insira sua API Key para cobrir o roteiro completo.', 'warning');
+        AutoSave.save();
+      }
+    } catch (err) {
+      UI.showToast(err.message, 'error');
+    } finally {
+      UI.setButtonLoading(btn, false);
+    }
   });
 
   document.getElementById('btn-gerar-prompts-thumb').addEventListener('click', async () => {
-    const tema = inputTemaThumb.value.trim() || UI.getValue('select-tema', 'input-tema-custom');
+    const tema = (inputIdeiaEscolhida ? inputIdeiaEscolhida.value.trim() : '') || inputTemaThumb.value.trim() || UI.getValue('select-tema', 'input-tema-custom');
     const estilo = UI.getValue('select-estilo-thumb', 'input-estilo-thumb-custom');
     const cores = UI.getValue('select-cores-thumb', 'input-cores-thumb-custom');
     const elementos = UI.getValue('select-elementos-thumb', 'input-elementos-thumb-custom');
@@ -4924,21 +5359,22 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
         document.getElementById('output-thumb-c').value = parsed.c;
 
         if (parsed.fallback === 'full') {
-          UI.showToast('⚠️ A IA não usou os marcadores esperados. Conteúdo completo no campo A — distribua manualmente entre B e C.', 'warning');
+          UI.showToast('⚠️ A IA não usou os marcadores esperados. Conteúdo completo no campo A.', 'warning');
         } else if (parsed.fallback === 'partial') {
-          UI.showToast('3 Prompts gerados (formato alternativo detectado). Verifique os campos.', 'warning');
+          UI.showToast('3 Prompts gerados (formato alternativo detectado).', 'warning');
         } else {
-          UI.showToast('3 Prompts de Thumbnail gerados via IA!');
+          UI.showToast('3 Opções de Thumbnail geradas com sucesso!');
         }
+        atualizarSeloAba(3, true);
         AutoSave.save();
       } else {
         const styleAppend = styleRef ? `, ${styleRef}` : '';
-        // ITEM 4: Prompts visuais sem texto legível
-        document.getElementById('output-thumb-a').value = `Option A (Visual Mystery & Contrast): Cinematic YouTube thumbnail composition for "${tema}". High contrast dark aesthetic, single dramatic symbolic item in intense gold spotlight, subtle ancient stone textures${styleAppend}, Explicador Bíblico channel style --ar 16:9`;
-        document.getElementById('output-thumb-b').value = `Option B (Symbolic & Dramatic): Dramatic historical digital painting thumbnail for "${tema}". Dark red and sepia color scheme, central ancient icon with intense chiaroscuro rim lighting${styleAppend} --ar 16:9`;
-        document.getElementById('output-thumb-c').value = `Option C (Revelation & Duality): Mysterious YouTube thumbnail about "${tema}". Dividing background with ancient illuminated parchment vs deep shadow abyss${styleAppend}, maximum visual curiosity --ar 16:9`;
+        document.getElementById('output-thumb-a').value = `Option A (Visual Mystery & Contrast):\nPrompt Visual: Cinematic YouTube thumbnail composition for "${tema}". High contrast dark aesthetic, single dramatic ancient oil lamp in golden spotlight, deep stone textures${styleAppend}, 16:9 widescreen, no text, no words.\nTexto da Thumbnail (Overlay Text): BEFORE DAWN...`;
+        document.getElementById('output-thumb-b').value = `Option B (Symbolic & Dramatic):\nPrompt Visual: Dramatic historical painting thumbnail for "${tema}". Deep crimson and charcoal color scheme, central ancient scroll with chiaroscuro rim lighting${styleAppend}, 16:9 widescreen, no text, no words.\nTexto da Thumbnail (Overlay Text): THE UNWRITTEN WORDS`;
+        document.getElementById('output-thumb-c').value = `Option C (Revelation & Duality):\nPrompt Visual: Mysterious YouTube thumbnail for "${tema}". Split composition between ancient illuminated parchment and deep shadowy abyss${styleAppend}, maximum curiosity, 16:9 widescreen, no text, no words.\nTexto da Thumbnail (Overlay Text): HE HID HIS FACE`;
 
-        UI.showToast('3 Prompts de Thumbnail gerados (Modo Modelo)! Insira a API Key no topo para gerar via IA.', 'warning');
+        atualizarSeloAba(3, true);
+        UI.showToast('3 Prompts de Thumbnail gerados (Modo Modelo)! Insira a API Key para IA.', 'warning');
         AutoSave.save();
       }
     } catch (err) {
@@ -4949,7 +5385,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
   });
 
   document.getElementById('btn-gerar-prompt-seo').addEventListener('click', async () => {
-    const tema = inputTemaSeo.value.trim() || UI.getValue('select-tema', 'input-tema-custom');
+    const tema = (inputIdeiaEscolhida ? inputIdeiaEscolhida.value.trim() : '') || inputTemaSeo.value.trim() || UI.getValue('select-tema', 'input-tema-custom');
     const resumo = document.getElementById('textarea-resumo-seo').value.trim();
     const idioma = UI.getValue('select-idioma', 'input-idioma-custom');
 
@@ -4959,9 +5395,10 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       'btn-gerar-prompt-seo',
       promptText,
       'output-prompt-seo',
-      'SEO Completo gerado com sucesso!',
+      'SEO Completo e Descrição gerados com sucesso!',
       OpenRouterAPI.getModelIdeas()
     );
+    atualizarSeloAba(4, true);
   });
 
   // =========================================================================
@@ -5040,6 +5477,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       if (cardAudioPlayer) cardAudioPlayer.classList.remove('hidden');
       audioGeneratedInSession = true;
 
+      atualizarSeloAba(5, true);
       UI.showToast('Narração gerada com sucesso! Você pode ouvir e baixar o arquivo .mp3.');
       AutoSave.save();
     } catch (err) {
@@ -5079,7 +5517,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
     UI.showToast('Download da narração (.mp3) iniciado!');
   });
 
-  // Gerar Legenda (.srt via AssemblyAI)
+  // Gerar Legenda (.srt via AssemblyAI com Upload Direto para suportar 18+ minutos sem erro HTTP 413)
   btnGerarLegenda.addEventListener('click', async () => {
     if (!currentAudioBlob) {
       UI.showToast('Gere o áudio da narração primeiro antes de gerar a legenda!', 'warning');
@@ -5090,28 +5528,82 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
     if (legendasLoadingNotice) legendasLoadingNotice.classList.remove('hidden');
 
     try {
-      const response = await fetch('/api/legendas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'audio/mpeg' },
-        body: currentAudioBlob
-      });
-
-      if (response.status === 404 || response.status === 405) {
-        throw new Error('Esta funcionalidade requer que a ferramenta esteja rodando via Vercel (dark-content-studio.vercel.app). Não está disponível na versão do GitHub Pages.');
+      // 1. Obtém token da AssemblyAI do servidor para upload direto do navegador
+      let uploadToken = '';
+      try {
+        const tokenRes = await fetch('/api/legendas?action=token');
+        if (tokenRes.ok) {
+          const tokenData = await tokenRes.json();
+          uploadToken = tokenData?.token || '';
+        }
+      } catch (eToken) {
+        console.warn('[Legendas] Falha ao consultar endpoint de token:', eToken);
       }
 
-      if (!response.ok) {
-        const errJson = await response.json().catch(() => ({}));
-        throw new Error(errJson.error || `Erro na transcrição de legendas (HTTP ${response.status})`);
+      let srtText = '';
+
+      // 2. Se temos o token, faz upload direto do áudio via navegador para a AssemblyAI (sem passar pelo limite 4.5MB da Vercel)
+      if (uploadToken) {
+        console.log('[Legendas] Fazendo upload direto do navegador para AssemblyAI...');
+        const uploadRes = await fetch('https://api.assemblyai.com/v2/upload', {
+          method: 'POST',
+          headers: {
+            'Authorization': uploadToken,
+            'Content-Type': 'application/octet-stream'
+          },
+          body: currentAudioBlob
+        });
+
+        if (!uploadRes.ok) {
+          const errUpload = await uploadRes.json().catch(() => ({}));
+          throw new Error(`Falha no upload direto para AssemblyAI (HTTP ${uploadRes.status}): ${errUpload.error || 'sem detalhes'}`);
+        }
+
+        const { upload_url } = await uploadRes.json();
+        if (!upload_url) throw new Error('AssemblyAI não retornou upload_url.');
+        console.log('[Legendas] Upload direto concluído com sucesso:', upload_url);
+
+        // 3. Envia apenas a URL de áudio para /api/legendas gerar e sincronizar o SRT
+        const transcribeRes = await fetch('/api/legendas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ audio_url: upload_url })
+        });
+
+        if (!transcribeRes.ok) {
+          const errJson = await transcribeRes.json().catch(() => ({}));
+          throw new Error(errJson.error || `Erro na transcrição de legendas (HTTP ${transcribeRes.status})`);
+        }
+
+        srtText = await transcribeRes.text();
+
+      } else {
+        // Fallback: envio pelo body para áudios curtos ou servidores locais
+        const response = await fetch('/api/legendas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'audio/mpeg' },
+          body: currentAudioBlob
+        });
+
+        if (response.status === 404 || response.status === 405) {
+          throw new Error('Esta funcionalidade requer que a ferramenta esteja rodando via Vercel (dark-content-studio.vercel.app). Não está disponível na versão do GitHub Pages.');
+        }
+
+        if (!response.ok) {
+          const errJson = await response.json().catch(() => ({}));
+          throw new Error(errJson.error || `Erro na transcrição de legendas (HTTP ${response.status})`);
+        }
+
+        srtText = await response.text();
       }
 
-      const srtText = await response.text();
       currentSrtContent = srtText;
       srtGeneratedInSession = true;
 
       if (outputLegendaSrt) outputLegendaSrt.value = srtText;
       if (cardLegendaOutput) cardLegendaOutput.classList.remove('hidden');
 
+      atualizarSeloAba(5, true);
       UI.showToast('Legenda (.srt) sincronizada e gerada com sucesso via AssemblyAI!');
       AutoSave.save();
     } catch (err) {

@@ -17,8 +17,8 @@
 // considere Vercel Pro ou dividir o áudio em segmentos no frontend.
 
 const ASSEMBLYAI_BASE   = 'https://api.assemblyai.com/v2';
-const POLL_INTERVAL_MS  = 4000;  // 4 segundos entre cada verificação de status
-const POLL_TIMEOUT_MS   = 55000; // 55s máximo (5s de margem do limite de 60s do Vercel)
+const POLL_INTERVAL_MS  = 3000;   // 3 segundos entre cada verificação de status
+const POLL_TIMEOUT_MS   = 270000; // 270s (4.5 min) para suportar com folga áudios de 18+ min
 
 // ---------------------------------------------------------------------------
 // Utilitários
@@ -216,10 +216,6 @@ module.exports = async function handler(req, res) {
     return res.status(204).end();
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Método não permitido. Use POST.' });
-  }
-
   // 1. Validação da API Key
   const apiKey = process.env.ASSEMBLYAI_API_KEY;
   if (!apiKey) {
@@ -228,37 +224,65 @@ module.exports = async function handler(req, res) {
     });
   }
 
-  // 2. Validação do Content-Type (espera áudio binário)
-  const contentType = req.headers['content-type'] || '';
-  if (!contentType.includes('audio/')) {
-    return res.status(400).json({
-      error:
-        'Content-Type incorreto. Envie o arquivo de áudio MP3 com ' +
-        '"Content-Type: audio/mpeg" no corpo da requisição.',
-    });
+  // 2. GET: Entrega token para upload direto do áudio via navegador para a AssemblyAI (contorna limite 4.5MB da Vercel)
+  if (req.method === 'GET') {
+    return res.status(200).json({ token: apiKey });
   }
 
-  try {
-    // 3. Lê o body binário bruto (audio/mpeg não é auto-parseado pelo Vercel)
-    console.log('[legendas] Lendo áudio do body...');
-    const audioBuffer = await readRawBody(req);
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Método não permitido. Use GET ou POST.' });
+  }
 
-    if (!audioBuffer || audioBuffer.length === 0) {
+  const contentType = req.headers['content-type'] || '';
+
+  try {
+    let uploadUrl = '';
+
+    // Modo 1 (Recomendado para áudios longos 18+ min): Cliente enviou JSON com { audio_url } após upload direto
+    if (contentType.includes('application/json')) {
+      let bodyData = req.body;
+      if (typeof bodyData === 'string') {
+        try { bodyData = JSON.parse(bodyData); } catch (e) {}
+      } else if (!bodyData) {
+        const raw = await readRawBody(req);
+        try { bodyData = JSON.parse(raw.toString('utf-8')); } catch (e) {}
+      }
+
+      uploadUrl = bodyData?.audio_url || bodyData?.audioUrl || '';
+      if (!uploadUrl) {
+        return res.status(400).json({
+          error: 'JSON inválido: informe o campo "audio_url" retornado pelo upload da AssemblyAI.',
+        });
+      }
+      console.log('[legendas] Transcrição via URL direta de áudio recebida:', uploadUrl);
+
+    // Modo 2: Upload binário direto pelo body (áudios curtos < 4.5MB)
+    } else if (contentType.includes('audio/')) {
+      console.log('[legendas] Lendo áudio do body...');
+      const audioBuffer = await readRawBody(req);
+
+      if (!audioBuffer || audioBuffer.length === 0) {
+        return res.status(400).json({
+          error: 'Body vazio: envie o arquivo de áudio MP3 binário no corpo da requisição.',
+        });
+      }
+      console.log(`[legendas] Áudio recebido: ${audioBuffer.length} bytes`);
+
+      console.log('[legendas] Fazendo upload para AssemblyAI...');
+      uploadUrl = await uploadAudio(audioBuffer, apiKey);
+      console.log('[legendas] Upload OK:', uploadUrl);
+
+    } else {
       return res.status(400).json({
-        error: 'Body vazio: envie o arquivo de áudio MP3 binário no corpo da requisição.',
+        error:
+          'Content-Type incorreto. Envie "application/json" com { "audio_url": "..." } ou áudio com "Content-Type: audio/mpeg".',
       });
     }
-    console.log(`[legendas] Áudio recebido: ${audioBuffer.length} bytes`);
 
-    // 4. Upload para AssemblyAI
-    console.log('[legendas] Fazendo upload para AssemblyAI...');
-    const uploadUrl = await uploadAudio(audioBuffer, apiKey);
-    console.log('[legendas] Upload OK:', uploadUrl);
-
-    // 5. Solicita transcrição
+    // 3. Solicita transcrição
     const transcriptId = await requestTranscription(uploadUrl, apiKey);
 
-    // 6. Polling até completar
+    // 4. Polling até completar
     console.log('[legendas] Aguardando processamento...');
     const transcript = await pollTranscription(transcriptId, apiKey);
     console.log(`[legendas] Transcrição concluída! ${transcript.words?.length || 0} palavra(s).`);
