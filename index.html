@@ -2052,7 +2052,8 @@ POSTURA OBRIGATÓRIA DO NARRADOR:
 - A autoridade é a própria Escritura. Use 'as Escrituras registram', 'o texto bíblico afirma', citando livro, capítulo e versículo.
 - NUNCA chame a Bíblia de lenda, mito, fábula, alegoria, folclore ou tradição. NUNCA convide o espectador a duvidar ou a 'analisar criticamente'.
 - LIMITE ESTRITO DE FRASES DE DESCARTE DE CETICISMO: No máximo 1 vez em Shorts, Shorts Estendido e Médio, e no máximo 2 vezes no Longo. NUNCA repita a fórmula 'não foi X, foi Y' mais do que o limite permitido.
-- PROIBIÇÃO DE AUTODEFESA E JUSTIFICATIVAS: NUNCA use termos como 'relato histórico', 'história verdadeira', 'juízo real' ou 'evento real' para tentar justificar ou defender o relato bíblico. O narrador fala como quem crê e não precisa se defender. Narre os fatos bíblicos diretamente com solenidade, autoridade e sobriedade.
+- PROIBIÇÃO DE AUTODEFESA E JUSTIFICATIVAS: NUNCA use termos como 'fato histórico', 'fato real', 'realidade histórica', 'acontecimento real', 'relato histórico', 'história verdadeira', 'juízo real' ou 'evento real' para tentar justificar ou defender o relato bíblico. O narrador fala como quem crê e não precisa se defender. Narre os fatos bíblicos diretamente com solenidade, autoridade e sobriedade.
+- REGRA OBRIGATÓRIA DE CITAÇÕES E FALAS BÍBLICAS: Toda e qualquer citação bíblica direta ou fala de personagem bíblico colocada entre aspas DEVE obrigatoriamente ser acompanhada da sua referência bíblica imediatamente ao lado entre parênteses (ex: '...' (Livro C:V)). NUNCA deixe falas bíblicas entre aspas sem a respectiva referência.
 - Use detalhes concretos do texto bíblico (números, lugares, horários, nomes) para reforçar a realidade histórica.
 - NÃO invente evidências externas (descobertas arqueológicas, datações, estatísticas, citações de especialistas). Só mencione achados externos se forem reais e amplamente documentados. Na dúvida, apoie-se apenas na Escritura.
 - Encerramento: reafirme a soberania divina com reverência e autoridade bíblica.
@@ -2251,7 +2252,24 @@ const FORBIDDEN_TERMS = [
   { term: 'scholars suggest', pattern: /\bscholars\s+suggest\b/i },
   { term: 'traditional theology may not reveal', pattern: /\btraditional\s+theology\s+may\s+not\s+reveal\b/i },
   { term: 'book of enoch', pattern: /\bbook\s+of\s+enoch\b/i },
-  { term: 'livro de enoque', pattern: /\blivro\s+de\s+enoque\b/i }
+  { term: 'livro de enoque', pattern: /\blivro\s+de\s+enoque\b/i },
+
+  // Termos Proibidos de Autodefesa e Justificativa (Tom Defensivo Proibido)
+  { term: 'fato histórico', pattern: /\bfato\s+hist[oó]rico\b/i },
+  { term: 'historical fact', pattern: /\bhistorical\s+fact\b/i },
+  { term: 'fato real', pattern: /\bfato\s+real\b/i },
+  { term: 'real fact', pattern: /\breal\s+fact\b/i },
+  { term: 'realidade histórica', pattern: /\brealidade\s+hist[oó]rica\b/i },
+  { term: 'historical reality', pattern: /\bhistorical\s+reality\b/i },
+  { term: 'acontecimento real', pattern: /\bacontecimento\s+real\b/i },
+  { term: 'real event', pattern: /\breal\s+event\b/i },
+  { term: 'relato histórico', pattern: /\brelato\s+hist[oó]rico\b/i },
+  { term: 'historical account', pattern: /\bhistorical\s+account\b/i },
+  { term: 'história verdadeira', pattern: /\bhist[oó]ria\s+verdadeira\b/i },
+  { term: 'true story', pattern: /\btrue\s+story\b/i },
+  { term: 'juízo real', pattern: /\bju[ií]zo\s+real\b/i },
+  { term: 'real judgment', pattern: /\breal\s+judgment\b/i },
+  { term: 'evento real', pattern: /\bevento\s+real\b/i }
 ];
 
 /**
@@ -3090,7 +3108,7 @@ function limitarFrasesHistoricas(texto, estiloRoteiro = '') {
   let contagemDescarte = 0;
 
   // Regex para sentenças de descarte de ceticismo e autodefesas (PT e EN)
-  const regexDescartePT = /\b(?:(?:isso|este|esse|o)\s*(?:evento|acontecimento|relato|fato|dil[uú]vio)?\s+)?n[aã]o\s+(?:foi|era|é|se\s+trata\s+de)\s+(?:(?:um[a]?|mer[ao]|apenas|somente)\s+)*(?:hist[oó]ria|evento(?:\s+simb[oó]lico)?|par[aá]bola|conto(?:s)?(?:\s+de\s+fadas)?|s[ií]mbolo|simb[oó]lico|mito|lenda|f[aá]bula|folclore|alegoria|fic[cç][aã]o)(?:[^.!?\n]*?(?:relato\s+hist[oó]rico|hist[oó]ria\s+verdadeira|ju[ií]zo\s+real|evento\s+real)[^.!?\n]*)?[.!?]?/i;
+  const regexDescartePT = /\b(?:(?:isso|este|esse|o)\s*(?:evento|acontecimento|relato|fato|dil[uú]vio)?\s+)?n[aã]o\s+(?:foi|era|é|se\s+trata\s+de)\s+(?:(?:um[a]?|mer[ao]|apenas|somente)\s+)*(?:hist[oó]ria|evento(?:\s+simb[oó]lico)?|par[aá]bola|conto(?:s)?(?:\s+de\s+fadas)?|s[ií]mbolo|simb[oó]lico|mito|lenda|f[aá]bula|folclore|alegoria|fic[cç][aã]o)(?:[^.!?\n]*?(?:fato\s+hist[oó]rico|fato\s+real|realidade\s+hist[oó]rica|acontecimento\s+real|relato\s+hist[oó]rico|hist[oó]ria\s+verdadeira|ju[ií]zo\s+real|evento\s+real)[^.!?\n]*)?[.!?]?/i;
   const regexDescarteEN = /\b(?:(?:it\s+was|this\s+was|they\s+were|is|was)\s+not\s+(?:(?:a\s+)?(?:mere|simple|just)\s+)*(?:myth|legend|folklore|fable|parable|fairy\s+tale|fiction|symbolic\s+event|story)[^.!?\n]*[.!?]?)/i;
 
   const paragrafosProcessados = paragrafos.map(p => {
@@ -3108,9 +3126,8 @@ function limitarFrasesHistoricas(texto, estiloRoteiro = '') {
         contagemDescarte++;
         if (contagemDescarte <= limiteDescarte) {
           // Mantém a sentença autorizada até o limite, mas limpa qualquer autodefesa clichê conectada
-          let sentLimpa = sTrim.replace(/;\s*(?:[eé]|foi)\s+(?:um\s+)?relato\s+hist[oó]rico[^.!?]*/i, '.')
-                               .replace(/;\s*(?:[eé]|foi)\s+(?:um\s+)?ju[ií]zo\s+real[^.!?]*/i, '.')
-                               .replace(/,\s*mas\s+(?:uma\s+)?hist[oó]ria\s+verdadeira[^.!?]*/i, '.');
+          let sentLimpa = sTrim.replace(/[,;]\s*(?:mas\s+)?(?:[eé]|foi|trata-se\s+de)?\s*(?:um[a]?\s+)?(?:fato\s+hist[oó]rico|fato\s+real|realidade\s+hist[oó]rica|acontecimento\s+real|relato\s+hist[oó]rico|hist[oó]ria\s+verdadeira|ju[ií]zo\s+real|evento\s+real)[^.!?]*/i, '.')
+                               .replace(/;\s*(?:[eé]|foi)\s+(?:um\s+)?(?:fato\s+hist[oó]rico|ju[ií]zo\s+real|relato\s+hist[oó]rico)[^.!?]*/i, '.');
           sentLimpa = sentLimpa.replace(/\.+/g, '.').trim();
           sentencasMantidas.push(sentLimpa);
         } else {
@@ -3119,7 +3136,7 @@ function limitarFrasesHistoricas(texto, estiloRoteiro = '') {
         }
       } else {
         // Frase comum: remove termos de autodefesa isolados se existirem
-        let sentLimpa = sTrim.replace(/\b(?:(?:isso|este|este\s+relato)\s+)?(?:[eé]|foi|trata-se\s+de)\s+(?:um[a]?\s+)?(?:relato\s+hist[oó]rico|hist[oó]ria\s+verdadeira|ju[ií]zo\s+real|evento\s+real)(?:\s+(?:preservado|registrado|revelado|derramado|enviado)?\s+pelas?\s+escrituras)?\b[.,;]?\s*/gi, '');
+        let sentLimpa = sTrim.replace(/\b(?:(?:isso|este|este\s+relato)\s+)?(?:[eé]|foi|trata-se\s+de)\s+(?:um[a]?\s+)?(?:fato\s+hist[oó]rico|fato\s+real|realidade\s+hist[oó]rica|acontecimento\s+real|relato\s+hist[oó]rico|hist[oó]ria\s+verdadeira|ju[ií]zo\s+real|evento\s+real)(?:\s+(?:preservado|registrado|revelado|derramado|enviado)?\s+pelas?\s+escrituras)?\b[.,;]?\s*/gi, '');
         sentLimpa = sentLimpa.replace(/[^\S\r\n]{2,}/g, ' ').replace(/\s+([.,;:!?])/g, '$1').trim();
         if (sentLimpa.length > 5) {
           sentencasMantidas.push(sentLimpa);
@@ -3136,10 +3153,10 @@ function limitarFrasesHistoricas(texto, estiloRoteiro = '') {
   res = res.replace(/\b(?:(?:they\s+were\s+)?not\s+(?:legends?\s+or\s+myths?|myths?\s+or\s+legends?))\b/gi, (match) => {
     return '';
   });
-  res = res.replace(/\b(?:The\s+)?historical\s+fact(?:\s+of)?\b/gi, 'The reality');
+  res = res.replace(/\b(?:The\s+)?(?:historical\s+fact|real\s+fact|historical\s+reality|real\s+event|historical\s+account|true\s+story)(?:\s+of)?\b/gi, '');
 
   // Sanitização estrita contra termos proibidos de autodefesa (PROIBIÇÃO ABSOLUTA)
-  res = res.replace(/\b(?:(?:[eé]|foi|trata-se\s+de)\s+(?:um[a]?\s+)?)?(?:relato\s+hist[oó]rico|hist[oó]ria\s+verdadeira|ju[ií]zo\s+real|evento\s+real)\b/gi, '');
+  res = res.replace(/\b(?:(?:[eé]|foi|trata-se\s+de)\s+(?:um[a]?\s+)?)?(?:fato\s+hist[oó]rico|fato\s+real|realidade\s+hist[oó]rica|acontecimento\s+real|relato\s+hist[oó]rico|hist[oó]ria\s+verdadeira|ju[ií]zo\s+real|evento\s+real)\b/gi, '');
 
   res = res.replace(/[^\S\r\n]{2,}/g, ' ').replace(/[^\S\r\n]+([.,;:!?])/g, '$1');
   res = res.replace(/\n{3,}/g, '\n\n').trim();
@@ -3279,10 +3296,15 @@ function validarECorrigirAspas(texto) {
  * PONTO 2: Garante que o convite de inscrição seja sempre o ÚLTIMO parágrafo,
  * sem absolutamente nada depois dele. Se o roteiro final estiver sem convite, gera um no fim.
  */
-function garantirCtaNoUltimoParagrafo(texto, idioma = 'pt') {
+function garantirCtaNoUltimoParagrafo(texto, idioma = 'pt', estiloRoteiro = '') {
   if (!texto || typeof texto !== 'string') return texto;
   const paragrafos = texto.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
   if (paragrafos.length === 0) return texto;
+
+  const isShorts = String(estiloRoteiro).includes('Shorts') ||
+                   String(estiloRoteiro).includes('50-60') ||
+                   String(estiloRoteiro).includes('Estendido') ||
+                   String(estiloRoteiro).includes('3 minutos');
 
   const ctaRegex = /\b(?:subscrib(?:e|ing)|inscreva-se|inscrever|join\s+(?:this\s+)?channel|follow\s+(?:this\s+)?channel|acompanhe\s+este\s+canal|suscr[ií]bete|suscribir)\b/i;
 
@@ -3294,19 +3316,37 @@ function garantirCtaNoUltimoParagrafo(texto, idioma = 'pt') {
   }
 
   const id = (idioma || '').toLowerCase();
-  const ctaPadrao = id.includes('ingl') || id.includes('en')
+
+  // CTA Curto (máximo 12 palavras) para Shorts e Shorts Estendido
+  const ctaCurto = id.includes('ingl') || id.includes('en')
+    ? 'Subscribe to the channel for more biblical studies and sacred accounts.' // 11 palavras
+    : (id.includes('espanh') || id.includes('es'))
+      ? 'Suscríbete al canal para más relatos bíblicos y estudios sagrados.' // 10 palavras
+      : 'Inscreva-se no canal para mais estudos e relatos bíblicos sagrados.'; // 10 palavras
+
+  // CTA Longo para Vídeos Médios e Longos (YouTube 5-8 min e 18-20 min)
+  const ctaLongo = id.includes('ingl') || id.includes('en')
     ? 'If you seek to understand the Scriptures in their true historical and canonical depth, subscribe to this channel and continue this journey through the sacred record.'
     : (id.includes('espanh') || id.includes('es'))
-      ? 'Si deseas comprender las Escrituras en su verdadera profundidad histórica y bíblica, suscríbete al canal y acompaña nuestros próximos estudios sobre el registro sagrado.'
+      ? 'Si deseas comprender las Escrituras en su verdadera profundidad histórica e bíblica, suscríbete al canal y acompaña nuestros próximos estudios sobre el registro sagrado.'
       : 'Se você deseja compreender as Escrituras em sua verdadeira profundidade histórica e bíblica, inscreva-se no canal e continue acompanhando este estudo detalhado do relato sagrado.';
+
+  const ctaPadrao = isShorts ? ctaCurto : ctaLongo;
 
   if (ctaIndex === -1) {
     // Se o roteiro final ficou sem convite, gera no final
     paragrafos.push(ctaPadrao);
-  } else if (ctaIndex < paragrafos.length - 1) {
-    // Se o CTA existe e NÃO é o último parágrafo, move ele para o final absoluto
-    const ctaParagrafo = paragrafos.splice(ctaIndex, 1)[0];
-    paragrafos.push(ctaParagrafo);
+  } else {
+    // Se o CTA existe e for Shorts com mais de 14 palavras, substitui pelo CTA curto
+    const pCtaExistente = paragrafos[ctaIndex];
+    const palavrasCta = (pCtaExistente.match(/\S+/g) || []).length;
+    let ctaFinal = pCtaExistente;
+    if (isShorts && palavrasCta > 14) {
+      ctaFinal = ctaCurto;
+    }
+    // Remove da posição antiga e garante no final absoluto
+    paragrafos.splice(ctaIndex, 1);
+    paragrafos.push(ctaFinal);
   }
 
   return paragrafos.join('\n\n');
@@ -3998,22 +4038,24 @@ Tone of voice: '${tomVoz}'.
 Opening hook style: '${tipoGancho}'.
 
 POSTURA OBRIGATÓRIA DO NARRADOR:
-- Trate todo relato bíblico como fato histórico. Afirme diretamente: 'o fogo caiu', nunca 'o relato diz que o fogo teria caído'.
+- Trate todo relato bíblico como verdade sagrada afirmada diretamente: 'o fogo caiu', nunca 'o relato diz que o fogo teria caído'.
 - A autoridade é a própria Escritura. Use 'as Escrituras registram', 'o texto bíblico afirma', citando livro, capítulo e versículo.
 - NUNCA chame a Bíblia de lenda, mito, fábula, alegoria, folclore ou tradição. NUNCA convide o espectador a duvidar ou a 'analisar criticamente'.
-- Quando mencionar ceticismo, faça isso apenas para descartá-lo na mesma frase. Ex: 'Isso não foi folclore religioso. As Escrituras registram como fato testemunhado.'
-- Use detalhes concretos do texto bíblico (números, lugares, horários, nomes) para reforçar a realidade histórica.
+- LIMITE ESTRITO DE FRASES DE DESCARTE DE CETICISMO: No máximo 1 vez em Shorts, Shorts Estendido e Médio, e no máximo 2 vezes no Longo. NUNCA repita a fórmula 'não foi X, foi Y' mais do que o limite permitido.
+- PROIBIÇÃO DE AUTODEFESA E JUSTIFICATIVAS: NUNCA use termos como 'fato histórico', 'fato real', 'realidade histórica', 'acontecimento real', 'relato histórico', 'história verdadeira', 'juízo real' ou 'evento real' para tentar justificar ou defender o relato bíblico. O narrador fala como quem crê e não precisa se defender. Narre os fatos bíblicos diretamente com solenidade, autoridade e sobriedade.
+- REGRA OBRIGATÓRIA DE CITAÇÕES E FALAS BÍBLICAS (CAMADA 1): Toda e qualquer citação bíblica direta ou fala de personagem bíblico colocada entre aspas DEVE obrigatoriamente ser acompanhada da sua referência bíblica imediatamente ao lado entre parênteses (ex: '...' (Livro C:V)). NUNCA deixe falas bíblicas entre aspas sem a respectiva referência.
+- Use detalhes concretos do texto bíblico (números, lugares, horários, nomes) para reforçar a realidade concreta dos fatos.
 - NÃO invente evidências externas (descobertas arqueológicas, datações, estatísticas, citações de especialistas). Só mencione achados externos se forem reais e amplamente documentados. Na dúvida, apoie-se apenas na Escritura.
-- Encerramento: reafirme que o evento é história, não parábola.
+- Encerramento: reafirme a soberania divina com reverência e autoridade bíblica.
 
 EXEMPLOS DO TOM CORRETO:
-- 'O fogo caiu do céu. Isso não foi folclore religioso nem expressão poética. As Escrituras registram como fato histórico, testemunhado por milhares de pessoas.'
+- 'O fogo caiu do céu. Isso não foi folclore religioso nem expressão poética. As Escrituras registram o ocorrido diante de toda a congregação reunida.'
 - 'Não eram camponeses ingênuos aceitando o truque de um mágico. Eram cidadãos do Reino do Norte, que passaram o dia inteiro vendo os profetas de Baal fracassarem.'
 - 'A seca não foi um desastre natural. Foi a resposta divina a um crime nacional.'
-- 'O fogo que caiu no Monte Carmelo não foi uma parábola. Foi um evento testemunhado.'
 
 EXEMPLOS PROIBIDOS (nunca escrever assim):
 - 'Muitos ainda consideram a história de Noé uma fábula.'
+- 'Isso não é uma fábula, mas um fato histórico registrado nas Escrituras.' (Tom defensivo proibido!)
 - 'É crucial abordar essas evidências com um olhar crítico.'
 - 'Segundo a tradição, acredita-se que...'
 
@@ -5274,8 +5316,8 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 function apararParaLimiteMaximo(texto, maxPalavras = 3000) {
   if (!texto) return texto;
-  const palavras = texto.match(/\S+/g) || [];
-  if (palavras.length <= maxPalavras) return texto;
+  const contarPalavras = (t) => (t.match(/\S+/g) || []).length;
+  if (contarPalavras(texto) <= maxPalavras) return texto;
 
   const paragrafos = texto.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
   if (paragrafos.length <= 2) {
@@ -5292,7 +5334,7 @@ function apararParaLimiteMaximo(texto, maxPalavras = 3000) {
   // Se o penúltimo parágrafo for a conclusão ou se o último parágrafo for apenas a frase de inscrição
   if (paragrafosMiolo.length >= 3) {
     const penultimo = paragrafosMiolo[paragrafosMiolo.length - 1];
-    const palavrasPenultimo = (penultimo.match(/\S+/g) || []).length;
+    const palavrasPenultimo = contarPalavras(penultimo);
     if (palavrasPenultimo < 80) {
       blocoFinal.unshift(paragrafosMiolo.pop());
     }
@@ -5302,40 +5344,65 @@ function apararParaLimiteMaximo(texto, maxPalavras = 3000) {
   const blocoInicial = [paragrafosMiolo.shift()];
 
   // 3. Calcular orçamento disponível exclusivamente para o miolo
-  const palavrasFim = (blocoFinal.join(' ').match(/\S+/g) || []).length;
-  const palavrasInicio = (blocoInicial.join(' ').match(/\S+/g) || []).length;
+  const palavrasFim = contarPalavras(blocoFinal.join(' '));
+  const palavrasInicio = contarPalavras(blocoInicial.join(' '));
   const orcamentoMiolo = maxPalavras - palavrasInicio - palavrasFim;
 
-  let mioloAparado = [];
-  let contagemMiolo = 0;
+  const temCitacaoBiblica = (frase) => /(?:["“][^"”]{5,}["”]|(?:\b[1-3]?\s*[A-Za-zÀ-ÖØ-öø-ÿ]+\s+\d+[:\.]\d+))/i.test(frase);
 
-  for (let i = 0; i < paragrafosMiolo.length; i++) {
-    const p = paragrafosMiolo[i];
-    const pCount = (p.match(/\S+/g) || []).length;
-    if (contagemMiolo + pCount <= orcamentoMiolo) {
-      mioloAparado.push(p);
-      contagemMiolo += pCount;
-    } else {
-      // Ajuste fino dentro do último parágrafo do miolo se couberem frases completas
-      const frases = p.match(/[^.!?]+[.!?]+/g) || [p];
-      let pParcial = '';
-      for (const f of frases) {
-        const fCount = (f.match(/\S+/g) || []).length;
-        if (contagemMiolo + fCount <= orcamentoMiolo) {
-          pParcial += (pParcial ? ' ' : '') + f.trim();
-          contagemMiolo += fCount;
-        } else {
-          break;
-        }
+  // Divide os parágrafos do miolo em frases com metadados
+  let frasesMiolo = [];
+  paragrafosMiolo.forEach((p, pIdx) => {
+    const fs = p.match(/[^.!?]+(?:[.!?]+["']?|$)/g) || [p];
+    fs.forEach(f => {
+      const fTrim = f.trim();
+      if (fTrim) {
+        frasesMiolo.push({
+          texto: fTrim,
+          pIdx,
+          protegido: temCitacaoBiblica(fTrim),
+          count: contarPalavras(fTrim)
+        });
       }
-      if (pParcial) {
-        mioloAparado.push(pParcial);
-      }
-      break;
+    });
+  });
+
+  let contagemMiolo = frasesMiolo.reduce((acc, f) => acc + f.count, 0);
+
+  // Se exceder o orçamento, remove primeiro as frases acessórias que NÃO contêm citação bíblica
+  for (let i = 0; i < frasesMiolo.length && contagemMiolo > orcamentoMiolo; i++) {
+    if (!frasesMiolo[i].protegido) {
+      contagemMiolo -= frasesMiolo[i].count;
+      frasesMiolo.splice(i, 1);
+      i--; // ajusta índice após remoção
     }
   }
 
-  return [...blocoInicial, ...mioloAparado, ...blocoFinal].join('\n\n');
+  // Se ainda assim exceder o orçamento (caso de introdução longa), enxuga frases acessórias do blocoInicial
+  if (contagemMiolo + palavrasInicio + palavrasFim > maxPalavras) {
+    const fsInicio = blocoInicial[0].match(/[^.!?]+(?:[.!?]+["']?|$)/g) || [blocoInicial[0]];
+    if (fsInicio.length > 2) {
+      let novoInicioFs = [fsInicio[0]];
+      for (let j = 1; j < fsInicio.length; j++) {
+        const fTrim = fsInicio[j].trim();
+        const fCount = contarPalavras(fTrim);
+        if (contarPalavras(novoInicioFs.join(' ')) + fCount + contagemMiolo + palavrasFim <= maxPalavras) {
+          novoInicioFs.push(fTrim);
+        }
+      }
+      blocoInicial[0] = novoInicioFs.join(' ');
+    }
+  }
+
+  // Reconstrói os parágrafos do miolo
+  let mioloReconstruido = [];
+  let pAtual = '';
+  frasesMiolo.forEach(f => {
+    pAtual += (pAtual ? ' ' : '') + f.texto;
+  });
+  if (pAtual) mioloReconstruido.push(pAtual);
+
+  return [...blocoInicial, ...mioloReconstruido, ...blocoFinal].join('\n\n');
 }
 
 /**
@@ -5865,7 +5932,12 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
         resultText = limitarFrasesHistoricas(resultText, estiloRoteiro);
       }
 
-      // 5.1 Ajustar extensão estrita para respeitar o teto de palavras da duração selecionada
+      // 5.1 Garante convite de inscrição ANTES do ajuste de extensão (o CTA entra no orçamento de palavras!)
+      if (typeof garantirCtaNoUltimoParagrafo === 'function') {
+        resultText = garantirCtaNoUltimoParagrafo(resultText, idioma, estiloRoteiro);
+      }
+
+      // 5.2 Ajustar extensão estrita para respeitar o teto de palavras da duração selecionada (COM CTA INCLUÍDO)
       if (typeof ajustarExtensaoRoteiro === 'function') {
         resultText = ajustarExtensaoRoteiro(resultText, estiloRoteiro);
       }
@@ -5905,7 +5977,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
 
       // 8. Garante convite de inscrição no último parágrafo antes de auditar
       if (typeof garantirCtaNoUltimoParagrafo === 'function') {
-        resultText = garantirCtaNoUltimoParagrafo(resultText, idioma);
+        resultText = garantirCtaNoUltimoParagrafo(resultText, idioma, estiloRoteiro);
       }
 
       // 9. PARTE 1: ETAPA DE REVISÃO AUTOMÁTICA (LLM-as-a-reviewer com texto integral e KJV pré-validados)
@@ -5939,9 +6011,14 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
         resultText = await executarChecagemFinalIntegridade(resultText, idioma, modeloRoteiro);
       }
 
-      // 11. PONTO 2: Garante convite de inscrição no último parágrafo (se o revisor tiver apagado, anexa no fim)
+      // 11. PONTO 2: Garante convite de inscrição no último parágrafo
       if (typeof garantirCtaNoUltimoParagrafo === 'function') {
-        resultText = garantirCtaNoUltimoParagrafo(resultText, idioma);
+        resultText = garantirCtaNoUltimoParagrafo(resultText, idioma, estiloRoteiro);
+      }
+
+      // 11.1 Garante que mesmo após a revisão a extensão final permaneça estritamente no teto
+      if (typeof ajustarExtensaoRoteiro === 'function') {
+        resultText = ajustarExtensaoRoteiro(resultText, estiloRoteiro);
       }
 
       // 12. Validação e correção automática de aspas abertas/fechadas

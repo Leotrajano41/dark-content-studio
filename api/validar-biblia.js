@@ -218,10 +218,10 @@ function alinharTrechoCorrespondente(versiculoReal, textoCitado, langKey = 'pt')
     return textoCitado;
   }
 
-  // 2. Divisão de sentenças / orações incluindo "!" (. ! ? ; :)
-  const sentencas = vFormatado.match(/[^.?!;:]+[.?!;:]*/g) || [vFormatado];
+  // 2. Divisão de orações e sentenças incluindo vírgulas e pontuações (. ! ? ; : ,)
+  const sentencas = vFormatado.match(/[^.?!;:,]+[.?!;:,]*/g) || [vFormatado];
 
-  // Avalia correspondência de cada sentença com a citação da IA
+  // Avalia correspondência de cada oração com a citação da IA
   const avaliacoes = sentencas.map(s => {
     const sPalavras = limparPalavras(s).filter(p => p.length > 2);
     let matches = 0;
@@ -232,25 +232,58 @@ function alinharTrechoCorrespondente(versiculoReal, textoCitado, langKey = 'pt')
     return { sent: s.trim(), score, matches, total: sPalavras.length };
   });
 
-  // Filtra as sentenças que realmente correspondem ao que a IA citou
-  // Nunca inclui introduções de fala ("e disse:", "Nisso o SENHOR disse a Moisés:") que tenham 0 matches
-  const indicesComMatch = [];
+  // Filtra as orações que realmente correspondem ao que a IA citou
+  // Agrupa em blocos contíguos de correspondência (rejeita falsos matches isolados após quebra de orações sem match)
+  const oracoesValidas = [];
   avaliacoes.forEach((av, idx) => {
-    if (av.matches >= 2 || (av.total <= 3 && av.matches >= 1 && av.score >= 0.5) || av.score >= 0.3) {
-      indicesComMatch.push(idx);
+    if (av.matches >= 2 || (av.total <= 3 && av.matches >= 1 && av.score >= 0.4) || av.score >= 0.3) {
+      oracoesValidas.push(idx);
     }
   });
 
-  if (indicesComMatch.length > 0) {
-    const minIdx = Math.min(...indicesComMatch);
-    const maxIdx = Math.max(...indicesComMatch);
-    let trecho = sentencas.slice(minIdx, maxIdx + 1).map(s => s.trim()).join(' ');
-    // Quando a citação terminar em ':', ',' ou ';', fechar com ponto final '.'
-    trecho = trecho.replace(/[:;,]\s*$/, '.');
-    return trecho;
+  if (oracoesValidas.length === 0) {
+    return vFormatado.replace(/[:;,]\s*$/, '.');
   }
 
-  return vFormatado.replace(/[:;,]\s*$/, '.');
+  // Identifica blocos contíguos de orações
+  const blocos = [];
+  let blocoAtual = [oracoesValidas[0]];
+  for (let i = 1; i < oracoesValidas.length; i++) {
+    const idx = oracoesValidas[i];
+    const prevIdx = oracoesValidas[i - 1];
+    // Se a distância for <= 2 (tolera no máximo 1 oração intermediária divergente na mesma citação contígua)
+    if (idx - prevIdx <= 2) {
+      blocoAtual.push(idx);
+    } else {
+      blocos.push(blocoAtual);
+      blocoAtual = [idx];
+    }
+  }
+  blocos.push(blocoAtual);
+
+  // Escolhe o bloco com a maior soma de matches (o bloco principal da citação)
+  let melhorBloco = blocos[0];
+  let maiorMatches = 0;
+  for (const b of blocos) {
+    const totalMatches = b.reduce((acc, idx) => acc + avaliacoes[idx].matches, 0);
+    if (totalMatches > maiorMatches) {
+      maiorMatches = totalMatches;
+      melhorBloco = b;
+    }
+  }
+
+  let minIdx = Math.min(...melhorBloco);
+  let maxIdx = Math.max(...melhorBloco);
+
+  // Se a primeira oração for introdução narrativa de fala (terminada em ':' com verbos de elocução), descarta-a
+  if (minIdx < maxIdx && /[:]\s*$/.test(sentencas[minIdx]) && /\b(?:disse|falou|respondeu|clamou|chamou|disseram|perguntou|dizendo)\b/i.test(sentencas[minIdx])) {
+    minIdx++;
+  }
+
+  let trecho = sentencas.slice(minIdx, maxIdx + 1).map(s => s.trim()).join(' ');
+  // Quando a citação terminar em ':', ',' ou ';', fechar com ponto final '.'
+  trecho = trecho.replace(/[:;,]\s*$/, '.');
+  return trecho;
 }
 
 
@@ -286,6 +319,20 @@ function validarRoteiroBiblico(texto, idioma = 'pt') {
   // Regex para capturar referências bíblicas (ex: Filipenses 4:13, 1 Coríntios 13:4-7, Atos 2:42-47)
   const refRegex = /\b([1-3]?\s*[A-Za-zÀ-ÖØ-öø-ÿ]+)\s+(\d+)[:\.](\d+)(?:-(\d+))?\b/g;
 
+  // Pré-coleta capítulos bíblicos mencionados no roteiro inteiro para suporte da Camada 2
+  const capitulosGerais = [];
+  const capRegexGeral = /\b([1-3]?\s*[A-Za-zÀ-ÖØ-öø-ÿ]+)\s+(\d+)\b/g;
+  let cmg;
+  while ((cmg = capRegexGeral.exec(texto)) !== null) {
+    const bCan = findBook(cmg[1].trim());
+    if (bCan) {
+      const cNum = parseInt(cmg[2], 10);
+      if (!capitulosGerais.some(cg => cg.bookCan.id === bCan.id && cg.chap === cNum)) {
+        capitulosGerais.push({ bookCan: bCan, chap: cNum });
+      }
+    }
+  }
+
   // Processa o texto parágrafo a parágrafo para garantir integridade e isolamento de índices
   let paragrafos = texto.split(/\n\s*\n/);
   const alteracoes = [];
@@ -314,7 +361,8 @@ function validarRoteiroBiblico(texto, idioma = 'pt') {
       }
     }
 
-    if (refs.length === 0) continue;
+    const temAspas = /(["“])([^"”]{10,600}?)(["”])/.test(p);
+    if (refs.length === 0 && !temAspas) continue;
     totalRefs += refs.length;
 
     // 1. Checa referências inexistentes
@@ -412,6 +460,74 @@ function validarRoteiroBiblico(texto, idioma = 'pt') {
               const novaCitacao = q.openChar + textoSubstituto + q.closeChar;
               substituicoes.push({ q, novaCitacao });
             }
+          }
+        }
+      } else {
+        // CAMADA 2: Fala entre aspas SEM referência bíblica adjacente
+        // Varre os capítulos bíblicos do parágrafo ou texto para verificar se a fala corresponde a algum versículo bíblico
+        const pCit = limparP(q.text);
+        if (pCit.length >= 3) {
+          const capitulosAlvo = refs.length > 0 ? refs : capitulosGerais;
+          let melhorCorrespondencia = null;
+
+          for (const r of capitulosAlvo) {
+            const bookEntry = currentBible.find(b => {
+              const nameNorm = normalizeStr(b.name || '');
+              return nameNorm === normalizeStr(r.bookCan.pt) ||
+                     nameNorm === normalizeStr(r.bookCan.en) ||
+                     nameNorm === normalizeStr(r.bookCan.es);
+            });
+
+            if (bookEntry && bookEntry.chapters && bookEntry.chapters[r.chap - 1]) {
+              const verses = bookEntry.chapters[r.chap - 1];
+              for (let vIdx = 0; vIdx < verses.length; vIdx++) {
+                // Versículo individual
+                const vText = verses[vIdx];
+                const pVerse = limparP(vText);
+                let matches = 0;
+                for (const w of pCit) {
+                  if (pVerse.includes(w)) matches++;
+                }
+                const score = matches / pCit.length;
+                if ((matches >= 3 || score >= 0.3) && (!melhorCorrespondencia || score > melhorCorrespondencia.score)) {
+                  melhorCorrespondencia = {
+                    refSugerida: `${r.bookCan[langKey] || r.bookCan.pt} ${r.chap}:${vIdx + 1}`,
+                    textoAlmeida: vText,
+                    score,
+                    matches
+                  };
+                }
+
+                // Par contíguo (ex: vIdx + 1 e vIdx + 2)
+                if (vIdx + 1 < verses.length) {
+                  const pairText = vText + ' ' + verses[vIdx + 1];
+                  const pPair = limparP(pairText);
+                  let pairMatches = 0;
+                  for (const w of pCit) {
+                    if (pPair.includes(w)) pairMatches++;
+                  }
+                  const pairScore = pairMatches / pCit.length;
+                  if (pairMatches > matches && (!melhorCorrespondencia || pairScore > melhorCorrespondencia.score)) {
+                    melhorCorrespondencia = {
+                      refSugerida: `${r.bookCan[langKey] || r.bookCan.pt} ${r.chap}:${vIdx + 1}-${vIdx + 2}`,
+                      textoAlmeida: pairText,
+                      score: pairScore,
+                      matches: pairMatches
+                    };
+                  }
+                }
+              }
+            }
+          }
+
+          if (melhorCorrespondencia && (melhorCorrespondencia.matches >= 4 || (pCit.length <= 6 && melhorCorrespondencia.matches >= 3) || melhorCorrespondencia.score >= 0.35)) {
+            alteracoes.push({
+              tipo: 'CITACAO_PARA_REVISAO',
+              referenciaSugerida: melhorCorrespondencia.refSugerida,
+              textoCitado: q.text,
+              textoAlmeida: melhorCorrespondencia.textoAlmeida,
+              motivo: `Fala entre aspas identificada com semelhança a ${melhorCorrespondencia.refSugerida}, mas sem referência bíblica ao lado. Recomendada conferência manual.`
+            });
           }
         }
       }
