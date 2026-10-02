@@ -202,9 +202,19 @@ function alinharTrechoCorrespondente(versiculoReal, textoCitado, langKey = 'pt')
   const palavrasCitado = normCitado.split(' ').filter(p => p.length > 2);
   const palavrasReal = normReal.split(' ').filter(p => p.length > 2);
 
+  // Se a citação não tiver correspondência mínima de palavras com o versículo real (ex: exclamação solta), não substitui
+  let matchesTotal = 0;
+  for (const p of palavrasCitado) {
+    if (palavrasReal.includes(p)) matchesTotal++;
+  }
+  if (matchesTotal === 0 || (matchesTotal / Math.max(palavrasCitado.length, 1) < 0.15 && matchesTotal < 2)) {
+    return textoCitado;
+  }
+
   if (palavrasCitado.length >= palavrasReal.length * 0.75) {
     return vFormatado;
   }
+
 
   const sentencas = vFormatado.match(/[^.?;:]+[.?;:]?/g) || [vFormatado];
   if (sentencas.length <= 1) {
