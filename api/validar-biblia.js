@@ -196,50 +196,56 @@ function alinharTrechoCorrespondente(versiculoReal, textoCitado, langKey = 'pt')
     });
   }
 
-  const normCitado = normalizeStr(textoCitado);
-  const normReal = normalizeStr(vFormatado);
+  const limparPalavras = (str) => {
+    return normalizeStr(str).replace(/[^\w\s]/g, ' ').split(/\s+/).filter(p => p.length > 0);
+  };
 
-  const palavrasCitado = normCitado.split(' ').filter(p => p.length > 2);
-  const palavrasReal = normReal.split(' ').filter(p => p.length > 2);
+  const palavrasCitado = limparPalavras(textoCitado);
+  const palavrasReal = limparPalavras(vFormatado);
 
-  // Se a citação não tiver correspondência mínima de palavras com o versículo real (ex: exclamação solta), não substitui
-  let matchesTotal = 0;
-  for (const p of palavrasCitado) {
-    if (palavrasReal.includes(p)) matchesTotal++;
-  }
-  if (matchesTotal === 0 || (matchesTotal / Math.max(palavrasCitado.length, 1) < 0.15 && matchesTotal < 2)) {
+  if (palavrasCitado.length === 0 || palavrasReal.length === 0) {
     return textoCitado;
   }
 
-  if (palavrasCitado.length >= palavrasReal.length * 0.75) {
-    return vFormatado;
-  }
-
-
-  const sentencas = vFormatado.match(/[^.?;:]+[.?;:]?/g) || [vFormatado];
-  if (sentencas.length <= 1) {
-    return vFormatado;
-  }
-
-  const avaliacoes = sentencas.map(s => {
-    const sNorm = normalizeStr(s);
-    const palavrasS = sNorm.split(' ');
-    let matches = 0;
-    for (const p of palavrasCitado) {
-      if (palavrasS.includes(p)) matches++;
+  // 1. Se a citação já bate com a Almeida (ignorando maiúsculas e pontuação), não alterar nada!
+  const strCitadoJoin = palavrasCitado.join(' ');
+  const strRealJoin = palavrasReal.join(' ');
+  if (strRealJoin.includes(strCitadoJoin)) {
+    // Se estiver em português, garante apenas que SENHOR fique em maiúsculas se houver
+    if (langKey === 'pt' && /\bsenhor\b/i.test(textoCitado)) {
+      return textoCitado.replace(/\b(?:ao|do|o|no|pelo|para\s+o)?\s*senhor\b/gi, (m) => m.replace(/senhor/i, 'SENHOR'));
     }
-    const score = matches / Math.max(palavrasCitado.length, 1);
-    return { sent: s.trim(), score, matches };
+    return textoCitado;
+  }
+
+  // 2. Divisão de sentenças / orações incluindo "!" (. ! ? ; :)
+  const sentencas = vFormatado.match(/[^.?!;:]+[.?!;:]*/g) || [vFormatado];
+
+  // Avalia correspondência de cada sentença com a citação da IA
+  const avaliacoes = sentencas.map(s => {
+    const sPalavras = limparPalavras(s).filter(p => p.length > 2);
+    let matches = 0;
+    for (const p of sPalavras) {
+      if (palavrasCitado.includes(p)) matches++;
+    }
+    const score = sPalavras.length > 0 ? (matches / sPalavras.length) : 0;
+    return { sent: s.trim(), score, matches, total: sPalavras.length };
   });
 
-  const selecionadas = avaliacoes.filter(a => a.matches >= 2 || a.score >= 0.2);
+  // Filtra as sentenças que realmente correspondem ao que a IA citou
+  // Nunca inclui introduções de fala ("e disse:", "Nisso o SENHOR disse a Moisés:") que tenham 0 matches
+  const indicesComMatch = [];
+  avaliacoes.forEach((av, idx) => {
+    if (av.matches >= 2 || (av.total <= 3 && av.matches >= 1 && av.score >= 0.5) || av.score >= 0.3) {
+      indicesComMatch.push(idx);
+    }
+  });
 
-  if (selecionadas.length > 0) {
-    const indices = selecionadas.map(s => sentencas.findIndex(orig => orig.trim() === s.sent)).filter(idx => idx !== -1);
-    const minIdx = Math.min(...indices);
-    const maxIdx = Math.max(...indices);
+  if (indicesComMatch.length > 0) {
+    const minIdx = Math.min(...indicesComMatch);
+    const maxIdx = Math.max(...indicesComMatch);
     let trecho = sentencas.slice(minIdx, maxIdx + 1).map(s => s.trim()).join(' ');
-    // Ponto 2: Quando a citação bíblica terminar em ':' ou ',' ou ';', fechar com ponto final '.'
+    // Quando a citação terminar em ':', ',' ou ';', fechar com ponto final '.'
     trecho = trecho.replace(/[:;,]\s*$/, '.');
     return trecho;
   }
@@ -294,13 +300,16 @@ function validarRoteiroBiblico(texto, idioma = 'pt') {
     while ((match = refRegex.exec(p)) !== null) {
       const bookCan = findBook(match[1].trim());
       if (bookCan) {
+        const leadingSpaces = match[0].match(/^\s*/)[0].length;
+        const cleanRef = match[0].trim();
         refs.push({
-          rawRef: match[0].trim(),
+          rawRef: cleanRef,
           bookCan,
           chap: parseInt(match[2], 10),
           vStart: parseInt(match[3], 10),
           vEnd: match[4] ? parseInt(match[4], 10) : null,
-          index: match.index
+          index: match.index + leadingSpaces,
+          endIndex: match.index + leadingSpaces + cleanRef.length
         });
       }
     }
@@ -327,49 +336,91 @@ function validarRoteiroBiblico(texto, idioma = 'pt') {
       }
     }
 
-    // 2. Checa citações entre aspas e substitui pelo texto bíblico exato
+    // 2. Checa citações entre aspas e associa por proximidade estrita
     const quoteRegex = /(["“])([^"”]{10,600}?)(["”])/g;
     let quotes = [];
     let qm;
-    while ((qm = quoteRegex.exec(p)) !== null) {
+    const pOriginal = p;
+    while ((qm = quoteRegex.exec(pOriginal)) !== null) {
       quotes.push({
         full: qm[0],
         openChar: qm[1],
         closeChar: qm[3],
         text: qm[2].trim(),
-        index: qm.index
+        index: qm.index,
+        endIndex: qm.index + qm[0].length
       });
     }
 
+    const limparP = (str) => normalizeStr(str).replace(/[^\w\s]/g, ' ').split(/\s+/).filter(p => p.length > 2);
+    const substituicoes = [];
+
     for (const q of quotes) {
-      let closestRef = null;
-      let minDistance = Infinity;
+      let associatedRef = null;
 
       for (const r of refs) {
-        const dist = Math.abs(r.index - q.index);
-        if (dist < minDistance) {
-          minDistance = dist;
-          closestRef = r;
+        // Caso A: Aspas imediatamente antes da referência: "..." (Livro C:V) ou "...", em Livro C:V
+        if (r.index >= q.endIndex) {
+          const gap = r.index - q.endIndex;
+          const textoEntre = pOriginal.slice(q.endIndex, r.index);
+          const semParen = textoEntre.replace(/\s*\([^\)]*$/, '');
+          if (gap <= 60 && !textoEntre.includes('\n') && !/[.!?]/.test(semParen) && /^[\s,]*\(?(?:conforme|segundo|de\s+acordo\s+com|em|como\s+diz)?[\s]*$/i.test(semParen)) {
+            associatedRef = r;
+            break;
+          }
         }
-      }
-
-      if (closestRef) {
-        const realVerse = getVerseText(currentBible, closestRef.bookCan, closestRef.chap, closestRef.vStart, closestRef.vEnd);
-        if (realVerse) {
-          const textoSubstituto = alinharTrechoCorrespondente(realVerse, q.text, langKey);
-
-          if (q.text !== textoSubstituto) {
-            alteracoes.push({
-              tipo: 'CITACAO_CORRIGIDA',
-              referencia: closestRef.rawRef,
-              textoAnterior: q.text,
-              textoCorreto: textoSubstituto
-            });
-            const novaCitacao = q.openChar + textoSubstituto + q.closeChar;
-            p = p.replace(q.full, novaCitacao);
+        // Caso B: Aspas imediatamente depois da referência: Livro C:V: "..." ou Livro C:V, que diz: "..."
+        else if (q.index >= r.endIndex) {
+          const gap = q.index - r.endIndex;
+          const textoEntre = pOriginal.slice(r.endIndex, q.index);
+          if (gap <= 60 && !textoEntre.includes('\n') && !/[.!?\)]/.test(textoEntre) && /^[\s:,]*(?:que\s+(?:diz|afirma|declara|registra))?[\s:,]*$/i.test(textoEntre)) {
+            associatedRef = r;
+            break;
           }
         }
       }
+
+      if (associatedRef) {
+        const realVerse = getVerseText(currentBible, associatedRef.bookCan, associatedRef.chap, associatedRef.vStart, associatedRef.vEnd);
+        if (realVerse) {
+          const pCit = limparP(q.text);
+          const pReal = limparP(realVerse);
+          let matches = 0;
+          for (const pWord of pCit) {
+            if (pReal.includes(pWord)) matches++;
+          }
+          const score = pCit.length > 0 ? (matches / pCit.length) : 0;
+          const semelhançaSuficiente = (matches >= 2) || (pCit.length <= 4 && matches >= 1) || (score >= 0.2);
+
+          if (!semelhançaSuficiente) {
+            // Requisito 2: Se tiver baixa semelhança com o versículo, registra no relatório para conferência manual
+            alteracoes.push({
+              tipo: 'CITACAO_PARA_REVISAO',
+              referencia: associatedRef.rawRef,
+              textoCitado: q.text,
+              motivo: 'Texto citado possui baixa semelhança com o versículo da Almeida. Mantido para revisão manual.'
+            });
+          } else {
+            const textoSubstituto = alinharTrechoCorrespondente(realVerse, q.text, langKey);
+            if (q.text !== textoSubstituto) {
+              alteracoes.push({
+                tipo: 'CITACAO_CORRIGIDA',
+                referencia: associatedRef.rawRef,
+                textoAnterior: q.text,
+                textoCorreto: textoSubstituto
+              });
+              const novaCitacao = q.openChar + textoSubstituto + q.closeChar;
+              substituicoes.push({ q, novaCitacao });
+            }
+          }
+        }
+      }
+    }
+
+    // Aplica as substituições em ordem reversa para garantir a exatidão milimétrica dos offsets
+    substituicoes.sort((a, b) => b.q.index - a.q.index);
+    for (const sub of substituicoes) {
+      p = p.slice(0, sub.q.index) + sub.novaCitacao + p.slice(sub.q.endIndex);
     }
 
     // Ponto 3: Limpeza de pontuação duplicada imediatamente após aspas e normalização

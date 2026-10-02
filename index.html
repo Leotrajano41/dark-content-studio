@@ -2107,7 +2107,10 @@ ABSOLUTE CANONICAL & STORYTELLING RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
    - STRICTLY FORBIDDEN INTERNAL LABELS: NEVER speak or write internal editorial labels such as "Canonical Boundary", "Opening Hook", "Section", "Point", "Outline", "Part".
    - STRICTLY FORBIDDEN BACKSTAGE PHRASES: "in the next section", "as we transition", "we will explore", "as we continue our exploration", "moving ahead", "as the narrative unfolds".
 9. LITERAL SCRIPTURE FIDELITY & LANGUAGE COMPLIANCE:
-   - Scripture quotes must be literal and verbatim from the target language's authorized Bible version (English: KJV).
+   - Scripture quotes must be literal and verbatim from the target language's authorized Bible version:
+     * Portuguese: João Ferreira de Almeida (Almeida). Quando o roteiro for em português: Escreva 100% em português do Brasil. Citações bíblicas pela Almeida. Nunca use palavras em inglês no roteiro.
+     * English: King James Version (KJV). (The KJV rule applies ONLY when the script language is English).
+     * Spanish: Reina-Valera 1909 (RVR1909).
    - Deliver 100% of the script in the selected content language.`;
 
 /**
@@ -3878,8 +3881,8 @@ const PromptEngine = {
       return {
         name: 'Português (Brasil)',
         code: 'pt',
-        bibleTranslation: 'João Ferreira de Almeida (JFA)',
-        citationRule: 'As citações bíblicas diretas DEVEM ser 100% literais da tradução João Ferreira de Almeida (JFA).',
+        bibleTranslation: 'João Ferreira de Almeida (Almeida)',
+        citationRule: 'Escreva 100% em português do Brasil. Citações bíblicas pela Almeida. Nunca use palavras em inglês no roteiro.',
         titleHookSample: 'A REAL Verdade Sobre a Profecia (Muitos Não Sabem)'
       };
     }
@@ -4015,7 +4018,7 @@ EXEMPLOS PROIBIDOS (nunca escrever assim):
 - 'Segundo a tradição, acredita-se que...'
 
 MANDATORY BIBLICAL AND CONTENT RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
-1. 100% LANGUAGE COMPLIANCE: The entire script MUST be written 100% in ${lang.name}.
+1. 100% LANGUAGE COMPLIANCE: ${lang.code === 'pt' ? 'Escreva 100% em português do Brasil. Citações bíblicas pela Almeida. Nunca use palavras em inglês no roteiro.' : `The entire script MUST be written 100% in ${lang.name}.`}
 2. MANDATORY HOOK IN FIRST 2-3 SENTENCES (ITEM 1):
    - The opening 2-3 sentences MUST be a concrete, striking factual statement drawn directly from the canonical biblical text.
    - PROHIBITED to open with: "The biblical narrative includes…", "In the biblical narrative...", "The Bible tells us...", "Throughout history...".
@@ -4056,7 +4059,7 @@ FINAL DIRECTIVES:
     return `Act as a senior biblical documentary script architect for the channel 'Explicador Bíblico'.
 Create a rigorous 7-section documentary outline dynamically built for a long-form video on: '${ideia}'.
 Tone of voice: '${tomVoz}'.
-Language: 100% in ${lang.name}.
+Language: ${lang.code === 'pt' ? '100% em português do Brasil. Citações bíblicas pela Almeida. Nunca use palavras em inglês no roteiro.' : `100% in ${lang.name}.`}
 
 MANDATORY 7-SECTION GENERIC NARRATIVE TEMPLATE (APPLIES TO ANY THEME OR PASSAGE):
 Every biblical documentary MUST follow this precise 7-part narrative progression:
@@ -4163,7 +4166,7 @@ VERSES: [List of specific scripture verses exclusive to Section 7]`;
 
     return `Act as a senior documentary scriptwriter and master storyteller for biblical YouTube channels following the proven formula of 'Explicador Bíblico'.
 Write SECTION ${secaoNumero} of ${totalSecoes} for the long-form documentary script: '${ideia}'.
-Language: 100% in ${lang.name}.
+Language: ${lang.code === 'pt' ? '100% em português do Brasil. Citações bíblicas pela Almeida. Nunca use palavras em inglês no roteiro.' : `100% in ${lang.name}.`}
 Tone of voice: '${tomVoz}'.
 
 SECTION ARCHITECTURE (GENERIC NARRATIVE TEMPLATE):
