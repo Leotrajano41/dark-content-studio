@@ -183,7 +183,64 @@ function getVerseText(bibleData, bookCanonical, chapterNum, verseStart, verseEnd
 }
 
 /**
+ * Alinha e extrai a porção correspondente do versículo bíblico real da Almeida (ARA) / KJV
+ * quando a citação do narrador for parcial. Substitui apenas as palavras citadas pelas literais.
+ */
+function alinharTrechoCorrespondente(versiculoReal, textoCitado, langKey = 'pt') {
+  if (!versiculoReal || !textoCitado) return versiculoReal;
+
+  let vFormatado = versiculoReal;
+  if (langKey === 'pt') {
+    vFormatado = vFormatado.replace(/\b(?:ao|do|o|no|pelo|para\s+o)?\s*senhor\b/gi, (match) => {
+      return match.replace(/senhor/i, 'SENHOR');
+    });
+  }
+
+  const normCitado = normalizeStr(textoCitado);
+  const normReal = normalizeStr(vFormatado);
+
+  const palavrasCitado = normCitado.split(' ').filter(p => p.length > 2);
+  const palavrasReal = normReal.split(' ').filter(p => p.length > 2);
+
+  if (palavrasCitado.length >= palavrasReal.length * 0.75) {
+    return vFormatado;
+  }
+
+  const sentencas = vFormatado.match(/[^.?;:]+[.?;:]?/g) || [vFormatado];
+  if (sentencas.length <= 1) {
+    return vFormatado;
+  }
+
+  const avaliacoes = sentencas.map(s => {
+    const sNorm = normalizeStr(s);
+    const palavrasS = sNorm.split(' ');
+    let matches = 0;
+    for (const p of palavrasCitado) {
+      if (palavrasS.includes(p)) matches++;
+    }
+    const score = matches / Math.max(palavrasCitado.length, 1);
+    return { sent: s.trim(), score, matches };
+  });
+
+  const selecionadas = avaliacoes.filter(a => a.matches >= 2 || a.score >= 0.2);
+
+  if (selecionadas.length > 0) {
+    const indices = selecionadas.map(s => sentencas.findIndex(orig => orig.trim() === s.sent)).filter(idx => idx !== -1);
+    const minIdx = Math.min(...indices);
+    const maxIdx = Math.max(...indices);
+    let trecho = sentencas.slice(minIdx, maxIdx + 1).map(s => s.trim()).join(' ');
+    // Ponto 2: Quando a citação bíblica terminar em ':' ou ',' ou ';', fechar com ponto final '.'
+    trecho = trecho.replace(/[:;,]\s*$/, '.');
+    return trecho;
+  }
+
+  return vFormatado.replace(/[:;,]\s*$/, '.');
+}
+
+
+/**
  * Valida referências bíblicas e corrige citações e referências inexistentes
+
  *
  * @param {string} texto
  * @param {string} idioma
@@ -213,173 +270,110 @@ function validarRoteiroBiblico(texto, idioma = 'pt') {
   // Regex para capturar referências bíblicas (ex: Filipenses 4:13, 1 Coríntios 13:4-7, Atos 2:42-47)
   const refRegex = /\b([1-3]?\s*[A-Za-zÀ-ÖØ-öø-ÿ]+)\s+(\d+)[:\.](\d+)(?:-(\d+))?\b/g;
 
-  let textoCorrigido = texto;
+  // Processa o texto parágrafo a parágrafo para garantir integridade e isolamento de índices
+  let paragrafos = texto.split(/\n\s*\n/);
   const alteracoes = [];
-  const matches = [];
-  let m;
+  let totalRefs = 0;
 
-  while ((m = refRegex.exec(texto)) !== null) {
-    const rawRef = m[0].trim();
-    const rawBook = m[1].trim();
-    const chap = parseInt(m[2], 10);
-    const vStart = parseInt(m[3], 10);
-    const vEnd = m[4] ? parseInt(m[4], 10) : null;
+  for (let pIdx = 0; pIdx < paragrafos.length; pIdx++) {
+    let p = paragrafos[pIdx];
+    let refs = [];
+    let match;
+    refRegex.lastIndex = 0;
 
-    const bookCan = findBook(rawBook);
-    if (bookCan) {
-      matches.push({
-        index: m.index,
-        length: m[0].length,
-        rawRef,
-        bookCan,
-        chap,
-        vStart,
-        vEnd
-      });
-    }
-  }
-
-  // Processa do final para o início para não desalinhar os índices de substituição
-  for (let i = matches.length - 1; i >= 0; i--) {
-    const match = matches[i];
-    const realText = getVerseText(currentBible, match.bookCan, match.chap, match.vStart, match.vEnd);
-
-    if (!realText) {
-      // Caso 1: A referência NÃO EXISTE na Bíblia (capítulo ou versículo fora do limite canônico)
-      // Substitui a citação específica mantendo a fluidez do sentido
-      const bookName = match.bookCan[langKey] || match.bookCan.pt;
-      const refPattern = new RegExp(`(?:em|conforme|segundo|de acordo com|como diz em|no livro de)?\\s*${match.rawRef.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1")}`, 'gi');
-      
-      const generalReplacement = langKey === 'en' ? 'in the Holy Scriptures'
-                                : langKey === 'es' ? 'en las Sagradas Escrituras'
-                                : 'nas Sagradas Escrituras';
-
-      textoCorrigido = textoCorrigido.replace(refPattern, generalReplacement);
-      alteracoes.push({
-        tipo: 'REFERENCIA_INEXISTENTE_REMOVIDA',
-        referencia: match.rawRef,
-        motivo: `Capítulo ou versículo não existe em ${bookName}`,
-        substituicao: generalReplacement
-      });
-    } else {
-function normalizeWords(str) {
-  if (!str) return '';
-  return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\s]/g, '').trim();
-}
-
-/**
- * Encontra a melhor correspondência dentro do versículo bíblico caso o usuário
- * tenha citado apenas uma oração/frase do versículo longo.
- */
-function findBestQuoteMatch(realVerse, quotedText) {
-  if (!realVerse || !quotedText) return realVerse;
-
-  // Se o texto citado for longo (próximo do tamanho do versículo), usa o versículo inteiro
-  if (quotedText.length >= realVerse.length * 0.75) {
-    return realVerse;
-  }
-
-  // 1. Divide o versículo em sentenças/cláusulas lógicas (; . ! ?)
-  const segments = realVerse.split(/(?<=[;\.!\?])\s+/);
-  if (segments.length > 1) {
-    let bestSegment = realVerse;
-    let bestScore = 0;
-
-    for (let i = 0; i < segments.length; i++) {
-      for (let j = i; j < segments.length; j++) {
-        const candidate = segments.slice(i, j + 1).join(' ').trim();
-        const candWords = normalizeWords(candidate).split(/\s+/);
-        const quoteWords = normalizeWords(quotedText).split(/\s+/);
-
-        const overlap = quoteWords.filter(w => candWords.includes(w)).length;
-        const score = overlap / Math.max(candWords.length, quoteWords.length);
-
-        if (score > bestScore && score >= 0.35) {
-          bestScore = score;
-          bestSegment = candidate;
-        }
+    while ((match = refRegex.exec(p)) !== null) {
+      const bookCan = findBook(match[1].trim());
+      if (bookCan) {
+        refs.push({
+          rawRef: match[0].trim(),
+          bookCan,
+          chap: parseInt(match[2], 10),
+          vStart: parseInt(match[3], 10),
+          vEnd: match[4] ? parseInt(match[4], 10) : null,
+          index: match.index
+        });
       }
     }
 
-    if (bestScore >= 0.35) {
-      return bestSegment;
-    }
-  }
+    if (refs.length === 0) continue;
+    totalRefs += refs.length;
 
-  // 2. Divide por vírgulas para versículos compostos por orações menores
-  const commaSegments = realVerse.split(/(?<=[,;])\s+/);
-  if (commaSegments.length > 1) {
-    let bestComma = realVerse;
-    let bestCommaScore = 0;
-
-    for (let i = 0; i < commaSegments.length; i++) {
-      for (let j = i; j < Math.min(i + 3, commaSegments.length); j++) {
-        const candidate = commaSegments.slice(i, j + 1).join(' ').trim();
-        const candWords = normalizeWords(candidate).split(/\s+/);
-        const quoteWords = normalizeWords(quotedText).split(/\s+/);
-
-        const overlap = quoteWords.filter(w => candWords.includes(w)).length;
-        const score = overlap / Math.max(candWords.length, quoteWords.length);
-
-        if (score > bestCommaScore && score >= 0.4) {
-          bestCommaScore = score;
-          bestComma = candidate.replace(/[,;]$/, '');
-        }
+    // 1. Checa referências inexistentes
+    for (const r of refs) {
+      const realText = getVerseText(currentBible, r.bookCan, r.chap, r.vStart, r.vEnd);
+      if (!realText) {
+        const bookName = r.bookCan[langKey] || r.bookCan.pt;
+        const refPattern = new RegExp(`(?:em|conforme|segundo|de acordo com|como diz em|no livro de)?\\s*${r.rawRef.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1")}`, 'gi');
+        const generalReplacement = langKey === 'en' ? 'in the Holy Scriptures'
+                                  : langKey === 'es' ? 'en las Sagradas Escrituras'
+                                  : 'nas Sagradas Escrituras';
+        p = p.replace(refPattern, generalReplacement);
+        alteracoes.push({
+          tipo: 'REFERENCIA_INEXISTENTE_REMOVIDA',
+          referencia: r.rawRef,
+          motivo: `Capítulo ou versículo não existe em ${bookName}`,
+          substituicao: generalReplacement
+        });
       }
     }
 
-    if (bestCommaScore >= 0.4) {
-      return bestComma;
+    // 2. Checa citações entre aspas e substitui pelo texto bíblico exato
+    const quoteRegex = /(["“])([^"”]{10,600}?)(["”])/g;
+    let quotes = [];
+    let qm;
+    while ((qm = quoteRegex.exec(p)) !== null) {
+      quotes.push({
+        full: qm[0],
+        openChar: qm[1],
+        closeChar: qm[3],
+        text: qm[2].trim(),
+        index: qm.index
+      });
     }
-  }
 
-  return realVerse;
-}
+    for (const q of quotes) {
+      let closestRef = null;
+      let minDistance = Infinity;
 
-      // Caso 2: A referência EXISTE. Busca citação correspondente na vizinhança (antes ou depois da referência)
-      const windowStart = Math.max(0, match.index - 400);
-      const windowEnd = Math.min(textoCorrigido.length, match.index + match.length + 500);
-      const snippet = textoCorrigido.slice(windowStart, windowEnd);
+      for (const r of refs) {
+        const dist = Math.abs(r.index - q.index);
+        if (dist < minDistance) {
+          minDistance = dist;
+          closestRef = r;
+        }
+      }
 
-      // Procura todas as citações entre aspas na janela
-      const quoteRegex = /["“]([^"”]{10,500})["”]/g;
-      let qm;
-      while ((qm = quoteRegex.exec(snippet)) !== null) {
-        const textoCitado = qm[1].trim();
-        const textoCorretoAlvo = findBestQuoteMatch(realText, textoCitado);
+      if (closestRef) {
+        const realVerse = getVerseText(currentBible, closestRef.bookCan, closestRef.chap, closestRef.vStart, closestRef.vEnd);
+        if (realVerse) {
+          const textoSubstituto = alinharTrechoCorrespondente(realVerse, q.text, langKey);
 
-        const candWords = normalizeWords(realText).split(/\s+/);
-        const quoteWords = normalizeWords(textoCitado).split(/\s+/);
-        const overlap = quoteWords.filter(w => candWords.includes(w)).length;
-
-        // Se pelo menos 3 palavras coincidem ou há mais de 30% de similaridade com o versículo bíblico
-        if (overlap >= 3 || (overlap / Math.max(1, quoteWords.length) >= 0.3)) {
-          if (normalizeWords(textoCitado) !== normalizeWords(textoCorretoAlvo)) {
-            const quoteFull = qm[0];
-            const newQuote = quoteFull.charAt(0) + textoCorretoAlvo + quoteFull.charAt(quoteFull.length - 1);
-            
-            // Substitui na janela e reconstrói o texto
-            const idxInSnippet = qm.index;
-            const absoluteIdx = windowStart + idxInSnippet;
-            textoCorrigido = textoCorrigido.slice(0, absoluteIdx) + newQuote + textoCorrigido.slice(absoluteIdx + quoteFull.length);
-
+          if (q.text !== textoSubstituto) {
             alteracoes.push({
               tipo: 'CITACAO_CORRIGIDA',
-              referencia: match.rawRef,
-              textoAnterior: textoCitado,
-              textoCorreto: textoCorretoAlvo
+              referencia: closestRef.rawRef,
+              textoAnterior: q.text,
+              textoCorreto: textoSubstituto
             });
-            break; // Citação corrigida para esta referência
+            const novaCitacao = q.openChar + textoSubstituto + q.closeChar;
+            p = p.replace(q.full, novaCitacao);
           }
         }
       }
     }
+
+    // Ponto 3: Limpeza de pontuação duplicada imediatamente após aspas e normalização
+    p = p.replace(/([.!?]["”'])\s*[.,;:]+/g, '$1');
+    p = p.replace(/(["”'])\1+/g, '$1');
+    p = p.replace(/([.!?])\s*\1+/g, '$1');
+
+    paragrafos[pIdx] = p;
   }
 
   return {
-    textoCorrigido,
+    textoCorrigido: paragrafos.join('\n\n'),
     alteracoes,
-    totalReferencias: matches.length
+    totalReferencias: totalRefs
   };
 }
 
