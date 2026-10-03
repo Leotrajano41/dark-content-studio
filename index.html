@@ -3367,24 +3367,18 @@ function validarECorrigirAspas(texto) {
  */
 function garantirCtaNoUltimoParagrafo(texto, idioma = 'pt', estiloRoteiro = '') {
   if (!texto || typeof texto !== 'string') return texto;
-  const paragrafos = texto.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
-  if (paragrafos.length === 0) return texto;
+  let limpo = texto.trim();
+  if (!limpo) return texto;
 
-  const totalPalavrasTexto = paragrafos.reduce((acc, p) => acc + (p.match(/\S+/g) || []).length, 0);
+  const totalPalavrasTexto = (limpo.match(/\S+/g) || []).length;
   const isShorts = String(estiloRoteiro).includes('Shorts') ||
                    String(estiloRoteiro).includes('50-60') ||
                    String(estiloRoteiro).includes('Estendido') ||
                    String(estiloRoteiro).includes('3 minutos') ||
                    (totalPalavrasTexto < 350);
 
-  const ctaRegex = /\b(?:subscrib(?:e|ing)|inscreva-se|inscrever|join\s+(?:this\s+)?channel|follow\s+(?:this\s+)?channel|acompanhe\s+este\s+canal|suscr[ií]bete|suscribir)\b/i;
-
-  let ctaIndex = -1;
-  for (let i = 0; i < paragrafos.length; i++) {
-    if (ctaRegex.test(paragrafos[i])) {
-      ctaIndex = i;
-    }
-  }
+  // Regex para capturar frases completas de CTA (sem apagar conteúdo bíblico ou histórico ao redor)
+  const ctaSentenceRegex = /(?:^|[.!?]\s*)(?:[^.!?\n]*\b(?:subscrib(?:e|ing)|inscreva-se|inscrever|join\s+(?:this\s+)?channel|follow\s+(?:this\s+)?channel|acompanhe\s+este\s+canal|suscr[ií]bete|suscribir)\b[^.!?\n]*[.!?]?)/gi;
 
   const id = (idioma || '').toLowerCase();
 
@@ -3404,15 +3398,28 @@ function garantirCtaNoUltimoParagrafo(texto, idioma = 'pt', estiloRoteiro = '') 
 
   const ctaPadrao = isShorts ? ctaCurto : ctaLongo;
 
-  if (ctaIndex === -1) {
-    // Se o roteiro final ficou sem convite, anexa no final
-    paragrafos.push(ctaPadrao);
-  } else {
-    // SEMPRE substitui qualquer CTA gerado pela IA pelo CTA de texto fixo padronizado
-    paragrafos.splice(ctaIndex, 1);
-    paragrafos.push(ctaPadrao);
+  let paragrafos = limpo.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  if (paragrafos.length === 0) return ctaPadrao;
+
+  // 1. Limpa chamadas de CTA existentes das sentenças sem apagar frases de história
+  paragrafos = paragrafos.map(p => {
+    let pLimpo = p.replace(ctaSentenceRegex, (match) => {
+      // Se a oração iniciava com pontuação (. ! ?), preserva a pontuação anterior
+      const leadingPunct = match.match(/^[.!?]/);
+      return leadingPunct ? leadingPunct[0] : '';
+    }).trim();
+    // Normaliza pontuação residual e espaços
+    pLimpo = pLimpo.replace(/\s+([.,;:!?])/g, '$1').replace(/[^\S\r\n]{2,}/g, ' ');
+    return pLimpo;
+  }).filter(Boolean);
+
+  // 2. Se o último parágrafo já for idêntico ao CTA padrão, mantém; senão anexa o CTA padrão isolado
+  const ultimoP = paragrafos[paragrafos.length - 1] || '';
+  if (ultimoP.toLowerCase() === ctaPadrao.toLowerCase()) {
+    return paragrafos.join('\n\n');
   }
 
+  paragrafos.push(ctaPadrao);
   return paragrafos.join('\n\n');
 }
 window.garantirCtaNoUltimoParagrafo = garantirCtaNoUltimoParagrafo;
@@ -6732,8 +6739,18 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       return;
     }
 
-    // Higienização final garantida sem marcações ou rótulos
-    const roteiro = limparTextoParaNarracao(textoNarracao);
+    // Remove referências bíblicas entre parênteses para síntese TTS, preservando 100% de todas as frases da narrativa
+    let roteiro = textoNarracao.replace(/\s*\(\s*(?:[1-3]\s+|[1-3]ª\s+|[1-3]º\s+)?[A-Za-zÀ-ÖØ-öø-ÿ.]+\s+\d+(?:[:\.]\d+(?:[,\s\-–—/]+(?:\d+|[A-Za-zÀ-ÖØ-öø-ÿ.]+))*)*\s*\)/g, '');
+    roteiro = roteiro.replace(/\s+([.,;:!?])/g, '$1').replace(/[^\S\r\n]{2,}/g, ' ').trim();
+
+    // Log completo no console do navegador para auditoria e comparação exata
+    console.log('[btnGerarAudio] === CONFERÊNCIA DE TEXTO ENVIADO AO /api/narrar ===');
+    console.log('[btnGerarAudio] Texto presente na caixa (textareaNarracaoLimpa):\n', textoNarracao);
+    console.log('[btnGerarAudio] Texto enviado para /api/narrar:\n', roteiro);
+    console.log(`[btnGerarAudio] Caracteres na caixa: ${textoNarracao.length} | Caracteres enviados: ${roteiro.length}`);
+    if (textoNarracao.length !== roteiro.length) {
+      console.log('[btnGerarAudio] Nota: Diferença refere-se à supressão de referências bíblicas entre parênteses para a locução neural.');
+    }
 
     const voz = document.getElementById('select-voz-audio').value || 'onyx';
     const tom = UI.getValue('select-tom', 'input-tom-custom') || 'Investigativo e Curioso';

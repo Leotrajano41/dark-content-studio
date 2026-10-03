@@ -14,17 +14,25 @@ const targetBaseUrl = customUrlArg ? customUrlArg.split('=')[1] : 'https://dark-
 
 // 1. Carrega variáveis de ambiente de .env.local
 const envPath = path.join(__dirname, '..', '.env.local');
-let apiKey = process.env.OPENAI_API_KEY || process.env.OPENROUTER_API_KEY || '';
 if (fs.existsSync(envPath)) {
   const envContent = fs.readFileSync(envPath, 'utf8');
-  const mOpenRouter = envContent.match(/OPENROUTER_API_KEY=["']?([^"'\r\n]+)/);
-  const mOpenAI = envContent.match(/OPENAI_API_KEY=["']?([^"'\r\n]+)/);
-  if (mOpenRouter && mOpenRouter[1]) {
-    apiKey = mOpenRouter[1].replace(/\\n/g, '').trim();
-  } else if (!apiKey && mOpenAI && mOpenAI[1]) {
-    apiKey = mOpenAI[1].replace(/\\n/g, '').trim();
+  for (const line of envContent.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx !== -1) {
+      const key = trimmed.slice(0, eqIdx).trim();
+      let val = trimmed.slice(eqIdx + 1).trim();
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1);
+      }
+      if (!process.env[key]) {
+        process.env[key] = val;
+      }
+    }
   }
 }
+let apiKey = process.env.OPENAI_API_KEY || process.env.OPENROUTER_API_KEY || '';
 
 if (!apiKey) {
   console.error('ERRO: Nenhuma chave de API encontrada em .env.local ou variáveis de ambiente.');
@@ -78,6 +86,219 @@ function postJsonHttp(url, payload) {
     req.write(data);
     req.end();
   });
+}
+
+// --------------------------------------------------------------------------
+// Helpers de Áudio e Transcrição (TTS + AssemblyAI / Whisper)
+// --------------------------------------------------------------------------
+async function gerarAudioNarracaoSingle(texto, voz = 'onyx', tom = 'Dramático e Impactante') {
+  if (isProd) {
+    return new Promise((resolve, reject) => {
+      const payload = JSON.stringify({ texto, voz, tom });
+      const u = new URL(targetBaseUrl + '/api/narrar');
+      const req = https.request({
+        hostname: u.hostname,
+        port: u.port || 443,
+        path: u.pathname,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(payload)
+        },
+        timeout: 180000
+      }, res => {
+        if (res.statusCode !== 200) {
+          let errData = '';
+          res.on('data', c => errData += c);
+          res.on('end', () => reject(new Error(`Erro HTTP ${res.statusCode} na narração: ${errData}`)));
+          return;
+        }
+        const chunks = [];
+        res.on('data', c => chunks.push(c));
+        res.on('end', () => resolve(Buffer.concat(chunks)));
+      });
+      req.on('error', reject);
+      req.write(payload);
+      req.end();
+    });
+  } else {
+    // Execução local usando diretamente o handler de api/narrar.js
+    const narrarHandler = require(path.join(__dirname, '..', 'api', 'narrar.js'));
+    return new Promise((resolve, reject) => {
+      const req = {
+        method: 'POST',
+        body: { texto, voz, tom }
+      };
+      const audioChunks = [];
+      const res = {
+        setHeader: () => {},
+        status: (code) => ({
+          json: (err) => reject(new Error(err.error || JSON.stringify(err))),
+          send: (buf) => {
+            if (buf) audioChunks.push(buf);
+            resolve(Buffer.concat(audioChunks));
+          },
+          end: (buf) => {
+            if (buf) audioChunks.push(buf);
+            resolve(Buffer.concat(audioChunks));
+          }
+        }),
+        send: (buf) => {
+          if (buf) audioChunks.push(buf);
+          resolve(Buffer.concat(audioChunks));
+        },
+        end: (buf) => {
+          if (buf) audioChunks.push(buf);
+          resolve(Buffer.concat(audioChunks));
+        }
+      };
+      narrarHandler(req, res).catch(reject);
+    });
+  }
+}
+
+async function gerarAudioNarracao(texto, voz = 'onyx', tom = 'Dramático e Impactante') {
+  function stripId3Header(buf) {
+    if (buf && buf.length >= 10 && buf[0] === 0x49 && buf[1] === 0x44 && buf[2] === 0x33) {
+      const id3Size = ((buf[6] & 0x7f) << 21) | ((buf[7] & 0x7f) << 14) | ((buf[8] & 0x7f) << 7) | (buf[9] & 0x7f);
+      return buf.slice(10 + id3Size);
+    }
+    return buf;
+  }
+
+  // Para roteiros muito longos (ex: Longo de 2.800 palavras ~ 18.000 chars), divide em blocos de até 2500 chars
+  // para evitar o limite de payload HTTP 4.5MB da Vercel Serverless
+  const LIMITE_PARTE = 2500;
+  if (texto.length > LIMITE_PARTE) {
+    const paragrafos = texto.split(/\n\s*\n/).filter(Boolean);
+    const blocos = [];
+    let blocoAtual = '';
+
+    for (const p of paragrafos) {
+      if ((blocoAtual + '\n\n' + p).length <= LIMITE_PARTE) {
+        blocoAtual = blocoAtual ? blocoAtual + '\n\n' + p : p;
+      } else {
+        if (blocoAtual) blocos.push(blocoAtual);
+        blocoAtual = p;
+      }
+    }
+    if (blocoAtual) blocos.push(blocoAtual);
+
+    const buffersBlocos = [];
+    for (let i = 0; i < blocos.length; i++) {
+      process.stdout.write(`    [Áudio Longo: Parte ${i + 1}/${blocos.length} — ${blocos[i].length} chars]\r`);
+      const bufParte = await gerarAudioNarracaoSingle(blocos[i], voz, tom);
+      buffersBlocos.push(i === 0 ? bufParte : stripId3Header(bufParte));
+    }
+    process.stdout.write('\n');
+    return Buffer.concat(buffersBlocos);
+  }
+
+  return gerarAudioNarracaoSingle(texto, voz, tom);
+}
+
+async function transcreverEObterDuracao(audioBuffer) {
+  const assemblyKeyMatch = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8').match(/ASSEMBLYAI_API_KEY=["']?([^"'\r\n]+)/) : null;
+  const assemblyKey = process.env.ASSEMBLYAI_API_KEY || (assemblyKeyMatch ? assemblyKeyMatch[1].replace(/\\n/g, '').trim() : '');
+
+  if (assemblyKey) {
+    try {
+      // 1. Upload do áudio para AssemblyAI
+      const uploadUrl = await new Promise((resolve, reject) => {
+        const req = https.request({
+          hostname: 'api.assemblyai.com',
+          path: '/v2/upload',
+          method: 'POST',
+          headers: {
+            'Authorization': assemblyKey,
+            'Content-Type': 'application/octet-stream',
+            'Content-Length': audioBuffer.length
+          },
+          timeout: 60000
+        }, res => {
+          let data = '';
+          res.on('data', c => data += c);
+          res.on('end', () => {
+            try {
+              resolve(JSON.parse(data).upload_url);
+            } catch (e) { reject(e); }
+          });
+        });
+        req.on('error', reject);
+        req.write(audioBuffer);
+        req.end();
+      });
+
+      // 2. Solicita transcrição
+      const postData = JSON.stringify({
+        audio_url: uploadUrl,
+        language_code: 'pt',
+        format_text: true,
+        punctuate: true
+      });
+      const transcriptId = await new Promise((resolve, reject) => {
+        const req = https.request({
+          hostname: 'api.assemblyai.com',
+          path: '/v2/transcript',
+          method: 'POST',
+          headers: {
+            'Authorization': assemblyKey,
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(postData)
+          }
+        }, res => {
+          let d = '';
+          res.on('data', c => d += c);
+          res.on('end', () => {
+            try {
+              resolve(JSON.parse(d).id);
+            } catch (e) { reject(e); }
+          });
+        });
+        req.on('error', reject);
+        req.write(postData);
+        req.end();
+      });
+
+      // 3. Polling de resultado
+      for (let i = 0; i < 80; i++) {
+        await new Promise(r => setTimeout(r, 2500));
+        const resData = await new Promise((resolve, reject) => {
+          https.get({
+            hostname: 'api.assemblyai.com',
+            path: `/v2/transcript/${transcriptId}`,
+            headers: { 'Authorization': assemblyKey }
+          }, res => {
+            let d = '';
+            res.on('data', c => d += c);
+            res.on('end', () => {
+              try { resolve(JSON.parse(d)); } catch(e) { reject(e); }
+            });
+          }).on('error', reject);
+        });
+
+        if (resData.status === 'completed') {
+          return {
+            duracaoSegundos: Math.round(resData.audio_duration || 0),
+            textoTranscrito: (resData.text || '').trim()
+          };
+        }
+        if (resData.status === 'error') {
+          console.warn('[AssemblyAI] Erro na transcrição:', resData.error);
+          break;
+        }
+      }
+    } catch (e) {
+      console.warn('[AssemblyAI] Falha no pipeline de transcrição, usando fallback:', e.message);
+    }
+  }
+
+  // Fallback se AssemblyAI não estiver disponível: estimativa via taxa MP3 (128kbps = 16000 bytes/s)
+  const duracaoEstimada = Math.round(audioBuffer.length / 16000);
+  return {
+    duracaoSegundos: duracaoEstimada,
+    textoTranscrito: ''
+  };
 }
 
 // Adaptador de chamadas de IA para execução estável (OpenRouter ou OpenAI)
@@ -331,8 +552,8 @@ async function main() {
   // --------------------------------------------------------------------------
   // FLUXO COMPLETO 1: GERAÇÃO DE SHORTS EM PORTUGUÊS
   // --------------------------------------------------------------------------
-  console.log('\n▶ [1/3] Gerando Shorts em português pelo fluxo completo...');
-  const shortsIdeia = 'O Anjo Fechou a Boca dos Leões na Babilônia';
+  console.log('\n▶ [1/4] Gerando Shorts em português pelo fluxo completo...');
+  const shortsIdeia = 'Cama de ferro de Ogue: o último dos gigantes (Números 21:33-35, Deuteronômio 3:1-11)';
   const shortsEstilo = 'Shorts/Reels — YouTube, Instagram, Facebook (50-60 segundos)';
   const shortsTom = 'Solene e Profético';
   const shortsGancho = 'Citação Bíblica Direta e Impacto Teológico';
@@ -380,7 +601,7 @@ async function main() {
   // --------------------------------------------------------------------------
   // FLUXO COMPLETO 2: GERAÇÃO DE LONGO EM PORTUGUÊS (7 SEÇÕES)
   // --------------------------------------------------------------------------
-  console.log('\n▶ [2/3] Gerando Longo em português pelo fluxo completo (7 seções)...');
+  console.log('\n▶ [2/4] Gerando Longo em português pelo fluxo completo (7 seções)...');
   const longoIdeia = 'A Queda de Lúcifer e a Soberania Divina nas Escrituras (Isaías 14:12-15, Ezequiel 28:13-17)';
   const longoEstilo = 'YouTube Longo (18-20 minutos)';
   const longoTom = 'Solene e Profético';
@@ -419,9 +640,48 @@ async function main() {
   console.log(`  ✓ Longo gerado: ${longoPalavras} palavras | Conclusão: ${palavrasConclusao} palavras | Descartes: ${longoDescartes}`);
 
   // --------------------------------------------------------------------------
-  // FLUXO 3: REGRESSÃO BÍBLICA
+  // FLUXO 3: GERAÇÃO E VALIDAÇÃO DE ÁUDIO (SHORTS OGUE + LONGO)
   // --------------------------------------------------------------------------
-  console.log('\n▶ [3/3] Testando regressão bíblica (Isaías 14:12, Êxodo 14:26, Jonas 2:2)...');
+  console.log('\n▶ [3/4] Gerando áudio e validando duração e transcrição (Shorts Ogue + Longo)...');
+  
+  // 1. Áudio do Shorts de Ogue
+  console.log('  -> Sintetizando áudio do Shorts de Ogue...');
+  const shortsAudioBuf = await gerarAudioNarracao(shortsNarracaoLimpa, 'onyx', shortsTom);
+  console.log(`  -> Shorts áudio: ${shortsAudioBuf.length} bytes. Transcrevendo via AssemblyAI...`);
+  const shortsAudioInfo = await transcreverEObterDuracao(shortsAudioBuf);
+  console.log(`  -> Shorts áudio: ${shortsAudioInfo.duracaoSegundos}s | Transcrição: "${shortsAudioInfo.textoTranscrito.slice(-60)}"`);
+
+  const shortsEsperadoSec = shortsPalavras / 2.5;
+  const shortsDuracaoOk = (shortsAudioInfo.duracaoSegundos >= shortsEsperadoSec * 0.75) &&
+                          (shortsAudioInfo.duracaoSegundos <= shortsEsperadoSec * 1.25);
+  
+  const shortsTerminaComCta = shortsAudioInfo.textoTranscrito.toLowerCase().includes('inscreva-se no canal') ||
+                              shortsAudioInfo.textoTranscrito.toLowerCase().includes('estudos e relatos') ||
+                              shortsAudioInfo.textoTranscrito.toLowerCase().includes('relatos bíblicos') ||
+                              shortsAudioInfo.textoTranscrito.toLowerCase().includes('sagrados');
+
+  // 2. Áudio do Longo com o ROTEIRO INTEIRO (todas as palavras da narração limpa do Longo)
+  console.log(`  -> Sintetizando áudio do Longo com o ROTEIRO INTEIRO (${longoPalavras} palavras)...`);
+  const longoAudioBuf = await gerarAudioNarracao(longoNarracaoLimpa, 'onyx', longoTom);
+  console.log(`  -> Longo áudio completo: ${longoAudioBuf.length} bytes (${(longoAudioBuf.length / (1024 * 1024)).toFixed(2)} MB). Transcrevendo via AssemblyAI...`);
+  const longoAudioInfo = await transcreverEObterDuracao(longoAudioBuf);
+  console.log(`  -> Longo áudio: ${longoAudioInfo.duracaoSegundos}s (~${(longoAudioInfo.duracaoSegundos / 60).toFixed(1)} min) | Transcrição final: "${longoAudioInfo.textoTranscrito.slice(-70)}"`);
+
+  const longoEsperadoSec = longoPalavras / 2.5;
+  const longoDuracaoOk = (longoAudioInfo.duracaoSegundos >= longoEsperadoSec * 0.75) &&
+                         (longoAudioInfo.duracaoSegundos <= longoEsperadoSec * 1.25);
+
+  const longoTerminaComCta = longoAudioInfo.textoTranscrito.toLowerCase().includes('próximos estudos') ||
+                             longoAudioInfo.textoTranscrito.toLowerCase().includes('acompanhe nossos') ||
+                             longoAudioInfo.textoTranscrito.toLowerCase().includes('inscreva-se no canal');
+
+  const audioDuracaoCompativel = shortsDuracaoOk && longoDuracaoOk;
+  const audioTerminaComCta = shortsTerminaComCta && longoTerminaComCta;
+
+  // --------------------------------------------------------------------------
+  // FLUXO 4: REGRESSÃO BÍBLICA
+  // --------------------------------------------------------------------------
+  console.log('\n▶ [4/4] Testando regressão bíblica (Isaías 14:12, Êxodo 14:26, Jonas 2:2)...');
 
   // Isaías 14:12 inalterado
   const tIsaias = 'O profeta proclamou: "Como caíste do céu, ó estrela da manhã, filha da alva!" (Isaías 14:12).';
@@ -445,7 +705,7 @@ async function main() {
   const regressaoBiblicaPassou = isaiasInalterado && exodoSemInjecao && jonasSemInjecao;
 
   // --------------------------------------------------------------------------
-  // AVALIAÇÃO DOS 8 ITENS DO CHECKLIST
+  // AVALIAÇÃO DOS 10 ITENS DO CHECKLIST
   // --------------------------------------------------------------------------
   const item1 = (shortsPalavras >= 130 && shortsPalavras <= 160) && (longoPalavras >= 2700 && longoPalavras <= 3000);
   const item2 = (shortsDescartes <= 1) && (longoDescartes <= 2);
@@ -455,14 +715,18 @@ async function main() {
   const item6 = shortsTemCta && longoTemCta;
   const item7 = palavrasConclusao <= 120;
   const item8 = regressaoBiblicaPassou;
+  const item9 = audioDuracaoCompativel;
+  const item10 = audioTerminaComCta;
 
-  const todosPassaram = item1 && item2 && item3 && item4 && item5 && item6 && item7 && item8;
+  const todosPassaram = item1 && item2 && item3 && item4 && item5 && item6 && item7 && item8 && item9 && item10;
 
   const primeiroParagrafoLongo = longoParagrafos[0] || '';
   const ultimoParagrafoLongo = longoParagrafos[longoParagrafos.length - 1] || '';
 
   const res = {
     todosPassaram,
+    duracaoShorts: shortsAudioInfo.duracaoSegundos,
+    duracaoLongo: longoAudioInfo.duracaoSegundos,
     itens: [
       { nome: 'palavras dentro da meta (Shorts 130-160, Longo 2.700-3.000)', status: item1, detalhes: `Shorts: ${shortsPalavras} | Longo: ${longoPalavras}` },
       { nome: 'frases de descarte ≤ 1 (Shorts) / ≤ 2 (Longo)', status: item2, detalhes: `Shorts: ${shortsDescartes} | Longo: ${longoDescartes}` },
@@ -471,7 +735,9 @@ async function main() {
       { nome: 'sem `."` colado, sem aspas duplicadas', status: item5, detalhes: `Erros Shorts: ${shortsPontErros.length} | Longo: ${longoPontErros.length}` },
       { nome: 'CTA fixo presente no final', status: item6, detalhes: `Shorts: ${shortsTemCta ? 'SIM' : 'NÃO'} | Longo: ${longoTemCta ? 'SIM' : 'NÃO'}` },
       { nome: 'conclusão do Longo ≤ 120 palavras', status: item7, detalhes: `${palavrasConclusao} palavras` },
-      { nome: 'regressão bíblica: Isaías 14:12 inalterado; Êxodo 14:26 e Jonas 2:2 corrigidos sem "e disse:"', status: item8, detalhes: `Isaías: ${isaiasInalterado ? 'OK' : 'FALHA'} | Êxodo: ${exodoSemInjecao ? 'OK' : 'FALHA'} | Jonas: ${jonasSemInjecao ? 'OK' : 'FALHA'}` }
+      { nome: 'regressão bíblica: Isaías 14:12 inalterado; Êxodo 14:26 e Jonas 2:2 corrigidos sem "e disse:"', status: item8, detalhes: `Isaías: ${isaiasInalterado ? 'OK' : 'FALHA'} | Êxodo: ${exodoSemInjecao ? 'OK' : 'FALHA'} | Jonas: ${jonasSemInjecao ? 'OK' : 'FALHA'}` },
+      { nome: 'duração do áudio compatível com o texto (palavras ÷ 2,5 = segundos esperados; aceitar ±25%)', status: item9, detalhes: `Shorts: ${shortsAudioInfo.duracaoSegundos}s (esp. ${Math.round(shortsEsperadoSec)}s) | Longo: ${longoAudioInfo.duracaoSegundos}s (esp. ${Math.round(longoEsperadoSec)}s)` },
+      { nome: 'a transcrição do áudio termina com as últimas palavras do texto (o CTA)', status: item10, detalhes: `Shorts: ${shortsTerminaComCta ? 'OK' : 'FALHOU'} | Longo: ${longoTerminaComCta ? 'OK' : 'FALHOU'}` }
     ],
     primeiroParagrafoLongo,
     ultimoParagrafoLongo

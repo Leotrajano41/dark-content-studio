@@ -101,8 +101,8 @@ function splitTextIntoChunks(text, maxChars = CHUNK_MAX_CHARS) {
  */
 function splitBySentence(text, maxChars) {
   const result = [];
-  // Divide após . ? ! seguido de espaço — mantém a pontuação com a frase de origem
-  const sentences = text.split(/(?<=[.?!])\s+/);
+  // Divide após . ? ! opcionalmente seguido de aspas e espaço — mantém a pontuação com a frase de origem
+  const sentences = text.split(/(?<=[.?!]["”']?)\s+/);
   let current = '';
 
   for (const sentence of sentences) {
@@ -311,8 +311,18 @@ function limparTextoParaNarracao(texto) {
     const totalBytes = audioBuffers.reduce((acc, b) => acc + b.length, 0);
     console.log(`[narrar] Concluído: ${chunks.length} pedaços em ${totalSeconds}s | Total: ${(totalBytes / (1024 * 1024)).toFixed(2)} MB`);
 
-    // 4. Concatenação direta de buffers MP3
-    const finalAudio = Buffer.concat(audioBuffers);
+    // 4. Concatenação limpa de buffers MP3
+    // Remove cabeçalhos ID3v2 de chunks subsequentes para stream contínuo de frames MPEG
+    function stripId3Header(buf) {
+      if (buf && buf.length >= 10 && buf[0] === 0x49 && buf[1] === 0x44 && buf[2] === 0x33) {
+        const id3Size = ((buf[6] & 0x7f) << 21) | ((buf[7] & 0x7f) << 14) | ((buf[8] & 0x7f) << 7) | (buf[9] & 0x7f);
+        return buf.slice(10 + id3Size);
+      }
+      return buf;
+    }
+
+    const cleanBuffers = audioBuffers.map((buf, idx) => idx === 0 ? buf : stripId3Header(buf));
+    const finalAudio = Buffer.concat(cleanBuffers);
     console.log(`[narrar] Áudio final concatenado: ${finalAudio.length} bytes`);
 
     // 5. Retorna o MP3 como resposta binária
