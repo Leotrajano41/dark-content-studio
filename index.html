@@ -988,6 +988,185 @@ textarea.h-180 {
     width: 100%;
   }
 }
+
+/* ==========================================================================
+   Painel Lateral: Guia Passo a Passo (Drawer)
+   ========================================================================== */
+.guia-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 12, 22, 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 10005;
+  display: flex;
+  justify-content: flex-end;
+  opacity: 1;
+  transition: opacity 0.25s ease;
+}
+.guia-overlay.hidden {
+  display: none;
+}
+.guia-drawer {
+  width: 100%;
+  max-width: 580px;
+  height: 100%;
+  background: #101626;
+  border-left: 1px solid rgba(229, 184, 105, 0.3);
+  box-shadow: -15px 0 45px rgba(0, 0, 0, 0.75);
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.guia-header {
+  padding: 18px 24px;
+  background: rgba(15, 23, 42, 0.98);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-shrink: 0;
+}
+.guia-header-info h3 {
+  margin: 0;
+  font-size: 1.18rem;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.guia-header-info p {
+  margin: 4px 0 0 0;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+}
+.guia-body {
+  padding: 22px 24px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.guia-secao-bloco {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.guia-secao-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(229, 184, 105, 0.12);
+  color: var(--accent-gold);
+  border: 1px solid rgba(229, 184, 105, 0.35);
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  width: fit-content;
+}
+.guia-passo-card {
+  background: rgba(17, 24, 39, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.2s ease;
+}
+.guia-passo-card:hover {
+  border-color: rgba(229, 184, 105, 0.4);
+  background: rgba(24, 33, 53, 0.85);
+}
+.guia-passo-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.guia-passo-numero {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e5b869, #b8860b);
+  color: #0b0f19;
+  font-weight: 800;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+.guia-passo-titulo {
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+.guia-passo-detalhes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: #cbd5e1;
+  padding-left: 40px;
+}
+.guia-detalhe-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.guia-tag-acao {
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.tag-onde {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+}
+.tag-oque {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+.tag-aparece {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+.guia-passo-nota {
+  margin-top: 4px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  background: rgba(229, 184, 105, 0.08);
+  border-left: 3px solid var(--accent-gold);
+  color: #fde68a;
+}
+.guia-footer {
+  padding: 14px 24px;
+  background: rgba(15, 23, 42, 0.98);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
   </style>
 </head>
 <body>
@@ -1035,6 +1214,13 @@ textarea.h-180 {
             <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
           </svg>
           Temas Salvos (<span id="badge-total-temas-salvos">0</span>)
+        </button>
+        <button id="btn-abrir-guia" class="btn btn-secondary" title="Abrir Guia Passo a Passo do fluxo completo">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+          </svg>
+          📖 Guia Passo a Passo
         </button>
         <button id="btn-clear-all" class="btn btn-ghost" title="Limpar todos os campos">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2010,6 +2196,535 @@ textarea.h-180 {
       </div>
       <div class="modal-footer">
         <button id="btn-fechar-lista-temas" class="btn btn-secondary">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Painel Lateral: Guia Passo a Passo (Drawer) -->
+  <div id="painel-guia-passo-a-passo" class="guia-overlay hidden">
+    <div class="guia-drawer" role="dialog" aria-modal="true" aria-labelledby="titulo-guia-passo-a-passo">
+      <div class="guia-header">
+        <div class="guia-header-info">
+          <h3 id="titulo-guia-passo-a-passo">
+            <span>📖 Guia Passo a Passo</span>
+          </h3>
+          <p>Fluxo completo do vídeo: do tema bíblico ao arquivo pronto com narração e legendas.</p>
+        </div>
+        <button id="btn-fechar-guia" class="modal-close-btn" title="Fechar Guia (Esc)">&times;</button>
+      </div>
+
+      <div class="guia-body">
+
+        <!-- ANTES DE COMEÇAR -->
+        <div class="guia-secao-bloco">
+          <div class="guia-secao-badge">Antes de Começar</div>
+
+          <!-- Passo 1 -->
+          <div class="guia-passo-card">
+            <div class="guia-passo-header">
+              <span class="guia-passo-numero">1</span>
+              <span class="guia-passo-titulo">Verificar Configuração da API</span>
+            </div>
+            <div class="guia-passo-detalhes">
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-onde">Onde Clicar:</span>
+                <span>No quadro <strong>Configurações da API (OpenRouter)</strong> no topo da página.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-oque">O que Escolher:</span>
+                <span>Confira se aparece a indicação verde <strong>API Configurada</strong>. Se não aparecer, cole sua chave de API no campo <em>Chave de API (OpenRouter)</em> e clique em <strong>Salvar Configurações</strong>.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
+                <span>O selo verde com a mensagem <strong>API Configurada</strong>, liberando todas as funções de IA.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ETAPA 1 — IDEIAS & ROTEIROS -->
+        <div class="guia-secao-bloco">
+          <div class="guia-secao-badge">Etapa 1 — Ideias & Roteiros</div>
+
+          <!-- Passo 2 -->
+          <div class="guia-passo-card">
+            <div class="guia-passo-header">
+              <span class="guia-passo-numero">2</span>
+              <span class="guia-passo-titulo">Preencher com o Padrão do Canal</span>
+            </div>
+            <div class="guia-passo-detalhes">
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-onde">Onde Clicar:</span>
+                <span>No botão <strong>Preencher com o padrão do canal</strong>, localizado logo no início da Etapa 1.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-oque">O que Escolher:</span>
+                <span>Apenas clique no botão para aplicar os parâmetros calibrados do canal.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
+                <span>O campo <em>Idioma do Conteúdo</em> fica em <strong>Português (Brasil)</strong> e o <em>Tom de Voz da Narrativa</em> é definido como <strong>Dramático e Impactante</strong>.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Passo 3 -->
+          <div class="guia-passo-card">
+            <div class="guia-passo-header">
+              <span class="guia-passo-numero">3</span>
+              <span class="guia-passo-titulo">Escolher o Tema do Vídeo</span>
+            </div>
+            <div class="guia-passo-detalhes">
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-onde">Onde Clicar:</span>
+                <span>No campo <strong>Tema do Vídeo</strong>.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-oque">O que Escolher:</span>
+                <span>Selecione uma das opções prontas da lista ou escolha <em>-- Personalizável --</em> e digite o seu tema (ex.: um personagem ou evento bíblico, como <em>Ogue, rei de Basã: o último dos gigantes</em>).</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
+                <span>O tema selecionado ou o campo de texto preenchido com o tema personalizado.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Passo 4 -->
+          <div class="guia-passo-card">
+            <div class="guia-passo-header">
+              <span class="guia-passo-numero">4</span>
+              <span class="guia-passo-titulo">Definir Estilo e Duração do Roteiro</span>
+            </div>
+            <div class="guia-passo-detalhes">
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-onde">Onde Clicar:</span>
+                <span>No menu suspenso <strong>Estilo de Roteiro</strong>.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-oque">O que Escolher:</span>
+                <span>Escolha o formato do seu conteúdo:
+                  <br>• <strong>YouTube Longo (18-20 minutos)</strong> (2.700 a 3.000 palavras em 7 seções completas);
+                  <br>• <strong>YouTube Médio (5-8 minutos)</strong>;
+                  <br>• <strong>Shorts/Reels — YouTube, Instagram, Facebook (50-60 segundos)</strong> (130 a 160 palavras);
+                  <br>• <strong>Shorts/Reels Estendido — YouTube, Instagram, Facebook (até 3 minutos)</strong>.
+                </span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
+                <span>O sistema calibra a contagem de palavras e a estrutura narrativa para o formato escolhido.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Passo 5 -->
+          <div class="guia-passo-card">
+            <div class="guia-passo-header">
+              <span class="guia-passo-numero">5</span>
+              <span class="guia-passo-titulo">Selecionar o Tipo de Gancho Inicial</span>
+            </div>
+            <div class="guia-passo-detalhes">
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-onde">Onde Clicar:</span>
+                <span>No menu suspenso <strong>Tipo de Gancho Inicial (Hook 0-15s)</strong>.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-oque">O que Escolher:</span>
+                <span>Selecione <strong>Afirmação Provocativa</strong> ou <strong>Citação Impactante</strong>. <em>Evite "Quebra de Mito"</em> para preservar o respeito reverente ao público do nicho bíblico.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
+                <span>A abertura do roteiro será calibrada para prender o espectador nos primeiros 15 segundos.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Passo 6 -->
+          <div class="guia-passo-card">
+            <div class="guia-passo-header">
+              <span class="guia-passo-numero">6</span>
+              <span class="guia-passo-titulo">Gerar Ideias de Vídeo com IA</span>
+            </div>
+            <div class="guia-passo-detalhes">
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-onde">Onde Clicar:</span>
+                <span>No botão <strong>Gerar Ideias de Vídeo com IA</strong>.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-oque">O que Escolher:</span>
+                <span>Aguarde a IA gerar as alternativas com ganchos e ângulos de curiosidade.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
+                <span>Aparecem <strong>10 ideias</strong> em cards individuais e um quadro com a <strong>Recomendação de Ideia da IA</strong> apontando a melhor opção.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Passo 7 -->
+          <div class="guia-passo-card">
+            <div class="guia-passo-header">
+              <span class="guia-passo-numero">7</span>
+              <span class="guia-passo-titulo">Selecionar a Ideia Escolhida</span>
+            </div>
+            <div class="guia-passo-detalhes">
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-onde">Onde Clicar:</span>
+                <span>No botão <strong>Usar esta ideia</strong> presente no card da ideia desejada.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-oque">O que Escolher:</span>
+                <span>Clique para preencher automaticamente. O campo continua 100% editável se você quiser fazer pequenos ajustes.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
+                <span>O texto limpo da ideia (sem asteriscos ou números) é transferido para o campo <strong>Ideia de Vídeo Escolhida</strong>.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Passo 8 -->
+          <div class="guia-passo-card">
+            <div class="guia-passo-header">
+              <span class="guia-passo-numero">8</span>
+              <span class="guia-passo-titulo">Gerar Roteiro Completo com IA</span>
+            </div>
+            <div class="guia-passo-detalhes">
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-onde">Onde Clicar:</span>
+                <span>No botão <strong>Gerar Roteiro Completo com IA</strong>.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-oque">O que Escolher:</span>
+                <span>Aguarde o processamento. Se for roteiro Longo, acompanhe a barra de progresso avançar até o <em>Passo 7/7</em>.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
+                <span>O roteiro gerado em duas versões paralelas: <strong>Roteiro Completo</strong> e <strong>Narração Limpa</strong>.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Passo 9 -->
+          <div class="guia-passo-card">
+            <div class="guia-passo-header">
+              <span class="guia-passo-numero">9</span>
+              <span class="guia-passo-titulo">Conferir Resultados e Relatórios</span>
+            </div>
+            <div class="guia-passo-detalhes">
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-onde">Onde Clicar:</span>
+                <span>Role para baixo e inspecione as caixas de saída da Etapa 1.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-oque">O que Escolher:</span>
+                <span>Verifique os resultados:
+                  <br>• <strong>Roteiro Completo:</strong> contém as referências bíblicas e citações canônicas para conferência;
+                  <br>• <strong>Narração Limpa:</strong> texto higienizado pronto para voz, sem referências entre parênteses;
+                  <br>• <strong>Relatórios em verde = tudo OK.</strong> Se aparecer <em>ALERTA DE EVIDÊNCIA</em> ou <em>CITAÇÃO PARA REVISÃO</em>, leia o trecho sinalizado antes de seguir.
+                </span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
+                <span>Os contadores de palavras e os relatórios de checagem bíblica e revisão em tempo real.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Passo 10 -->
+          <div class="guia-passo-card">
+            <div class="guia-passo-header">
+              <span class="guia-passo-numero">10</span>
+              <span class="guia-passo-titulo">Salvar o Tema Atual (Manual)</span>
+            </div>
+            <div class="guia-passo-detalhes">
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-onde">Onde Clicar:</span>
+                <span>No botão <strong>Salvar Tema Atual</strong> no cabeçalho superior.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-oque">O que Escolher:</span>
+                <span>Confirme ou ajuste o nome do tema e clique em <em>Confirmar e Salvar</em>.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
+                <span>Uma mensagem de confirmação e o contador em <strong>Temas Salvos</strong> será atualizado, guardando todo o trabalho com segurança.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ETAPA 2 — MÍDIAS & IA VISUAL -->
+        <div class="guia-secao-bloco">
+          <div class="guia-secao-badge">Etapa 2 — Mídias & IA Visual</div>
+
+          <!-- Passo 11 -->
+          <div class="guia-passo-card">
+            <div class="guia-passo-header">
+              <span class="guia-passo-numero">11</span>
+              <span class="guia-passo-titulo">Acessar a Aba de Mídias</span>
+            </div>
+            <div class="guia-passo-detalhes">
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-onde">Onde Clicar:</span>
+                <span>Na aba <strong>2. Mídias & IA Visual</strong> na barra de navegação.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-oque">O que Escolher:</span>
+                <span>Apenas mude para a aba. O campo <em>Roteiro Gerado</em> já vem sincronizado e carregado automaticamente da Etapa 1.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
+                <span>A interface da Etapa 2 com o roteiro pronto para extração de mídias e prompts.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Passo 12 -->
+          <div class="guia-passo-card">
+            <div class="guia-passo-header">
+              <span class="guia-passo-numero">12</span>
+              <span class="guia-passo-titulo">Gerar Keywords e Prompts Visuais</span>
+            </div>
+            <div class="guia-passo-detalhes">
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-onde">Onde Clicar:</span>
+                <span>Clique em <strong>Gerar Keywords de Mídia com IA</strong> e depois em <strong>Gerar Prompts para Imagens/Vídeos com IA</strong>.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-oque">O que Escolher:</span>
+                <span>Copie as keywords para buscar fotos e vídeos grátis no Pexels e Pixabay; copie os prompts detalhados para criar imagens épicas em IAs visuais (Midjourney, DALL-E, etc.).</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
+                <span>As caixas de texto preenchidas com as listas de termos de busca e os prompts visuais de alta definição.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ETAPA 3 — THUMBNAILS -->
+        <div class="guia-secao-bloco">
+          <div class="guia-secao-badge">Etapa 3 — Thumbnails</div>
+
+          <!-- Passo 13 -->
+          <div class="guia-passo-card">
+            <div class="guia-passo-header">
+              <span class="guia-passo-numero">13</span>
+              <span class="guia-passo-titulo">Gerar Opções de Thumbnail (A/B/C)</span>
+            </div>
+            <div class="guia-passo-detalhes">
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-onde">Onde Clicar:</span>
+                <span>Na aba <strong>3. Thumbnails</strong> e depois no botão <strong>Gerar 3 Prompts de Thumbnail com IA (A/B/C)</strong>.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-oque">O que Escolher:</span>
+                <span>O tema já vem sincronizado. Se desejar, escolha o <em>Estilo da Thumbnail</em>, as <em>Cores Predominantes</em> e os <em>Elementos Visuais Chave</em> antes de clicar.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
+                <span>Três conceitos completos prontos (Opção A: Texto & Mistério, Opção B: Rosto & Emoção, Opção C: Ação & Curiosidade) para usar a recomendada ou testar no recurso de teste A/B do YouTube.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ETAPA 4 — SEO & TÍTULOS -->
+        <div class="guia-secao-bloco">
+          <div class="guia-secao-badge">Etapa 4 — SEO & Títulos</div>
+
+          <!-- Passo 14 -->
+          <div class="guia-passo-card">
+            <div class="guia-passo-header">
+              <span class="guia-passo-numero">14</span>
+              <span class="guia-passo-titulo">Gerar Títulos em Inglês e SEO Completo</span>
+            </div>
+            <div class="guia-passo-detalhes">
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-onde">Onde Clicar:</span>
+                <span>Na aba <strong>4. SEO & Títulos</strong> e clique em <strong>Gerar SEO Completo com IA</strong>.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-oque">O que Escolher:</span>
+                <span>Aguarde a IA gerar. Os títulos saem em inglês para alcance global na busca do YouTube, enquanto o vídeo continua em português. Copie o título recomendado, descrição, tags e hashtags.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
+                <span>A caixa de SEO com 3 títulos otimizados, descrição completa e o card <strong>⚡ Recomendação de Título da IA</strong> indicando a melhor escolha.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ETAPA 5 — NARRAÇÃO & LEGENDAS -->
+        <div class="guia-secao-bloco">
+          <div class="guia-secao-badge">Etapa 5 — Narração & Legendas</div>
+
+          <!-- Passo 15 -->
+          <div class="guia-passo-card">
+            <div class="guia-passo-header">
+              <span class="guia-passo-numero">15</span>
+              <span class="guia-passo-titulo">Acessar a Aba de Narração</span>
+            </div>
+            <div class="guia-passo-detalhes">
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-onde">Onde Clicar:</span>
+                <span>Na aba <strong>5. Narração & Legendas</strong>.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-oque">O que Escolher:</span>
+                <span>O campo <em>Texto da Narração Limpa</em> já vem carregado automaticamente com a versão de locução sem referências da Etapa 1.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
+                <span>O texto pronto para a síntese neural, com indicação do tom herdado da Etapa 1.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Passo 16 -->
+          <div class="guia-passo-card">
+            <div class="guia-passo-header">
+              <span class="guia-passo-numero">16</span>
+              <span class="guia-passo-titulo">Gerar Narração em Áudio</span>
+            </div>
+            <div class="guia-passo-detalhes">
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-onde">Onde Clicar:</span>
+                <span>No botão <strong>🎙️ Gerar Narração (Áudio)</strong>.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-oque">O que Escolher:</span>
+                <span>No menu <em>Narrador / Voz (OpenAI TTS)</em>, escolha a voz desejada (recomendada: <strong>Onyx</strong>) e clique no botão. Shorts leva poucos segundos; vídeos Longos levam alguns minutos — é normal.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
+                <span>O player de áudio MP3 integrado com o botão de download e a opção de gerar legendas.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Passo 17 -->
+          <div class="guia-passo-card">
+            <div class="guia-passo-header">
+              <span class="guia-passo-numero">17</span>
+              <span class="guia-passo-titulo">Ouvir e Baixar o Arquivo MP3</span>
+            </div>
+            <div class="guia-passo-detalhes">
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-onde">Onde Clicar:</span>
+                <span>No player de áudio e no botão <strong>Baixar Narração (.mp3)</strong>.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-oque">O que Escolher:</span>
+                <span>Ouça o áudio completo para conferir o ritmo e a emoção, e faça o download do arquivo de som para o seu computador.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
+                <span>O arquivo `.mp3` é baixado com a locução profissional completa.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Passo 18 -->
+          <div class="guia-passo-card">
+            <div class="guia-passo-header">
+              <span class="guia-passo-numero">18</span>
+              <span class="guia-passo-titulo">Gerar e Baixar Legendas (.SRT)</span>
+            </div>
+            <div class="guia-passo-detalhes">
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-onde">Onde Clicar:</span>
+                <span>Clique em <strong>📝 Gerar Legenda (.srt)</strong> e depois em <strong>Baixar Legenda (.srt)</strong>.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-oque">O que Escolher:</span>
+                <span>Aguarde a IA transcrever o áudio sincronizado via AssemblyAI e clique para baixar o arquivo.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
+                <span>A caixa com as legendas cronometradas e o download do arquivo `.srt` pronto para o CapCut, Premiere ou YouTube.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FINALIZANDO -->
+        <div class="guia-secao-bloco">
+          <div class="guia-secao-badge">Finalizando</div>
+
+          <!-- Passo 19 -->
+          <div class="guia-passo-card">
+            <div class="guia-passo-header">
+              <span class="guia-passo-numero">19</span>
+              <span class="guia-passo-titulo">Baixar o Pacote Completo do Vídeo</span>
+            </div>
+            <div class="guia-passo-detalhes">
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-onde">Onde Clicar:</span>
+                <span>No botão <strong>Baixar Pacote (.txt)</strong> localizado no cabeçalho superior.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-oque">O que Escolher:</span>
+                <span>Clique para salvar tudo em um único arquivo de texto de backup.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
+                <span>Um arquivo `.txt` contendo roteiro completo, narração limpa, SEO, prompts visuais e metadados.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Passo 20 -->
+          <div class="guia-passo-card">
+            <div class="guia-passo-header">
+              <span class="guia-passo-numero">20</span>
+              <span class="guia-passo-titulo">Salvar o Tema Completo na Ferramenta</span>
+            </div>
+            <div class="guia-passo-detalhes">
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-onde">Onde Clicar:</span>
+                <span>No botão <strong>Salvar Tema Atual</strong> no cabeçalho superior.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-oque">O que Escolher:</span>
+                <span>Salve novamente para atualizar o registro com todas as etapas geradas (Mídias, Thumbnails e SEO).</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
+                <span>O tema salvo completo na lista de <strong>Temas Salvos</strong>, podendo ser reaberto ou consultado a qualquer momento.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Passo 21 -->
+          <div class="guia-passo-card">
+            <div class="guia-passo-header">
+              <span class="guia-passo-numero">21</span>
+              <span class="guia-passo-titulo">Configuração no YouTube Studio</span>
+            </div>
+            <div class="guia-passo-detalhes">
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-onde">Onde Clicar:</span>
+                <span>No <strong>YouTube Studio</strong> (fora da ferramenta), ao enviar seu vídeo.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-oque">O que Escolher:</span>
+                <span>Mantenha ativada a função de <strong>auto-dubbing</strong> (dublagem automática de áudio em outros idiomas) nas configurações do seu canal.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
+                <span>O YouTube utilizará seu áudio original em português e o título em inglês para distribuir seu vídeo para espectadores do mundo todo!</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="guia-footer">
+        <button id="btn-fechar-guia-rodape" class="btn btn-secondary">Fechar Guia</button>
       </div>
     </div>
   </div>
@@ -7701,6 +8416,52 @@ Desenvolvimento: A soberania divina cumpre cada detalhe profético anunciado pel
     syncTomAudio();
     UI.showToast('Sessão anterior restaurada automaticamente.', 'warning');
   }
+  // === GUIA PASSO A PASSO (DRAWER) ===
+  const painelGuia = document.getElementById('painel-guia-passo-a-passo');
+  const btnAbrirGuia = document.getElementById('btn-abrir-guia');
+  const btnFecharGuia = document.getElementById('btn-fechar-guia');
+  const btnFecharGuiaRodape = document.getElementById('btn-fechar-guia-rodape');
+
+  function abrirGuiaPassoAPasso() {
+    if (painelGuia) {
+      painelGuia.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+  }
+
+  function fecharGuiaPassoAPasso() {
+    if (painelGuia) {
+      painelGuia.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+  }
+
+  if (btnAbrirGuia) {
+    btnAbrirGuia.addEventListener('click', abrirGuiaPassoAPasso);
+  }
+  if (btnFecharGuia) {
+    btnFecharGuia.addEventListener('click', fecharGuiaPassoAPasso);
+  }
+  if (btnFecharGuiaRodape) {
+    btnFecharGuiaRodape.addEventListener('click', fecharGuiaPassoAPasso);
+  }
+
+  // Fechar ao clicar fora do drawer (no backdrop)
+  if (painelGuia) {
+    painelGuia.addEventListener('click', (e) => {
+      if (e.target === painelGuia) {
+        fecharGuiaPassoAPasso();
+      }
+    });
+  }
+
+  // Fechar com a tecla Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && painelGuia && !painelGuia.classList.contains('hidden')) {
+      fecharGuiaPassoAPasso();
+    }
+  });
+
   // Renderiza botões de ideias se houver ideias presentes
   renderizarBotoesSelecaoIdeias(document.getElementById('output-prompt-ideias')?.value || '');
   AutoSave.setupDebounce();
