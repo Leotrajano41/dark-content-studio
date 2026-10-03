@@ -1336,10 +1336,10 @@ textarea.h-180 {
           </summary>
           <div class="step-guide-body">
             <ol>
-              <li><strong>Padrão do Canal:</strong> Clique no botão <em>"Preencher com o padrão do canal"</em> para carregar instantaneamente as opções ideais: Idioma = <code>Português (Brasil)</code>, Estilo = <code>YouTube Longo (18-20 minutos)</code>, Tom = <code>Dramático e Impactante</code>, Gancho = <code>Citação Bíblica Direta e Impacto Teológico</code> e Tema = <code>-- Personalizável --</code>.</li>
+              <li><strong>Padrão do Canal:</strong> Clique no botão <em>"Preencher com o padrão do canal"</em> para carregar instantaneamente as opções ideais: Idioma = <code>Português (Brasil)</code>, Estilo = <code>YouTube Longo (18-20 minutos)</code>, Tom = <code>Dramático e Impactante</code>, Gancho = <code>Citação Impactante</code> e Tema = <code>-- Personalizável --</code>.</li>
               <li><strong>Tema do Vídeo:</strong> No campo "Tema Personalizado", digite o tema em português com as passagens bíblicas. <em>Exemplo pronto para copiar:</em> <code>Ogue, rei de Basã: o último dos gigantes (Números 21:33-35, Deuteronômio 3:1-11)</code>.</li>
               <li><strong>Gerar e Avaliar Ideias:</strong> Clique no botão <em>"Gerar Ideias de Vídeo com IA"</em>. O sistema gera 10 títulos com estruturas variadas, valida se há palavras proibidas e exibe o <strong>Avaliador da IA</strong> indicando a ideia recomendada e qual evitar.</li>
-              <li><strong>Copie a Ideia Escolhida:</strong> Selecione o título escolhido e cole no campo <em>"Passo B: Ideia Escolhida para o Roteiro"</em>.</li>
+              <li><strong>Usar a Ideia:</strong> Clique em <em>"Usar esta ideia"</em> ao lado da ideia escolhida. Ela vai para o campo <em>"Ideia de Vídeo Escolhida"</em> (você ainda pode editar o texto).</li>
               <li><strong>Gerar Roteiro Completo:</strong> Clique em <em>"Gerar Roteiro Completo com IA"</em> e aguarde a geração das 7 seções com auditoria e validação bíblica automática.</li>
             </ol>
             <div class="step-guide-alert">
@@ -6261,7 +6261,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (selectTom) selectTom.value = 'Dramático e Impactante';
       if (containerTomCustom) containerTomCustom.classList.add('hidden');
       if (inputTomCustom) inputTomCustom.value = '';
-      if (selectGancho) selectGancho.value = 'Citação Bíblica Direta e Impacto Teológico';
+      if (selectGancho) selectGancho.value = 'Citação Impactante';
 
       syncTema();
       syncTomAudio();
