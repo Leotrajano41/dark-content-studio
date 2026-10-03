@@ -5730,13 +5730,8 @@ function garantirExtensaoShorts(texto, idioma = 'pt') {
     return (limpo.trim().match(/\S+/g) || []).length;
   };
 
-  let total = contar(texto);
-  if (total >= 130 && total <= 160) {
-    return texto;
-  }
-
   const paragrafos = texto.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
-  let cta = '';
+  let cta = 'Inscreva-se no canal para mais estudos e relatos bíblicos sagrados.';
   let corpoParagrafos = [...paragrafos];
 
   // Se o último parágrafo for CTA ou contiver chamada para inscrição
@@ -5750,50 +5745,71 @@ function garantirExtensaoShorts(texto, idioma = 'pt') {
     }
   }
 
-  if (!cta) {
-    cta = 'Inscreva-se no canal para mais estudos e relatos bíblicos sagrados.';
-  }
-
   let corpoTexto = corpoParagrafos.join('\n\n');
 
-  if (total > 160) {
+  if (contar(corpoTexto + '\n\n' + cta) > 160) {
     const sentencas = corpoTexto.match(/[^.!?]+(?:[.!?]+["']?|$)/g) || [corpoTexto];
     let selecionadas = [];
     for (const s of sentencas) {
       const sTrim = s.trim();
       if (!sTrim) continue;
       const cNova = contar(selecionadas.concat(sTrim).join(' ') + '\n\n' + cta);
-      if (cNova <= 158 || selecionadas.length === 0) {
+      if (cNova <= 155) {
         selecionadas.push(sTrim);
       } else {
         break;
       }
     }
+
+    if (selecionadas.length === 0 && sentencas.length > 0) {
+      const tokens = sentencas[0].trim().split(/\s+/);
+      const orcamentoTokens = Math.max(145 - contar(cta), 50);
+      let sCortada = tokens.slice(0, orcamentoTokens).join(' ');
+      sCortada = sCortada.replace(/[,;:\s]+$/, '') + '.';
+      selecionadas.push(sCortada);
+    }
+
     corpoTexto = selecionadas.join(' ');
-    texto = corpoTexto + '\n\n' + cta;
-    total = contar(texto);
   }
 
-  if (total < 130) {
+  let resTexto = corpoTexto + '\n\n' + cta;
+
+  // Salvaguarda matemática estrita contra estouro de 160 palavras
+  while (contar(resTexto) > 160) {
+    const sentencas = corpoTexto.match(/[^.!?]+(?:[.!?]+["']?|$)/g) || [];
+    if (sentencas.length > 1) {
+      sentencas.pop();
+      corpoTexto = sentencas.join(' ').trim();
+      resTexto = corpoTexto + '\n\n' + cta;
+    } else {
+      const tokens = corpoTexto.split(/\s+/);
+      if (tokens.length <= 10) break;
+      tokens.pop();
+      corpoTexto = tokens.join(' ').replace(/[,;:\s]+$/, '') + '.';
+      resTexto = corpoTexto + '\n\n' + cta;
+    }
+  }
+
+  // Salvaguarda matemática estrita para atingir no mínimo 130 palavras
+  if (contar(resTexto) < 130) {
     const complementos = [
       'As Escrituras Sagradas testificam com poder que a fidelidade divina permanece viva e inabalável.',
       'O relato sagrado revela com clareza infalível que a palavra de Deus triunfa sobre todo império.',
       'A soberania do Senhor permanece inabalável através de todas as gerações.'
     ];
     for (const comp of complementos) {
-      if (total >= 130) break;
+      if (contar(resTexto) >= 130) break;
       const testTexto = corpoTexto + ' ' + comp + '\n\n' + cta;
       const testTotal = contar(testTexto);
       if (testTotal <= 160) {
         corpoTexto += ' ' + comp;
-        texto = testTexto;
-        total = testTotal;
+        resTexto = testTexto;
       }
     }
-    texto = corpoTexto + '\n\n' + cta;
+    resTexto = corpoTexto + '\n\n' + cta;
   }
 
-  return texto;
+  return resTexto;
 }
 window.garantirExtensaoShorts = garantirExtensaoShorts;
 
@@ -5842,6 +5858,13 @@ function ajustarExtensaoRoteiro(texto, estiloRoteiro = '') {
   }
   if (typeof limparPontuacaoDuplicada === 'function') {
     res = limparPontuacaoDuplicada(res);
+  }
+
+  // Reforço final de garantia de extensão em Shorts após qualquer formatação
+  if (estilo.includes('50-60') || (estilo.includes('Shorts') && !estilo.includes('Estendido') && !estilo.includes('3 minutos'))) {
+    if (typeof garantirExtensaoShorts === 'function') {
+      res = garantirExtensaoShorts(res);
+    }
   }
 
   return res;

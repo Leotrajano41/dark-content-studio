@@ -363,6 +363,9 @@ async function main() {
   if (typeof context.removerAnglicismosAcidentais === 'function') {
     shortsTexto = context.removerAnglicismosAcidentais(shortsTexto, shortsIdioma);
   }
+  if (typeof context.garantirExtensaoShorts === 'function') {
+    shortsTexto = context.garantirExtensaoShorts(shortsTexto, shortsIdioma);
+  }
 
   const shortsNarracaoLimpa = limparTextoParaNarracao(shortsTexto, shortsEstilo);
   const shortsPalavras = contarPalavras(shortsNarracaoLimpa);
