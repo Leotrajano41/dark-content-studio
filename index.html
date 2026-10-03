@@ -848,6 +848,114 @@ textarea.h-180 {
 }
 
 /* ==========================================================================
+   Modais & Seleção de Ideias & Temas Salvos (Itens B e C)
+   ========================================================================== */
+.ideia-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  transition: all 0.2s ease;
+}
+.ideia-card:hover {
+  border-color: rgba(99, 102, 241, 0.5);
+  background: rgba(30, 41, 59, 0.8);
+}
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 15, 23, 0.85);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 16px;
+}
+.modal-overlay.hidden {
+  display: none;
+}
+.modal-card {
+  background: #1a2234;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 620px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+  animation: modalFadeIn 0.2s ease-out;
+}
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+.modal-header {
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.modal-close-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  font-size: 1.25rem;
+  line-height: 1;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+.modal-close-btn:hover {
+  color: #ffffff;
+}
+.modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+.modal-footer {
+  padding: 14px 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.tema-salvo-card {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  transition: border-color 0.2s;
+}
+.tema-salvo-card:hover {
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+/* ==========================================================================
    Footer
    ========================================================================== */
 .app-footer {
@@ -912,6 +1020,21 @@ textarea.h-180 {
             <line x1="12" y1="15" x2="12" y2="3"></line>
           </svg>
           Baixar Pacote (.txt)
+        </button>
+        <button id="btn-salvar-tema-atual" class="btn btn-primary" title="Salvar o estado completo do tema atual manualmente">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+            <polyline points="7 3 7 8 15 8"></polyline>
+          </svg>
+          Salvar Tema Atual
+        </button>
+        <button id="btn-ver-temas-salvos" class="btn btn-secondary" title="Ver e restaurar temas salvos">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+          Temas Salvos (<span id="badge-total-temas-salvos">0</span>)
         </button>
         <button id="btn-clear-all" class="btn btn-ghost" title="Limpar todos os campos">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1027,7 +1150,7 @@ textarea.h-180 {
           </summary>
           <div class="step-guide-body">
             <ol>
-              <li><strong>Padrão do Canal:</strong> Clique no botão <em>"Preencher com o padrão do canal"</em> para carregar instantaneamente as opções ideais: Idioma = <code>Português (Brasil)</code>, Estilo = <code>YouTube Longo (18-20 minutos)</code>, Tom = <code>Solene e Profético</code>, Gancho = <code>Citação Bíblica Direta e Impacto Teológico</code> e Tema = <code>-- Personalizável --</code>.</li>
+              <li><strong>Padrão do Canal:</strong> Clique no botão <em>"Preencher com o padrão do canal"</em> para carregar instantaneamente as opções ideais: Idioma = <code>Português (Brasil)</code>, Estilo = <code>YouTube Longo (18-20 minutos)</code>, Tom = <code>Dramático e Impactante</code>, Gancho = <code>Citação Bíblica Direta e Impacto Teológico</code> e Tema = <code>-- Personalizável --</code>.</li>
               <li><strong>Tema do Vídeo:</strong> No campo "Tema Personalizado", digite o tema em português com as passagens bíblicas. <em>Exemplo pronto para copiar:</em> <code>Ogue, rei de Basã: o último dos gigantes (Números 21:33-35, Deuteronômio 3:1-11)</code>.</li>
               <li><strong>Gerar e Avaliar Ideias:</strong> Clique no botão <em>"Gerar Ideias de Vídeo com IA"</em>. O sistema gera 10 títulos com estruturas variadas, valida se há palavras proibidas e exibe o <strong>Avaliador da IA</strong> indicando a ideia recomendada e qual evitar.</li>
               <li><strong>Copie a Ideia Escolhida:</strong> Selecione o título escolhido e cole no campo <em>"Passo B: Ideia Escolhida para o Roteiro"</em>.</li>
@@ -1179,6 +1302,18 @@ textarea.h-180 {
             </button>
           </div>
           <textarea id="output-prompt-ideias" class="form-control prompt-output" readonly placeholder="As 10 ideias de vídeos geradas pela IA aparecerão aqui..."></textarea>
+          
+          <!-- Lista de 10 Ideias com Botão "Usar esta ideia" (Item B) -->
+          <div id="container-selecao-ideias" class="hidden mt-3">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #a5b4fc; font-size: 0.95rem;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+                <span>Escolha uma ideia abaixo para preencher o Roteiro:</span>
+              </div>
+              <span style="font-size: 0.8rem; color: #94a3b8;">1 clique preenche o Passo B e mantém editável</span>
+            </div>
+            <div id="lista-ideias-cards" style="display: flex; flex-direction: column; gap: 8px;"></div>
+          </div>
         </div>
 
         <!-- Card Avaliador de Ideias (Item 4) -->
@@ -1825,6 +1960,58 @@ textarea.h-180 {
     <footer class="app-footer">
       <p>Dark Studio Automation Tool • Integração com OpenRouter API • Fórmula Explicador Bíblico</p>
     </footer>
+  </div>
+
+  <!-- Modal: Salvar Tema Atual (Item C) -->
+  <div id="modal-salvar-tema" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+          <span>Salvar Tema Atual</span>
+        </h3>
+        <button id="btn-fechar-modal-salvar" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 14px;">
+          Este tema salvará o estado completo: configurações da Etapa 1, ideias, ideia escolhida, roteiro, narração limpa, prompts de imagens, thumbnails e SEO. (Não inclui arquivos de áudio nem chaves de API).
+        </p>
+        <div class="form-group">
+          <label for="input-nome-tema-salvo" style="font-weight: 600; color: #e2e8f0; margin-bottom: 6px; display: block;">
+            Nome do Tema (editável):
+          </label>
+          <input type="text" id="input-nome-tema-salvo" class="form-control" placeholder="Digite o nome do tema para identificação futura...">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancelar-salvar-tema" class="btn btn-ghost">Cancelar</button>
+        <button id="btn-confirmar-salvar-tema" class="btn btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          Confirmar e Salvar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Lista de Temas Salvos (Item C) -->
+  <div id="modal-temas-salvos" class="modal-overlay hidden">
+    <div class="modal-card" style="max-width: 680px;">
+      <div class="modal-header">
+        <h3>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+          <span>Temas Salvos Manualmente</span>
+        </h3>
+        <button id="btn-fechar-modal-lista-temas" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="lista-temas-salvos-container">
+          <!-- Renderizado dinamicamente -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-fechar-lista-temas" class="btn btn-secondary">Fechar</button>
+      </div>
+    </div>
   </div>
 
   <!-- Toast Container -->
@@ -3326,6 +3513,11 @@ function validarECorrigirAspas(texto) {
     // Normaliza aspas curvas para retas
     limpo = limpo.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
 
+    // A1: Remove espaço após aspas de abertura (ex: " Porque só Ogue... -> "Porque só Ogue...)
+    limpo = limpo.replace(/"\s+([A-Za-z0-9À-ÖØ-öø-ÿ])/g, '"$1');
+    // Remove espaço antes de aspas de fechamento
+    limpo = limpo.replace(/([A-Za-z0-9À-ÖØ-öø-ÿ.,;:!?])\s+"/g, '$1"');
+
     const totalAspas = (limpo.match(/"/g) || []).length;
     if (totalAspas % 2 === 0) return limpo;
 
@@ -3804,6 +3996,18 @@ Remember: Output EXCLUSIVELY a JSON array [ { "fraseOriginal": "...", "tipo": ".
     problemas = [];
   }
 
+  // A2: Não reporta nem remove o CTA fixo obrigatório de encerramento como "CONCLUSÃO PREMATURA"
+  const ctaCheckRegex = /\b(?:subscrib(?:e|ing)|inscreva-se|inscrever|join\s+(?:this\s+)?channel|follow\s+(?:this\s+)?channel|acompanhe\s+este\s+canal|suscr[ií]bete|suscribir|próximos\s+estudos|relatos\s+bíblicos)\b/i;
+  problemas = problemas.filter(item => {
+    if (!item || !item.fraseOriginal) return false;
+    const isCta = ctaCheckRegex.test(item.fraseOriginal);
+    if (isCta) {
+      console.log('[Revisão Automática] Ignorando falso positivo de CTA no relatório:', item.fraseOriginal);
+      return false;
+    }
+    return true;
+  });
+
   let textoAtual = roteiro;
   let problemasCorrigidos = [];
 
@@ -3869,7 +4073,8 @@ function atualizarRelatorioRevisaoNaTela(revisaoRes) {
 
   container.classList.remove('hidden');
 
-  const corrigidos = revisaoRes.problemasCorrigidos || [];
+  const ctaCheckRegex = /\b(?:subscrib(?:e|ing)|inscreva-se|inscrever|join\s+(?:this\s+)?channel|follow\s+(?:this\s+)?channel|acompanhe\s+este\s+canal|suscr[ií]bete|suscribir|próximos\s+estudos|relatos\s+bíblicos)\b/i;
+  const corrigidos = (revisaoRes.problemasCorrigidos || []).filter(item => !ctaCheckRegex.test(item.original || ''));
   const total = corrigidos.length;
   tituloEl.textContent = `Revisão: ${total} problema${total === 1 ? '' : 's'} encontrado${total === 1 ? '' : 's'} e corrigido${total === 1 ? '' : 's'}`;
 
@@ -5326,6 +5531,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const containerIdiomaCustom = document.getElementById('container-idioma-custom');
       const selectEstilo = document.getElementById('select-estilo-roteiro');
       const selectTom = document.getElementById('select-tom');
+      const containerTomCustom = document.getElementById('container-tom-custom');
+      const inputTomCustom = document.getElementById('input-tom-custom');
       const selectGancho = document.getElementById('select-gancho');
 
       if (selectTema) selectTema.value = 'Personalizável';
@@ -5336,7 +5543,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (selectIdioma) selectIdioma.value = 'Português (Brasil)';
       if (containerIdiomaCustom) containerIdiomaCustom.classList.add('hidden');
       if (selectEstilo) selectEstilo.value = 'YouTube Longo (18-20 minutos)';
-      if (selectTom) selectTom.value = 'Solene e Profético';
+      if (selectTom) selectTom.value = 'Dramático e Impactante';
+      if (containerTomCustom) containerTomCustom.classList.add('hidden');
+      if (inputTomCustom) inputTomCustom.value = '';
       if (selectGancho) selectGancho.value = 'Citação Bíblica Direta e Impacto Teológico';
 
       syncTema();
@@ -5390,14 +5599,20 @@ document.addEventListener('DOMContentLoaded', () => {
     );
 
     // Ordem estrita (Item 4): gerar 10 ideias -> checar títulos e regenerar com IA -> avaliador
+    let textoFinalIdeias = rawIdeias;
     if (rawIdeias && typeof rawIdeias === 'string' && OpenRouterAPI.getApiKey()) {
       const ideiasLimpas = await validarERegenerarTitulosIdeias(rawIdeias, tema, modeloIdeias);
       const outEl = document.getElementById('output-prompt-ideias');
       if (outEl) outEl.value = ideiasLimpas;
+      textoFinalIdeias = ideiasLimpas;
       AutoSave.save();
 
       // Avaliador de Ideias com IA
       await avaliarIdeiasComIA(ideiasLimpas, tema, modeloIdeias);
+    }
+
+    if (typeof renderizarBotoesSelecaoIdeias === 'function' && textoFinalIdeias) {
+      renderizarBotoesSelecaoIdeias(textoFinalIdeias);
     }
   });
 
@@ -6292,7 +6507,8 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
         }, 4000);
       }
     } else {
-      // Fluxo para outros formatos (Shorts / Médio) ou sem API Key (apenas exibe o prompt estruturado)
+      // Fluxo para outros formatos (Shorts / Médio): nunca exibe a barra Passo 0/7 do Longo (Item A3)
+      if (progressEl) progressEl.classList.add('hidden');
       const promptText = PromptEngine.generateScriptPrompt({
         ideia,
         estiloRoteiro,
@@ -6396,9 +6612,11 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       if (typeof executarRevisaoAutomaticaRoteiro === 'function') {
         const progressoSecaoEl = document.getElementById('progresso-geracao-secoes');
         const progressoTextoEl = document.getElementById('texto-progresso-secao');
-        if (progressoSecaoEl && progressoTextoEl) {
+        if (isLongo && progressoSecaoEl && progressoTextoEl) {
           progressoSecaoEl.classList.remove('hidden');
           progressoTextoEl.textContent = 'Passo de Revisão: Auditando cronologia, fidelidade bíblica, aspas e eventos...';
+        } else if (progressoSecaoEl) {
+          progressoSecaoEl.classList.add('hidden');
         }
 
         try {
@@ -6718,6 +6936,11 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
 
   // Gerar Narração (Áudio MP3)
   btnGerarAudio.addEventListener('click', async () => {
+    // A5: Ao gerar um áudio novo, apagar a legenda antiga automaticamente
+    if (outputLegendaSrt) outputLegendaSrt.value = '';
+    if (cardLegendaOutput) cardLegendaOutput.classList.add('hidden');
+    currentSrtContent = '';
+
     // ITEM 5: Usar SÓ a versão "Narração Limpa" na etapa de narração
     const textareaNarracaoLimpa = document.getElementById('textarea-narracao-limpa-audio');
     const outputLimpoEl = document.getElementById('output-roteiro-limpo');
@@ -7095,6 +7318,381 @@ Desenvolvimento: A soberania divina cumpre cada detalhe profético anunciado pel
     UI.showToast('Pacote .txt baixado com sucesso!');
   });
 
+  // =========================================================================
+  // ITEM B: SELEÇÃO DE IDEIAS COM 1 CLIQUE ("Usar esta ideia")
+  // =========================================================================
+  function extrairIdeiasIndividuais(texto) {
+    if (!texto || typeof texto !== 'string') return [];
+    const limpo = texto.trim();
+    if (!limpo) return [];
+
+    // Tenta quebrar por numeração no início de linha (ex: "1. ", "1 - ", "1) ", "**1. ")
+    const regexItem = /(?:^|\n)\s*(?:\*{0,2}(?:Ideia\s+)?(\d+)[\.:\)\-]\s*\*{0,2})/gi;
+    const matches = [...limpo.matchAll(regexItem)];
+
+    if (matches.length >= 2) {
+      const itens = [];
+      for (let i = 0; i < matches.length; i++) {
+        const start = matches[i].index + matches[i][0].length;
+        const end = (i + 1 < matches.length) ? matches[i + 1].index : limpo.length;
+        let trecho = limpo.substring(start, end).trim();
+        // Remove asteriscos markdown e marcadores residuais
+        trecho = trecho.replace(/\*{2,}/g, '').replace(/_{2,}/g, '').trim();
+        if (trecho) {
+          itens.push({
+            numero: matches[i][1] || String(i + 1),
+            texto: trecho
+          });
+        }
+      }
+      return itens;
+    }
+
+    // Fallback: quebra por parágrafos não vazios
+    const paragrafos = limpo.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+    return paragrafos.map((p, idx) => {
+      let semNum = p.replace(/^\s*(?:\*{0,2}(?:Ideia\s+)?\d+[\.:\)\-]\s*\*{0,2})\s*/i, '');
+      semNum = semNum.replace(/\*{2,}/g, '').replace(/_{2,}/g, '').trim();
+      return { numero: String(idx + 1), texto: semNum };
+    }).filter(item => item.texto.length > 5);
+  }
+
+  function renderizarBotoesSelecaoIdeias(textoIdeias) {
+    const container = document.getElementById('container-selecao-ideias');
+    const listaCards = document.getElementById('lista-ideias-cards');
+    if (!container || !listaCards) return;
+
+    const itens = extrairIdeiasIndividuais(textoIdeias);
+    if (itens.length === 0) {
+      container.classList.add('hidden');
+      listaCards.innerHTML = '';
+      return;
+    }
+
+    const escapeAttr = (s) => String(s || '').replace(/"/g, '&quot;');
+    const escapeHtml = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    listaCards.innerHTML = itens.map(item => `
+      <div class="ideia-card">
+        <div style="flex: 1; font-size: 0.92rem; line-height: 1.5; color: #f1f5f9;">
+          <strong style="color: #6366f1; margin-right: 6px;">#${item.numero}</strong>
+          ${escapeHtml(item.texto)}
+        </div>
+        <button type="button" class="btn btn-sm btn-secondary btn-usar-esta-ideia" data-ideia="${escapeAttr(item.texto)}" style="white-space: nowrap; flex-shrink: 0; padding: 6px 12px; font-size: 0.8rem; font-weight: 600;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px; vertical-align: -2px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          Usar esta ideia
+        </button>
+      </div>
+    `).join('');
+
+    container.classList.remove('hidden');
+
+    listaCards.querySelectorAll('.btn-usar-esta-ideia').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const ideia = btn.getAttribute('data-ideia');
+        if (!ideia) return;
+        const inputIdeia = document.getElementById('input-ideia-escolhida');
+        if (inputIdeia) {
+          inputIdeia.value = ideia;
+          inputIdeia.dispatchEvent(new Event('input', { bubbles: true }));
+          inputIdeia.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          inputIdeia.focus();
+          UI.showToast('Ideia selecionada! O campo permanece editável.', 'success');
+          AutoSave.save();
+        }
+      });
+    });
+  }
+
+  // Monitora alterações manuais na caixa de ideias
+  const textareaIdeiasEl = document.getElementById('output-prompt-ideias');
+  if (textareaIdeiasEl) {
+    textareaIdeiasEl.addEventListener('input', () => {
+      renderizarBotoesSelecaoIdeias(textareaIdeiasEl.value);
+    });
+  }
+
+  // =========================================================================
+  // ITEM C: GERENCIADOR DE TEMAS SALVOS MANUALMENTE
+  // =========================================================================
+  const GerenciadorTemasSalvos = {
+    STORAGE_KEY: 'dark_studio_temas_salvos',
+
+    CAMPOS_TEMA: [
+      'select-tema', 'input-tema-custom',
+      'select-idioma', 'input-idioma-custom',
+      'select-estilo-roteiro',
+      'select-tom', 'input-tom-custom',
+      'select-gancho', 'input-gancho-custom',
+      'output-prompt-ideias',
+      'input-ideia-escolhida',
+      'output-prompt-roteiro', 'textarea-roteiro-gerado',
+      'output-roteiro-limpo', 'textarea-narracao-limpa-audio',
+      'select-voz-audio',
+      'output-prompt-imagens-ia',
+      'select-estilo-thumb', 'input-estilo-thumb-custom',
+      'select-cores-thumb', 'input-cores-thumb-custom',
+      'select-elementos-thumb', 'input-elementos-thumb-custom',
+      'input-tema-thumb', 'output-thumb-a', 'output-thumb-b', 'output-thumb-c',
+      'input-tema-seo', 'textarea-resumo-seo', 'output-prompt-keywords', 'output-prompt-seo'
+    ],
+
+    obterTemas() {
+      try {
+        const raw = localStorage.getItem(this.STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        console.warn('Erro ao carregar temas salvos:', e);
+        return [];
+      }
+    },
+
+    salvarLista(temas) {
+      try {
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(temas));
+        this.atualizarContadorBadge();
+      } catch (e) {
+        console.error('Erro ao gravar temas salvos no localStorage:', e);
+      }
+    },
+
+    atualizarContadorBadge() {
+      const badge = document.getElementById('badge-total-temas-salvos');
+      if (badge) {
+        const total = this.obterTemas().length;
+        badge.textContent = String(total);
+      }
+    },
+
+    capturarSnapshot() {
+      const snapshot = {};
+      this.CAMPOS_TEMA.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) snapshot[id] = el.value;
+      });
+      return snapshot;
+    },
+
+    temTrabalhoNaoSalvoNaTela(dadosTema) {
+      const roteiroAtual = (document.getElementById('textarea-roteiro-gerado')?.value || '').trim();
+      const ideiaAtual = (document.getElementById('input-ideia-escolhida')?.value || '').trim();
+      if (!roteiroAtual && !ideiaAtual) return false;
+
+      const roteiroTema = (dadosTema?.['textarea-roteiro-gerado'] || dadosTema?.['output-prompt-roteiro'] || '').trim();
+      const ideiaTema = (dadosTema?.['input-ideia-escolhida'] || '').trim();
+
+      return (roteiroAtual && roteiroAtual !== roteiroTema) || (ideiaAtual && ideiaAtual !== ideiaTema);
+    },
+
+    salvarTema(nome) {
+      const nomeFinal = String(nome || '').trim() || 'Tema Bíblico';
+      const snapshot = this.capturarSnapshot();
+      const agora = new Date();
+      const dataFormatada = agora.toLocaleDateString('pt-BR') + ' às ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+      const novoTema = {
+        id: 'tema_' + Date.now(),
+        nome: nomeFinal,
+        data: dataFormatada,
+        dataIso: agora.toISOString(),
+        dados: snapshot
+      };
+
+      const temas = this.obterTemas();
+      temas.unshift(novoTema);
+      this.salvarLista(temas);
+      return novoTema;
+    },
+
+    abrirTema(id) {
+      const temas = this.obterTemas();
+      const tema = temas.find(t => t.id === id);
+      if (!tema || !tema.dados) {
+        UI.showToast('Tema salvo não encontrado.', 'error');
+        return;
+      }
+
+      if (this.temTrabalhoNaoSalvoNaTela(tema.dados)) {
+        const confirma = confirm(`Atenção: Há conteúdo na tela que será substituído ao abrir o tema "${tema.nome}". Deseja continuar?`);
+        if (!confirma) return;
+      }
+
+      this.CAMPOS_TEMA.forEach(fieldId => {
+        const el = document.getElementById(fieldId);
+        if (el && tema.dados[fieldId] !== undefined) {
+          el.value = tema.dados[fieldId];
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      });
+
+      ['select-tema', 'select-idioma', 'select-tom', 'select-gancho'].forEach(selId => {
+        const sel = document.getElementById(selId);
+        const containerCustom = document.getElementById(`container-${selId.replace('select-', '')}-custom`);
+        if (sel && containerCustom) {
+          if (sel.value === 'Personalizável') {
+            containerCustom.classList.remove('hidden');
+          } else {
+            containerCustom.classList.add('hidden');
+          }
+        }
+      });
+
+      syncTema();
+      syncTomAudio();
+
+      if (typeof renderizarBotoesSelecaoIdeias === 'function') {
+        renderizarBotoesSelecaoIdeias(tema.dados['output-prompt-ideias'] || '');
+      }
+
+      AutoSave.save();
+      this.fecharModalLista();
+      UI.showToast(`Tema "${tema.nome}" aberto com sucesso!`, 'success');
+    },
+
+    excluirTema(id) {
+      const temas = this.obterTemas();
+      const tema = temas.find(t => t.id === id);
+      const nome = tema ? tema.nome : 'este tema';
+
+      if (!confirm(`Deseja realmente excluir o tema "${nome}"? Esta ação não pode ser desfeita.`)) {
+        return;
+      }
+
+      const atualizados = temas.filter(t => t.id !== id);
+      this.salvarLista(atualizados);
+      this.renderizarListaModal();
+      UI.showToast(`Tema "${nome}" excluído.`, 'info');
+    },
+
+    abrirModalSalvar() {
+      const modal = document.getElementById('modal-salvar-tema');
+      const inputNome = document.getElementById('input-nome-tema-salvo');
+      if (!modal || !inputNome) return;
+
+      const ideiaEscolhida = document.getElementById('input-ideia-escolhida')?.value.trim();
+      const temaCustom = document.getElementById('input-tema-custom')?.value.trim();
+      const temaSelect = document.getElementById('select-tema')?.value;
+      const sugestao = ideiaEscolhida || temaCustom || (temaSelect !== 'Personalizável' ? temaSelect : '') || 'Novo Tema Bíblico';
+
+      inputNome.value = sugestao;
+      modal.classList.remove('hidden');
+      setTimeout(() => { inputNome.focus(); inputNome.select(); }, 50);
+    },
+
+    fecharModalSalvar() {
+      const modal = document.getElementById('modal-salvar-tema');
+      if (modal) modal.classList.add('hidden');
+    },
+
+    abrirModalLista() {
+      const modal = document.getElementById('modal-temas-salvos');
+      if (!modal) return;
+      this.renderizarListaModal();
+      modal.classList.remove('hidden');
+    },
+
+    fecharModalLista() {
+      const modal = document.getElementById('modal-temas-salvos');
+      if (modal) modal.classList.add('hidden');
+    },
+
+    renderizarListaModal() {
+      const container = document.getElementById('lista-temas-salvos-container');
+      if (!container) return;
+
+      const temas = this.obterTemas();
+      if (temas.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 32px 16px; color: #94a3b8;">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 12px; opacity: 0.5;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+            <div style="font-weight: 600; color: #e2e8f0; font-size: 1rem; margin-bottom: 4px;">Nenhum tema salvo manualmente ainda</div>
+            <p style="font-size: 0.85rem; margin: 0;">Clique no botão "Salvar Tema Atual" no topo para arquivar seus roteiros e configurações.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const escapeHtml = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+      container.innerHTML = temas.map(tema => {
+        const estilo = tema.dados?.['select-estilo-roteiro'] || 'Roteiro';
+        const isShorts = estilo.includes('Shorts') || estilo.includes('50-60');
+        const badgeTipo = isShorts
+          ? '<span style="background: rgba(244, 63, 94, 0.15); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.3); padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;">Shorts</span>'
+          : '<span style="background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;">Longo</span>';
+
+        return `
+          <div class="tema-salvo-card">
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                ${badgeTipo}
+                <strong style="color: #f8fafc; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(tema.nome)}">${escapeHtml(tema.nome)}</strong>
+              </div>
+              <div style="font-size: 0.78rem; color: #94a3b8;">
+                Salvo em ${escapeHtml(tema.data)}
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+              <button type="button" class="btn btn-sm btn-primary btn-abrir-tema-salvo" data-tema-id="${escapeHtml(tema.id)}">
+                Abrir
+              </button>
+              <button type="button" class="btn btn-sm btn-ghost btn-excluir-tema-salvo" data-tema-id="${escapeHtml(tema.id)}" style="color: #f87171;" title="Excluir tema salvo">
+                Excluir
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      container.querySelectorAll('.btn-abrir-tema-salvo').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-tema-id');
+          this.abrirTema(id);
+        });
+      });
+
+      container.querySelectorAll('.btn-excluir-tema-salvo').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-tema-id');
+          this.excluirTema(id);
+        });
+      });
+    }
+  };
+
+  // Wire up dos botões e modais de Temas Salvos
+  const btnSalvarTema = document.getElementById('btn-salvar-tema-atual');
+  const btnVerTemas = document.getElementById('btn-ver-temas-salvos');
+  const btnConfirmarSalvar = document.getElementById('btn-confirmar-salvar-tema');
+  const btnCancelarSalvar = document.getElementById('btn-cancelar-salvar-tema');
+  const btnFecharSalvar = document.getElementById('btn-fechar-modal-salvar');
+  const btnFecharModalLista = document.getElementById('btn-fechar-modal-lista-temas');
+  const btnFecharLista = document.getElementById('btn-fechar-lista-temas');
+
+  if (btnSalvarTema) btnSalvarTema.addEventListener('click', () => GerenciadorTemasSalvos.abrirModalSalvar());
+  if (btnVerTemas) btnVerTemas.addEventListener('click', () => GerenciadorTemasSalvos.abrirModalLista());
+  if (btnCancelarSalvar) btnCancelarSalvar.addEventListener('click', () => GerenciadorTemasSalvos.fecharModalSalvar());
+  if (btnFecharSalvar) btnFecharSalvar.addEventListener('click', () => GerenciadorTemasSalvos.fecharModalSalvar());
+  if (btnFecharModalLista) btnFecharModalLista.addEventListener('click', () => GerenciadorTemasSalvos.fecharModalLista());
+  if (btnFecharLista) btnFecharLista.addEventListener('click', () => GerenciadorTemasSalvos.fecharModalLista());
+
+  if (btnConfirmarSalvar) {
+    btnConfirmarSalvar.addEventListener('click', () => {
+      const inputNome = document.getElementById('input-nome-tema-salvo');
+      const nome = inputNome ? inputNome.value.trim() : '';
+      if (!nome) {
+        UI.showToast('Por favor, informe um nome para o tema.', 'warning');
+        return;
+      }
+      GerenciadorTemasSalvos.salvarTema(nome);
+      GerenciadorTemasSalvos.fecharModalSalvar();
+      UI.showToast(`Tema "${nome}" salvo com sucesso!`, 'success');
+    });
+  }
+
+  GerenciadorTemasSalvos.atualizarContadorBadge();
+
   // === AUTOSAVE: Restaurar sessão anterior ao carregar e configurar debounce ===
   const sessionRestored = AutoSave.restore();
   if (sessionRestored) {
@@ -7103,6 +7701,8 @@ Desenvolvimento: A soberania divina cumpre cada detalhe profético anunciado pel
     syncTomAudio();
     UI.showToast('Sessão anterior restaurada automaticamente.', 'warning');
   }
+  // Renderiza botões de ideias se houver ideias presentes
+  renderizarBotoesSelecaoIdeias(document.getElementById('output-prompt-ideias')?.value || '');
   AutoSave.setupDebounce();
 });
   </script>
