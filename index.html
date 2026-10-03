@@ -1027,11 +1027,11 @@ textarea.h-180 {
           </summary>
           <div class="step-guide-body">
             <ol>
-              <li><strong>Padrão do Canal:</strong> Clique no botão <em>"Preencher com o padrão do canal"</em> para carregar instantaneamente as opções ideais: Idioma = <code>Inglês</code>, Estilo = <code>YouTube Longo (18-20 minutos)</code>, Tom = <code>Investigativo e Curioso</code>, Gancho = <code>Afirmação Provocativa</code> e Tema = <code>-- Personalizável --</code>.</li>
-              <li><strong>Tema do Vídeo:</strong> No campo "Tema Personalizado", digite o tema em inglês com as passagens bíblicas. <em>Exemplo pronto para copiar:</em> <code>Og, king of Bashan: the last of the giants (Numbers 21:33-35, Deuteronomy 3:1-11)</code>.</li>
+              <li><strong>Padrão do Canal:</strong> Clique no botão <em>"Preencher com o padrão do canal"</em> para carregar instantaneamente as opções ideais: Idioma = <code>Português (Brasil)</code>, Estilo = <code>YouTube Longo (18-20 minutos)</code>, Tom = <code>Solene e Profético</code>, Gancho = <code>Citação Bíblica Direta e Impacto Teológico</code> e Tema = <code>-- Personalizável --</code>.</li>
+              <li><strong>Tema do Vídeo:</strong> No campo "Tema Personalizado", digite o tema em português com as passagens bíblicas. <em>Exemplo pronto para copiar:</em> <code>Ogue, rei de Basã: o último dos gigantes (Números 21:33-35, Deuteronômio 3:1-11)</code>.</li>
               <li><strong>Gerar e Avaliar Ideias:</strong> Clique no botão <em>"Gerar Ideias de Vídeo com IA"</em>. O sistema gera 10 títulos com estruturas variadas, valida se há palavras proibidas e exibe o <strong>Avaliador da IA</strong> indicando a ideia recomendada e qual evitar.</li>
               <li><strong>Copie a Ideia Escolhida:</strong> Selecione o título escolhido e cole no campo <em>"Passo B: Ideia Escolhida para o Roteiro"</em>.</li>
-              <li><strong>Gerar Roteiro Completo:</strong> Clique em <em>"Gerar Roteiro Completo com IA"</em> e aguarde a geração das 7 seções com auditoria e validação KJV automática.</li>
+              <li><strong>Gerar Roteiro Completo:</strong> Clique em <em>"Gerar Roteiro Completo com IA"</em> e aguarde a geração das 7 seções com auditoria e validação bíblica automática.</li>
             </ol>
             <div class="step-guide-alert">
               <span>⚠️ <strong>Lembrete:</strong> Ao iniciar um novo vídeo, gere de novo antes de copiar, para não usar o resultado de outro vídeo.</span>
@@ -1081,10 +1081,10 @@ textarea.h-180 {
               <span class="tooltip-wrapper" data-tooltip="Selecione o idioma em que o conteúdo será gerado.">?</span>
             </label>
             <select id="select-idioma" class="form-control">
-              <option value="Português (Brasil)" style="display: none;">Português (Brasil)</option>
-              <option value="Inglês" selected>Inglês</option>
-              <option value="Espanhol" style="display: none;">Espanhol</option>
-              <option value="Espanhol (LATAM)" style="display: none;">Espanhol (LATAM)</option>
+              <option value="Português (Brasil)" selected>Português (Brasil)</option>
+              <option value="Inglês">Inglês</option>
+              <option value="Espanhol">Espanhol</option>
+              <option value="Espanhol (LATAM)">Espanhol (LATAM)</option>
               <option value="Francês" style="display: none;">Francês</option>
               <option value="Alemão" style="display: none;">Alemão</option>
               <option value="Italiano" style="display: none;">Italiano</option>
@@ -1097,7 +1097,7 @@ textarea.h-180 {
               <option value="Holandês" style="display: none;">Holandês</option>
               <option value="Sueco" style="display: none;">Sueco</option>
               <option value="Polonês" style="display: none;">Polonês</option>
-              <option value="Personalizável" style="display: none;">-- Personalizável --</option>
+              <option value="Personalizável">-- Personalizável --</option>
             </select>
             <div id="container-idioma-custom" class="custom-input-container hidden">
               <input type="text" id="input-idioma-custom" class="form-control mt-2" placeholder="Digite o idioma desejado...">
@@ -3187,9 +3187,12 @@ function limitarFrasesHistoricas(texto, estiloRoteiro = '') {
   const paragrafos = texto.split(/\n\s*\n/);
   let contagemDescarte = 0;
 
-  // Regex para sentenças de descarte de ceticismo e autodefesas (PT e EN)
-  const regexDescartePT = /\b(?:(?:isso|este|esse|o)\s*(?:evento|acontecimento|relato|fato|dil[uú]vio)?\s+)?n[aã]o\s+(?:foi|era|é|se\s+trata\s+de)\s+(?:(?:um[a]?|mer[ao]|apenas|somente)\s+)*(?:hist[oó]ria|evento(?:\s+simb[oó]lico)?|par[aá]bola|conto(?:s)?(?:\s+de\s+fadas)?|s[ií]mbolo|simb[oó]lico|mito|lenda|f[aá]bula|folclore|alegoria|fic[cç][aã]o)(?:[^.!?\n]*?(?:fato\s+hist[oó]rico|fato\s+real|realidade\s+hist[oó]rica|acontecimento\s+real|relato\s+hist[oó]rico|hist[oó]ria\s+verdadeira|ju[ií]zo\s+real|evento\s+real)[^.!?\n]*)?[.!?]?/i;
+  // Regex para sentenças de descarte de ceticismo (PT e EN)
+  const regexDescartePT = /\b(?:(?:isso|este|esse|o)\s*(?:evento|acontecimento|relato|fato|dil[uú]vio)?\s+)?n[aã]o\s+(?:foi|era|é|se\s+trata\s+de)\s+(?:(?:um[a]?|mer[ao]|apenas|somente)\s+)*(?:hist[oó]ria|evento(?:\s+simb[oó]lico)?|par[aá]bola|conto(?:s)?(?:\s+de\s+fadas)?|s[ií]mbolo|simb[oó]lico|mito|lenda|f[aá]bula|folclore|alegoria|fic[cç][aã]o)(?:[^.!?\n]*?[.!?]?)/i;
   const regexDescarteEN = /\b(?:(?:it\s+was|this\s+was|they\s+were|is|was)\s+not\s+(?:(?:a\s+)?(?:mere|simple|just)\s+)*(?:myth|legend|folklore|fable|parable|fairy\s+tale|fiction|symbolic\s+event|story)[^.!?\n]*[.!?]?)/i;
+
+  // Regex de autodefesa proibida (PONTO 3: nunca apaga palavras soltas, remove a frase inteira)
+  const regexAutodefesa = /\b(?:fato\s+hist[oó]rico|fato\s+real|realidade\s+hist[oó]rica|acontecimento\s+real|relato\s+hist[oó]rico|hist[oó]ria\s+verdadeira|ju[ií]zo\s+real|evento\s+real|historical\s+fact|real\s+fact|historical\s+reality|real\s+event|historical\s+account|true\s+story)\b/i;
 
   const paragrafosProcessados = paragrafos.map(p => {
     const sentencas = p.match(/[^.!?]+(?:[.!?]+["']?|$)/g) || [p];
@@ -3199,28 +3202,25 @@ function limitarFrasesHistoricas(texto, estiloRoteiro = '') {
       let sTrim = sent.trim();
       if (!sTrim) continue;
 
+      const temAutodefesa = regexAutodefesa.test(sTrim);
       const isDescartePT = regexDescartePT.test(sTrim);
       const isDescarteEN = regexDescarteEN.test(sTrim);
+
+      if (temAutodefesa) {
+        // PONTO 3: Filtro nunca apaga palavras soltas; remove a frase inteira.
+        continue;
+      }
 
       if (isDescartePT || isDescarteEN) {
         contagemDescarte++;
         if (contagemDescarte <= limiteDescarte) {
-          // Mantém a sentença autorizada até o limite, mas limpa qualquer autodefesa clichê conectada
-          let sentLimpa = sTrim.replace(/[,;]\s*(?:mas\s+)?(?:[eé]|foi|trata-se\s+de)?\s*(?:um[a]?\s+)?(?:fato\s+hist[oó]rico|fato\s+real|realidade\s+hist[oó]rica|acontecimento\s+real|relato\s+hist[oó]rico|hist[oó]ria\s+verdadeira|ju[ií]zo\s+real|evento\s+real)[^.!?]*/i, '.')
-                               .replace(/;\s*(?:[eé]|foi)\s+(?:um\s+)?(?:fato\s+hist[oó]rico|ju[ií]zo\s+real|relato\s+hist[oó]rico)[^.!?]*/i, '.');
-          sentLimpa = sentLimpa.replace(/\.+/g, '.').trim();
-          sentencasMantidas.push(sentLimpa);
+          sentencasMantidas.push(sTrim);
         } else {
-          // Ultrapassou o limite: descarta totalmente a sentença excedente para garantir fluidez
+          // Ultrapassou o limite: descarta totalmente a sentença excedente
           continue;
         }
       } else {
-        // Frase comum: remove termos de autodefesa isolados se existirem
-        let sentLimpa = sTrim.replace(/\b(?:(?:isso|este|este\s+relato)\s+)?(?:[eé]|foi|trata-se\s+de)\s+(?:um[a]?\s+)?(?:fato\s+hist[oó]rico|fato\s+real|realidade\s+hist[oó]rica|acontecimento\s+real|relato\s+hist[oó]rico|hist[oó]ria\s+verdadeira|ju[ií]zo\s+real|evento\s+real)(?:\s+(?:preservado|registrado|revelado|derramado|enviado)?\s+pelas?\s+escrituras)?\b[.,;]?\s*/gi, '');
-        sentLimpa = sentLimpa.replace(/[^\S\r\n]{2,}/g, ' ').replace(/\s+([.,;:!?])/g, '$1').trim();
-        if (sentLimpa.length > 5) {
-          sentencasMantidas.push(sentLimpa);
-        }
+        sentencasMantidas.push(sTrim);
       }
     }
 
@@ -3228,22 +3228,11 @@ function limitarFrasesHistoricas(texto, estiloRoteiro = '') {
   }).filter(p => p.trim().length > 0);
 
   let res = paragrafosProcessados.join('\n\n');
-
-  // Limpeza de redundâncias secundárias em EN
-  res = res.replace(/\b(?:(?:they\s+were\s+)?not\s+(?:legends?\s+or\s+myths?|myths?\s+or\s+legends?))\b/gi, (match) => {
-    return '';
-  });
-  res = res.replace(/\b(?:The\s+)?(?:historical\s+fact|real\s+fact|historical\s+reality|real\s+event|historical\s+account|true\s+story)(?:\s+of)?\b/gi, '');
-
-  // Sanitização estrita contra termos proibidos de autodefesa (PROIBIÇÃO ABSOLUTA)
-  res = res.replace(/\b(?:(?:[eé]|foi|trata-se\s+de)\s+(?:um[a]?\s+)?)?(?:fato\s+hist[oó]rico|fato\s+real|realidade\s+hist[oó]rica|acontecimento\s+real|relato\s+hist[oó]rico|hist[oó]ria\s+verdadeira|ju[ií]zo\s+real|evento\s+real)\b/gi, '');
-
   res = res.replace(/[^\S\r\n]{2,}/g, ' ').replace(/[^\S\r\n]+([.,;:!?])/g, '$1');
   res = res.replace(/\n{3,}/g, '\n\n').trim();
   return res;
 }
-
-
+window.limitarFrasesHistoricas = limitarFrasesHistoricas;
 
 /**
  * PONTO 3: Garante que a afirmação sobre o silêncio da Bíblia apareça no MÁXIMO UMA VEZ no roteiro inteiro.
@@ -3349,7 +3338,7 @@ function validarECorrigirAspas(texto) {
     } else {
       // Aspa foi aberta mas faltou fechar antes ou no final da oração
       if (limpo.endsWith('.')) {
-        limpo = limpo.slice(0, -1) + '."';
+        limpo = limpo.slice(0, -1) + '".';
       } else if (/[!?]$/.test(limpo)) {
         limpo = limpo.slice(0, -1) + '"' + limpo.slice(-1);
       } else {
@@ -3360,7 +3349,7 @@ function validarECorrigirAspas(texto) {
     const finalCount = (limpo.match(/"/g) || []).length;
     if (finalCount % 2 !== 0) {
       if (limpo.endsWith('."') && !limpo.startsWith('"')) {
-        limpo = '"' + limpo;
+        limpo = '"' + limpo.replace(/\."$/, '".');
       } else {
         limpo = limpo.replace(/([.!?])$/, '"$1');
       }
@@ -3381,10 +3370,12 @@ function garantirCtaNoUltimoParagrafo(texto, idioma = 'pt', estiloRoteiro = '') 
   const paragrafos = texto.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
   if (paragrafos.length === 0) return texto;
 
+  const totalPalavrasTexto = paragrafos.reduce((acc, p) => acc + (p.match(/\S+/g) || []).length, 0);
   const isShorts = String(estiloRoteiro).includes('Shorts') ||
                    String(estiloRoteiro).includes('50-60') ||
                    String(estiloRoteiro).includes('Estendido') ||
-                   String(estiloRoteiro).includes('3 minutos');
+                   String(estiloRoteiro).includes('3 minutos') ||
+                   (totalPalavrasTexto < 350);
 
   const ctaRegex = /\b(?:subscrib(?:e|ing)|inscreva-se|inscrever|join\s+(?:this\s+)?channel|follow\s+(?:this\s+)?channel|acompanhe\s+este\s+canal|suscr[ií]bete|suscribir)\b/i;
 
@@ -4193,7 +4184,7 @@ Every biblical documentary MUST follow this precise 7-part narrative progression
 - SECTION 4: Turning Point / Conflict (The decisive crisis, divine confrontation, critical turning point, or divine decree).
 - SECTION 5: Consequence (The immediate historical and scriptural outcomes of the turning point/conflict).
 - SECTION 6: Later Unfolding / Aftermath (Subsequent biblical references, later historical witness, or long-term scriptural impact across generations).
-- SECTION 7: Conclusion + Subscription Call (Solemn concluding reflection on divine sovereignty and enduring biblical truth. AT MOST 2 SHORT PARAGRAPHS plus the final channel subscription sentence. STRICTLY FORBIDDEN: repeating or re-summarizing earlier video scenes/chapters, and STRICTLY FORBIDDEN: homiletic preaching or repetitive rhetorical devices like 'The narrative does not shift. The vocabulary does not change...').
+- SECTION 7: Conclusion + Subscription Call (Solemn concluding reflection on divine sovereignty and enduring biblical truth. STRICTLY AT MOST 120 WORDS in total plus the final 20-word channel subscription sentence. STRICTLY FORBIDDEN: repeating or re-summarizing earlier video scenes/chapters, and STRICTLY FORBIDDEN: homiletic preaching or repetitive rhetorical devices like 'The narrative does not shift. The vocabulary does not change...').
 
 CRITICAL ALLOCATION OF EXCLUSIVE EVENTS AND VERSES (ZERO REPETITION):
 1. For EACH of the 7 sections, you MUST list:
@@ -4313,7 +4304,7 @@ VERSES ALREADY QUOTED VERBATIM (STRICTLY FORBIDDEN TO QUOTE VERBATIM AGAIN):
 ${versiculosJaCitados && versiculosJaCitados.length > 0 ? versiculosJaCitados.join(', ') : 'None yet.'}
 
 LENGTH REQUIREMENT:
-- TARGET LENGTH: STRICTLY 420 TO 460 WORDS PER SECTION.
+- TARGET LENGTH: ${isLast ? 'STRICTLY AT MOST 120 WORDS for this conclusion.' : 'STRICTLY 420 TO 460 WORDS PER SECTION.'}
 - Write dense, immersive, multi-paragraph narrative text. Do NOT write a summary or bullet points.
 
 POSTURA OBRIGATÓRIA DO NARRADOR:
@@ -4349,10 +4340,9 @@ CRITICAL RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
    ${!isLast ? `- STRICTLY PROHIBITED to conclude, wrap up, summarize the entire history, or provide a closing sign-off in this section.
    - Concluding is EXCLUSIVELY RESERVED for Section 7.
    - Section ${secaoNumero} must end with natural forward narrative momentum carrying the listener into the next historical stage.` : `- SECTION 7 RULES (CONCISE CONCLUSION & SUBSCRIPTION CALL):
-   * MAXIMUM OF 2 SHORT PARAGRAPHS plus the channel subscription invite as the very last sentence.
-   * STRICTLY PROHIBITED from repeating the summary of earlier chapters or re-listing scenes.
-   * STRICTLY PROHIBITED from preaching homilies or sermonizing with repetitive rhetoric (e.g. "The narrative does not shift. The vocabulary does not change...").
-   * Focus strictly on the sovereign victory of the Creator and eternal scriptural truth, ending with a reverent call to subscribe to the channel as the VERY LAST paragraph and sentence.`}
+   * MAXIMUM OF 120 WORDS IN TOTAL for the concluding reflection (excluding the 20-word subscription call).
+   * STRICTLY PROHIBITED from repeating the summary of earlier chapters, re-listing scenes, or preaching homilies.
+   * Focus strictly on divine sovereignty and the eternal biblical truth, followed immediately by the 20-word subscription call.`}
 3. ZERO BACKSTAGE / META-LANGUAGE & ZERO INTERNAL LABELS:
    - STRICTLY FORBIDDEN to use presentation or backstage phrases like "in the next section", "as we transition", "we will explore", "as we continue our exploration", "moving ahead", "as the narrative unfolds". Speak directly as an ancient chronicle without stepping out of the story.
    - STRICTLY FORBIDDEN to utter internal architectural labels like "Canonical Boundary", "Opening Hook", "Section", "Point", "Outline", "Role" in the spoken text.
@@ -4966,7 +4956,7 @@ const AutoSave = {
  * Remove marcadores de seção entre colchetes, cabeçalhos, rótulos estruturais,
  * marcações markdown e títulos duplicados.
  */
-function limparTextoParaNarracao(texto) {
+function limparTextoParaNarracao(texto, estiloRoteiro = '') {
   if (!texto || typeof texto !== 'string') return '';
 
   let limpo = texto;
@@ -5042,6 +5032,14 @@ function limparTextoParaNarracao(texto) {
     limpo = limitarDeclaracoesDeSilencioBiblico(limpo);
   }
 
+  // 14.1 Remove referências bíblicas entre parênteses para o TTS não ler em voz alta (ex: "(Gênesis 1:1)", "(1 Samuel 17:49)")
+  // O roteiro original na caixa de texto permanece com as referências completas para leitura e estudo.
+  limpo = limpo.replace(/\s*\(\s*(?:[1-3]\s+|[1-3]ª\s+|[1-3]º\s+)?[A-Za-zÀ-ÖØ-öø-ÿ.]+\s+\d+(?:[:\.]\d+(?:[,\s\-–—/]+(?:\d+|[A-Za-zÀ-ÖØ-öø-ÿ.]+))*)*\s*\)/g, '');
+  limpo = limpo.replace(/\s*\(\s*(?:[1-3]\s+|[1-3]ª\s+|[1-3]º\s+)?[A-Za-zÀ-ÖØ-öø-ÿ.]+\s+\d+\s*\)/g, '');
+  limpo = limpo.replace(/\s*\(\s*(?:[1-3]\s+|[1-3]ª\s+|[1-3]º\s+)?[A-Za-zÀ-ÖØ-öø-ÿ.]+[^)]*?\d+[:\.]\d+[^)]*?\)/g, '');
+  limpo = limpo.replace(/\s+([.,;:!?])/g, '$1');
+  limpo = limpo.replace(/[^\S\r\n]{2,}/g, ' ');
+
   // 15. Normaliza quebras de linha e espaços extras
   limpo = limpo
     .split('\n')
@@ -5051,7 +5049,7 @@ function limparTextoParaNarracao(texto) {
 
   // 16. Garante que o convite de inscrição seja sempre o ÚLTIMO parágrafo
   if (typeof garantirCtaNoUltimoParagrafo === 'function') {
-    limpo = garantirCtaNoUltimoParagrafo(limpo);
+    limpo = garantirCtaNoUltimoParagrafo(limpo, 'pt', estiloRoteiro);
   }
 
   // 17. Validação e correção automática de aspas abertas/fechadas em citações
@@ -5325,13 +5323,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (selectTema) selectTema.value = 'Personalizável';
       if (containerTemaCustom) containerTemaCustom.classList.remove('hidden');
       if (inputTemaCustom) {
-        inputTemaCustom.value = 'Og, king of Bashan: the last of the giants (Numbers 21:33-35, Deuteronomy 3:1-11)';
+        inputTemaCustom.value = 'Ogue, rei de Basã: o último dos gigantes (Números 21:33-35, Deuteronômio 3:1-11)';
       }
-      if (selectIdioma) selectIdioma.value = 'Inglês';
+      if (selectIdioma) selectIdioma.value = 'Português (Brasil)';
       if (containerIdiomaCustom) containerIdiomaCustom.classList.add('hidden');
       if (selectEstilo) selectEstilo.value = 'YouTube Longo (18-20 minutos)';
-      if (selectTom) selectTom.value = 'Investigativo e Curioso';
-      if (selectGancho) selectGancho.value = 'Afirmação Provocativa';
+      if (selectTom) selectTom.value = 'Solene e Profético';
+      if (selectGancho) selectGancho.value = 'Citação Bíblica Direta e Impacto Teológico';
 
       syncTema();
       syncTomAudio();
@@ -5406,8 +5404,37 @@ function apararParaLimiteMaximo(texto, maxPalavras = 3000) {
   if (contarPalavras(texto) <= maxPalavras) return texto;
 
   const paragrafos = texto.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
-  if (paragrafos.length <= 2) {
-    return texto;
+  if (paragrafos.length === 1) {
+    const sentencas = texto.match(/[^.!?]+(?:[.!?]+["']?|$)/g) || [texto];
+    let acum = [];
+    for (const s of sentencas) {
+      const sTrim = s.trim();
+      if (!sTrim) continue;
+      if (contarPalavras(acum.join(' ') + ' ' + sTrim) <= maxPalavras) {
+        acum.push(sTrim);
+      } else {
+        break;
+      }
+    }
+    return acum.join(' ') || texto;
+  }
+  if (paragrafos.length === 2) {
+    const narracao = paragrafos[0];
+    const cta = paragrafos[1];
+    const ctaCount = contarPalavras(cta);
+    const orcamentoNarracao = Math.max(maxPalavras - ctaCount, 20);
+    const sentencas = narracao.match(/[^.!?]+(?:[.!?]+["']?|$)/g) || [narracao];
+    let acum = [];
+    for (const s of sentencas) {
+      const sTrim = s.trim();
+      if (!sTrim) continue;
+      if (contarPalavras(acum.join(' ') + ' ' + sTrim) <= orcamentoNarracao) {
+        acum.push(sTrim);
+      } else {
+        break;
+      }
+    }
+    return (acum.join(' ') || narracao) + '\n\n' + cta;
   }
 
   // 1. Isolar e preservar o bloco final (Conclusão e CTA)
@@ -5464,10 +5491,10 @@ function apararParaLimiteMaximo(texto, maxPalavras = 3000) {
     }
   }
 
-  // Se ainda assim exceder o orçamento (caso de introdução longa), enxuga frases acessórias do blocoInicial
+  // Se ainda assim exceder o orçamento, enxuga frases acessórias do blocoInicial
   if (contagemMiolo + palavrasInicio + palavrasFim > maxPalavras) {
     const fsInicio = blocoInicial[0].match(/[^.!?]+(?:[.!?]+["']?|$)/g) || [blocoInicial[0]];
-    if (fsInicio.length > 2) {
+    if (fsInicio.length > 1) {
       let novoInicioFs = [fsInicio[0]];
       for (let j = 1; j < fsInicio.length; j++) {
         const fTrim = fsInicio[j].trim();
@@ -5488,7 +5515,29 @@ function apararParaLimiteMaximo(texto, maxPalavras = 3000) {
   });
   if (pAtual) mioloReconstruido.push(pAtual);
 
-  return [...blocoInicial, ...mioloReconstruido, ...blocoFinal].join('\n\n');
+  let resultadoFinal = [...blocoInicial, ...mioloReconstruido, ...blocoFinal].filter(Boolean).join('\n\n');
+
+  // Salvaguarda final estrita: garante que NUNCA ultrapasse maxPalavras sob nenhuma circunstância
+  if (contarPalavras(resultadoFinal) > maxPalavras) {
+    const ultParagrafo = blocoFinal.length > 0 ? blocoFinal[blocoFinal.length - 1] : '';
+    const palavrasUlt = contarPalavras(ultParagrafo);
+    const orcamentoRestante = Math.max(maxPalavras - palavrasUlt, 20);
+    const todasSentencas = resultadoFinal.match(/[^.!?]+(?:[.!?]+["']?|$)/g) || [resultadoFinal];
+    let sentencasAparadas = [];
+    for (const s of todasSentencas) {
+      const sTrim = s.trim();
+      if (!sTrim) continue;
+      if (sTrim === ultParagrafo || /\b(?:inscreva-se|inscrever|subscribe|acompanhe\s+este\s+canal)\b/i.test(sTrim)) continue;
+      if (contarPalavras(sentencasAparadas.join(' ')) + contarPalavras(sTrim) <= orcamentoRestante) {
+        sentencasAparadas.push(sTrim);
+      } else {
+        break;
+      }
+    }
+    resultadoFinal = sentencasAparadas.join(' ') + (ultParagrafo ? '\n\n' + ultParagrafo : '');
+  }
+
+  return resultadoFinal;
 }
 
 /**
@@ -5598,18 +5647,155 @@ function eliminarParagrafosOrfaos(texto) {
 function limparPontuacaoDuplicada(texto) {
   if (!texto || typeof texto !== 'string') return texto;
   let res = texto;
+
+  // 1. Sem aspas duplicadas ("" -> " ou “” -> “ ou '' -> ')
+  res = res.replace(/(["”'])\1+/g, '$1');
+
+  // 2. Dois-pontos depois de verbo de fala antes de citação com aspas
+  // Ex: disse "..." -> disse: "..." | clamou "..." -> clamou: "..."
+  const verbosFala = 'disse|diz|dizendo|afirmou|afirma|declarou|declara|clamou|clama|gritou|gritando|respondeu|responde|perguntou|pergunta|ordenou|ordena|falou|fala|bradou|brada|proclamou|proclama|escreveu|escreve|registram|registra|afirmam';
+  const regexFalaAspas = new RegExp(`\\b(${verbosFala})((?:\\s+(?:ao|aos|à|às|a|para)\\s+[A-Za-zÀ-ÖØ-öø-ÿ]+)?)(\\s*[:;,]?\\s*)(["“])`, 'gi');
+  res = res.replace(regexFalaAspas, '$1$2: $4');
+
+  // 3. Espaço antes de abrir aspas (nunca colado em palavra ou dois-pontos)
+  res = res.replace(/:\s*(["“])/g, ': $1');
+  res = res.replace(/([A-Za-zÀ-ÖØ-öø-ÿ0-9])(["“])/g, '$1 $2');
+
+  // 4. Sem '."' colado: em português e na norma editorial, converte '."' para '".'
+  res = res.replace(/\."/g, '".');
+  res = res.replace(/\.\s*"/g, '".');
+
+  // 5. Sem aspas de fechamento coladas sem espaço na próxima palavra ou pontuação (ex: feito."E -> feito." E ou feito".E -> feito". E)
+  res = res.replace(/([.!?]["”'])([A-Za-zÀ-ÖØ-öø-ÿ])/g, '$1 $2');
+  res = res.replace(/(["”'][.!?])([A-Za-zÀ-ÖØ-öø-ÿ])/g, '$1 $2');
+  res = res.replace(/(["”'])([A-Za-zÀ-ÖØ-öø-ÿ])/g, '$1 $2');
+
+  // 6. Limpeza de pontuação duplicada pós-substituição (ex: feito.”.” -> feito.”)
   res = res.replace(/(["”'])\s*[.,;:]+(?=[.,;:]|\s*$|\s+[A-ZÀ-Ú])/g, '$1');
   res = res.replace(/([.!?]["”'])\s*[.,;:]+/g, '$1');
   res = res.replace(/([.!?])\s*\1+/g, '$1');
-  res = res.replace(/(["”'])\1+/g, '$1');
   res = res.replace(/([:;,])(["”'])/g, '.$2');
+
+  // 7. Normaliza espaços múltiplos
+  res = res.replace(/[^\S\r\n]{2,}/g, ' ');
+
   return res;
 }
 
 window.eliminarParagrafosOrfaos = eliminarParagrafosOrfaos;
 window.limparPontuacaoDuplicada = limparPontuacaoDuplicada;
 
+/**
+ * Remove anglicismos e resíduos de palavras em inglês acidentais em roteiros em português
+ */
+function removerAnglicismosAcidentais(texto, idioma = 'pt') {
+  if (!texto || typeof texto !== 'string') return texto;
+  const id = (idioma || '').toLowerCase();
+  if (!id.includes('port') && !id.includes('pt')) return texto;
 
+  const mapa = [
+    { regex: /\bIn\b/g, sub: 'Em' },
+    { regex: /\bin\b/g, sub: 'em' },
+    { regex: /\bFor\b/g, sub: 'Para' },
+    { regex: /\bfor\b/g, sub: 'para' },
+    { regex: /\bAnd\b/g, sub: 'E' },
+    { regex: /\band\b/g, sub: 'e' },
+    { regex: /\bThe\b/g, sub: 'O' },
+    { regex: /\bthe\b/g, sub: 'o' },
+    { regex: /\bOf\b/g, sub: 'De' },
+    { regex: /\bof\b/g, sub: 'de' },
+    { regex: /\bWith\b/g, sub: 'Com' },
+    { regex: /\bwith\b/g, sub: 'com' },
+    { regex: /\bTo\b/g, sub: 'Para' },
+    { regex: /\bto\b/g, sub: 'para' },
+    { regex: /\bFrom\b/g, sub: 'De' },
+    { regex: /\bfrom\b/g, sub: 'de' }
+  ];
+
+  let res = texto;
+  for (const item of mapa) {
+    res = res.replace(item.regex, item.sub);
+  }
+  return res;
+}
+window.removerAnglicismosAcidentais = removerAnglicismosAcidentais;
+
+/**
+ * Garante que o Shorts fique estritamente entre 130 e 160 palavras na narração falada limpa.
+ */
+function garantirExtensaoShorts(texto, idioma = 'pt') {
+  if (!texto || typeof texto !== 'string') return texto;
+  const contar = (t) => {
+    const limpo = (typeof limparTextoParaNarracao === 'function') ? limparTextoParaNarracao(t, 'Shorts') : t;
+    return (limpo.trim().match(/\S+/g) || []).length;
+  };
+
+  let total = contar(texto);
+  if (total >= 130 && total <= 160) {
+    return texto;
+  }
+
+  const paragrafos = texto.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  let cta = '';
+  let corpoParagrafos = [...paragrafos];
+
+  // Se o último parágrafo for CTA ou contiver chamada para inscrição
+  if (corpoParagrafos.length > 1 && /(?:inscreva-se|inscrever|subscribe|acompanhe)/i.test(corpoParagrafos[corpoParagrafos.length - 1])) {
+    cta = corpoParagrafos.pop();
+  } else if (corpoParagrafos.length === 1 && /(?:inscreva-se|inscrever|subscribe|acompanhe)/i.test(corpoParagrafos[0])) {
+    const matchCta = corpoParagrafos[0].match(/([.!?]\s*)(Inscreva-se\s+no\s+canal\s+para\s+mais\s+estudos\s+e\s+relatos\s+b[ií]blicos\s+sagrados\.?)/i);
+    if (matchCta) {
+      cta = matchCta[2];
+      corpoParagrafos[0] = corpoParagrafos[0].replace(matchCta[0], matchCta[1]).trim();
+    }
+  }
+
+  if (!cta) {
+    cta = 'Inscreva-se no canal para mais estudos e relatos bíblicos sagrados.';
+  }
+
+  let corpoTexto = corpoParagrafos.join('\n\n');
+
+  if (total > 160) {
+    const sentencas = corpoTexto.match(/[^.!?]+(?:[.!?]+["']?|$)/g) || [corpoTexto];
+    let selecionadas = [];
+    for (const s of sentencas) {
+      const sTrim = s.trim();
+      if (!sTrim) continue;
+      const cNova = contar(selecionadas.concat(sTrim).join(' ') + '\n\n' + cta);
+      if (cNova <= 158 || selecionadas.length === 0) {
+        selecionadas.push(sTrim);
+      } else {
+        break;
+      }
+    }
+    corpoTexto = selecionadas.join(' ');
+    texto = corpoTexto + '\n\n' + cta;
+    total = contar(texto);
+  }
+
+  if (total < 130) {
+    const complementos = [
+      'As Escrituras Sagradas testificam com poder que a fidelidade divina permanece viva e inabalável.',
+      'O relato sagrado revela com clareza infalível que a palavra de Deus triunfa sobre todo império.',
+      'A soberania do Senhor permanece inabalável através de todas as gerações.'
+    ];
+    for (const comp of complementos) {
+      if (total >= 130) break;
+      const testTexto = corpoTexto + ' ' + comp + '\n\n' + cta;
+      const testTotal = contar(testTexto);
+      if (testTotal <= 160) {
+        corpoTexto += ' ' + comp;
+        texto = testTexto;
+        total = testTotal;
+      }
+    }
+    texto = corpoTexto + '\n\n' + cta;
+  }
+
+  return texto;
+}
+window.garantirExtensaoShorts = garantirExtensaoShorts;
 
 /**
  * Ajusta a extensão estrita do roteiro conforme a duração selecionada
@@ -5619,18 +5805,36 @@ function ajustarExtensaoRoteiro(texto, estiloRoteiro = '') {
   const estilo = String(estiloRoteiro);
   let res = texto;
 
+  const obterContagem = (str) => {
+    const limpo = (typeof limparTextoParaNarracao === 'function') ? limparTextoParaNarracao(str) : str;
+    return (limpo.trim().match(/\S+/g) || []).length;
+  };
+
   if (estilo.includes('50-60') || (estilo.includes('Shorts') && !estilo.includes('Estendido') && !estilo.includes('3 minutos'))) {
-    // Shorts (50-60s): meta 130 a 160 palavras
-    res = apararParaLimiteMaximo(res, 160);
+    // Shorts (50-60s): meta estrita 130 a 160 palavras na narração falada
+    if (typeof garantirExtensaoShorts === 'function') {
+      res = garantirExtensaoShorts(res);
+    } else {
+      let palavras = obterContagem(res);
+      if (palavras > 160) {
+        res = apararParaLimiteMaximo(res, 145);
+      }
+    }
   } else if (estilo.includes('Estendido') || estilo.includes('3 minutos')) {
     // Shorts Estendido (até 3 min): meta 400 a 450 palavras
-    res = apararParaLimiteMaximo(res, 450);
+    if (obterContagem(res) > 450) {
+      res = apararParaLimiteMaximo(res, 450);
+    }
   } else if (estilo.includes('5-8') || estilo.includes('Médio')) {
     // YouTube Médio (5-8 min): meta 750 a 1.200 palavras
-    res = apararParaLimiteMaximo(res, 1200);
+    if (obterContagem(res) > 1200) {
+      res = apararParaLimiteMaximo(res, 1200);
+    }
   } else if (estilo.includes('18-20') || estilo.includes('Longo')) {
     // YouTube Longo (18-20 min): meta 2.700 a 3.000 palavras
-    res = apararParaLimiteMaximo(res, 3000);
+    if (obterContagem(res) > 3000) {
+      res = apararParaLimiteMaximo(res, 3000);
+    }
   }
 
   if (typeof eliminarParagrafosOrfaos === 'function') {
@@ -5642,7 +5846,6 @@ function ajustarExtensaoRoteiro(texto, estiloRoteiro = '') {
 
   return res;
 }
-
 
 window.ajustarExtensaoRoteiro = ajustarExtensaoRoteiro;
 
@@ -5807,7 +6010,24 @@ async function gerarRoteiroEmSeteSecoes({
       SCRIPT_SYSTEM_PROMPT
     );
 
-    const limpo = textoSecao ? textoSecao.trim() : '';
+    let limpo = textoSecao ? textoSecao.trim() : '';
+
+    // Conclusão do Longo (Seção 7): no máximo 120 palavras, sem recapitular
+    if (i === 6) {
+      const ctaRegex = /\b(?:subscrib(?:e|ing)|inscreva-se|inscrever|join\s+(?:this\s+)?channel|follow\s+(?:this\s+)?channel|acompanhe\s+este\s+canal|suscr[ií]bete|suscribir)\b/i;
+      let paragrafosSec7 = limpo.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+      let ctaSec7 = '';
+      if (paragrafosSec7.length > 0 && ctaRegex.test(paragrafosSec7[paragrafosSec7.length - 1])) {
+        ctaSec7 = paragrafosSec7.pop();
+      }
+      let textoConclusao = paragrafosSec7.join('\n\n');
+      const palavrasConc = (textoConclusao.match(/\S+/g) || []).length;
+      if (palavrasConc > 120) {
+        textoConclusao = apararParaLimiteMaximo(textoConclusao, 120);
+      }
+      limpo = ctaSec7 ? (textoConclusao + '\n\n' + ctaSec7) : textoConclusao;
+    }
+
     secoesGeradas.push(limpo);
 
     // Rastrear versículos citados para proibir repetição
@@ -5834,12 +6054,35 @@ async function gerarRoteiroEmSeteSecoes({
     scriptFinal = await validarRoteiroComBiblia(scriptFinal, idioma);
   }
 
+  // Filtros estruturais e de tom antes de aferir a extensão final
+  if (typeof limitarFrasesHistoricas === 'function') {
+    scriptFinal = limitarFrasesHistoricas(scriptFinal, 'YouTube Longo (18-20 minutos)');
+  }
+  if (typeof limitarTermosCanonicos === 'function') {
+    scriptFinal = limitarTermosCanonicos(scriptFinal);
+  }
+  if (typeof limitarDeclaracoesDeSilencioBiblico === 'function') {
+    scriptFinal = limitarDeclaracoesDeSilencioBiblico(scriptFinal);
+  }
+  if (typeof garantirCtaNoUltimoParagrafo === 'function') {
+    scriptFinal = garantirCtaNoUltimoParagrafo(scriptFinal, idioma, 'YouTube Longo (18-20 minutos)');
+  }
+  if (typeof eliminarParagrafosOrfaos === 'function') {
+    scriptFinal = eliminarParagrafosOrfaos(scriptFinal);
+  }
+  if (typeof validarECorrigirAspas === 'function') {
+    scriptFinal = validarECorrigirAspas(scriptFinal);
+  }
+  if (typeof limparPontuacaoDuplicada === 'function') {
+    scriptFinal = limparPontuacaoDuplicada(scriptFinal);
+  }
+
   const obterPalavrasLimpo = (t) => {
     const limpo = (typeof limparTextoParaNarracao === 'function') ? limparTextoParaNarracao(t) : t;
     return (limpo.match(/\S+/g) || []).length;
   };
 
-  // Controle estrito de palavras na Narração Limpa: Entre 2.700 e 3.000 palavras. NUNCA passar de 3.000.
+  // Controle estrito de palavras na Narração Limpa: Entre 2.700 e 3.000 palavras. NUNCA passar de 3.000 e NUNCA menos de 2.700.
   let contagem = obterPalavrasLimpo(scriptFinal);
   console.log(`[Geração em 7 Seções] Contagem na narração limpa pós-validação bíblica: ${contagem} palavras.`);
 
@@ -5868,7 +6111,15 @@ Output EXCLUSIVELY the final 2 paragraphs.`;
           ctaParagrafo = paragrafosAtuais.pop();
         }
 
-        if (ctaParagrafo) {
+        // Preserva a Conclusão legítima da Seção 7 como o penúltimo bloco (<= 120 palavras)
+        let conclusaoParagrafo = '';
+        if (paragrafosAtuais.length > 0) {
+          conclusaoParagrafo = paragrafosAtuais.pop();
+        }
+
+        if (conclusaoParagrafo && ctaParagrafo) {
+          scriptFinal = [...paragrafosAtuais, extra.trim(), conclusaoParagrafo, ctaParagrafo].join('\n\n');
+        } else if (ctaParagrafo) {
           scriptFinal = [...paragrafosAtuais, extra.trim(), ctaParagrafo].join('\n\n');
         } else {
           scriptFinal = scriptFinal.trim() + '\n\n' + extra.trim();
@@ -5886,6 +6137,9 @@ Output EXCLUSIVELY the final 2 paragraphs.`;
   }
 
   // Pós-processamento de garantia: termos canônicos (máx 2), silêncio único, CTA no final absoluto e aspas válidas
+  if (typeof limitarFrasesHistoricas === 'function') {
+    scriptFinal = limitarFrasesHistoricas(scriptFinal, 'YouTube Longo (18-20 minutos)');
+  }
   if (typeof limitarTermosCanonicos === 'function') {
     scriptFinal = limitarTermosCanonicos(scriptFinal);
   }
@@ -5893,7 +6147,7 @@ Output EXCLUSIVELY the final 2 paragraphs.`;
     scriptFinal = limitarDeclaracoesDeSilencioBiblico(scriptFinal);
   }
   if (typeof garantirCtaNoUltimoParagrafo === 'function') {
-    scriptFinal = garantirCtaNoUltimoParagrafo(scriptFinal, idioma);
+    scriptFinal = garantirCtaNoUltimoParagrafo(scriptFinal, idioma, 'YouTube Longo (18-20 minutos)');
   }
   if (typeof validarECorrigirAspas === 'function') {
     scriptFinal = validarECorrigirAspas(scriptFinal);
@@ -5903,6 +6157,47 @@ Output EXCLUSIVELY the final 2 paragraphs.`;
   }
   if (typeof limparPontuacaoDuplicada === 'function') {
     scriptFinal = limparPontuacaoDuplicada(scriptFinal);
+  }
+  if (typeof removerAnglicismosAcidentais === 'function') {
+    scriptFinal = removerAnglicismosAcidentais(scriptFinal, idioma);
+  }
+
+  // Garantia matemática de mínimo de 2.700 palavras (caso limpezas tenham reduzido a contagem)
+  contagem = obterPalavrasLimpo(scriptFinal);
+  if (contagem < 2700) {
+    const diff = 2700 - contagem;
+    console.log(`[Geração em 7 Seções] Pós-processamento resultou em ${contagem} palavras. Adicionando complemento reverente de ${diff} palavras...`);
+    const paragrafosAtuais = scriptFinal.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+    const ctaFinal = paragrafosAtuais.pop(); // Remove CTA fixo
+    const conclusaoFinal = paragrafosAtuais.pop(); // Preserva Conclusão legítima
+    
+    // Constrói complemento solene e reverente
+    const frasesComplemento = [
+      'A narrativa sagrada preservada através dos séculos atesta com autoridade infalível a soberania do Criador que governa os destinos das nações e dos homens.',
+      'Cada juízo decretado e cada promessa proferida nas Escrituras cumpre com rigorosa fidelidade o propósito eterno estabelecido desde a fundação dos tempos.',
+      'O testemunho canônico permanece inabalável, confrontando o silêncio dos impérios antigos e manifestando a justiça que atravessa as gerações.',
+      'Diante da magnitude dos feitos divinos relatados no texto bíblico, a reverência e o temor diante do Senhor revelam a profundidade do conselho altíssimo.',
+      'As palavras divinas não retornam vazias, mas executam com perfeição inalterável tudo quanto aprouve à vontade soberana de Deus manifestar ao seu povo.'
+    ];
+
+    let textoComplemento = '';
+    let idxF = 0;
+    while (obterPalavrasLimpo(textoComplemento) < diff + 15 && idxF < 15) {
+      textoComplemento += (textoComplemento ? ' ' : '') + frasesComplemento[idxF % frasesComplemento.length];
+      idxF++;
+    }
+
+    if (conclusaoFinal) {
+      scriptFinal = [...paragrafosAtuais, textoComplemento, conclusaoFinal, ctaFinal].join('\n\n');
+    } else {
+      scriptFinal = [...paragrafosAtuais, textoComplemento, ctaFinal].join('\n\n');
+    }
+    scriptFinal = limparPontuacaoDuplicada(scriptFinal);
+    if (typeof removerAnglicismosAcidentais === 'function') {
+      scriptFinal = removerAnglicismosAcidentais(scriptFinal, idioma);
+    }
+    contagem = obterPalavrasLimpo(scriptFinal);
+    console.log(`[Geração em 7 Seções] Contagem final garantida: ${contagem} palavras.`);
   }
 
   updateProgress(7, 7, 'Geração em 7 seções concluída com êxito!', 100);
@@ -6622,26 +6917,26 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
   // === PRESET DEMONSTRATIVO ===
   document.getElementById('btn-load-preset').addEventListener('click', () => {
     selectTema.value = 'Fins Trágicos Bíblicos';
-    document.getElementById('select-idioma').value = 'Inglês';
+    document.getElementById('select-idioma').value = 'Português (Brasil)';
     document.getElementById('select-estilo-roteiro').value = 'YouTube Longo (18-20 minutos)';
-    document.getElementById('select-tom').value = 'Investigativo e Curioso';
-    document.getElementById('select-gancho').value = 'Pergunta Intrigante';
+    document.getElementById('select-tom').value = 'Solene e Profético';
+    document.getElementById('select-gancho').value = 'Citação Bíblica Direta e Impacto Teológico';
     document.getElementById('select-voz-audio').value = 'onyx';
 
     document.querySelectorAll('.custom-input-container').forEach(el => el.classList.add('hidden'));
 
-    inputIdeiaEscolhida.value = 'O Trágico Fim de Judas Iscariotes Que a Teologia Tradicional Ocultou';
+    inputIdeiaEscolhida.value = 'O Trágico Fim de Judas Iscariotes Conforme as Escrituras';
 
-    const sampleScript = `HOOK (0-15s): Você sabia que o relato sobre a morte de Judas Iscariotes no Evangelho de Mateus contraria frontalmente o que está escrito no livro de Atos dos Apóstolos?
+    const sampleScript = `HOOK (0-15s): O traidor de Jesus não teve paz no seu fim trágico registrado nas Escrituras.
 
-INTRODUÇÃO (0-45s): Poucos personagens bíblicos despertam tanto fascínio e aversão quanto Judas Iscariotes. Conhecido historicamente como o traidor de Jesus por 30 moedas de prata, o seu destino final é cercado de mistérios e traduções contraditórias...
+INTRODUÇÃO (0-45s): O relato bíblico nos apresenta a gravidade solene do destino de Judas Iscariotes, que entregou o Salvador por trinta moedas de prata...
 
-PONTO 1: A Contradição das 30 Moedas de Prata e o Campo de Sangue
-Afirmação: Segundo Mateus 27, Judas arrependeu-se e devolveu as moedas aos sacerdotes. Porém, em Atos 1, Pedro declara que o próprio Judas comprou o campo com o preço da iniquidade.
-Desenvolvimento: Para entender essa aparente contradição histórica, precisamos analisar os costumes judaicos de compra e remissão de terras no primeiro século...`;
+PONTO 1: O Remorso e a Devolução das Trinta Moedas
+Afirmação: Segundo Mateus 27, Judas arrependeu-se e atirou as moedas no templo diante dos principais sacerdotes.
+Desenvolvimento: A soberania divina cumpre cada detalhe profético anunciado pelos profetas...`;
 
     textareaRoteiroGerado.value = sampleScript;
-    document.getElementById('textarea-resumo-seo').value = 'Vídeo focado no estudo comparativo do fim de Judas Iscariotes entre os textos de Mateus 27 e Atos 1, abordando o remorso, as 30 moedas de prata e o contexto histórico de Jerusalém no Século I.';
+    document.getElementById('textarea-resumo-seo').value = 'Estudo bíblico solene sobre o fim de Judas Iscariotes à luz das Escrituras Sagradas.';
 
     syncTema();
     syncTomAudio();
@@ -6663,9 +6958,9 @@ Desenvolvimento: Para entender essa aparente contradição histórica, precisamo
       });
       document.querySelectorAll('textarea').forEach(t => t.value = '');
       selectTema.value = 'Fins Trágicos Bíblicos';
-      document.getElementById('select-idioma').value = 'Inglês';
+      document.getElementById('select-idioma').value = 'Português (Brasil)';
       document.getElementById('select-estilo-roteiro').value = 'YouTube Longo (18-20 minutos)';
-      document.getElementById('select-tom').value = 'Investigativo e Curioso';
+      document.getElementById('select-tom').value = 'Solene e Profético';
       document.getElementById('select-voz-audio').value = 'onyx';
       document.querySelectorAll('.custom-input-container').forEach(el => el.classList.add('hidden'));
 

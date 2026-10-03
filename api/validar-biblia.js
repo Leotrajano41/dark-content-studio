@@ -275,9 +275,31 @@ function alinharTrechoCorrespondente(versiculoReal, textoCitado, langKey = 'pt')
   let minIdx = Math.min(...melhorBloco);
   let maxIdx = Math.max(...melhorBloco);
 
-  // Se a primeira oração for introdução narrativa de fala (terminada em ':' com verbos de elocução), descarta-a
-  if (minIdx < maxIdx && /[:]\s*$/.test(sentencas[minIdx]) && /\b(?:disse|falou|respondeu|clamou|chamou|disseram|perguntou|dizendo)\b/i.test(sentencas[minIdx])) {
-    minIdx++;
+  // Ajuste do início: a citação deve começar onde a IA começou a citar.
+  // Nunca injeta introduções de fala narrativa ("e disse:", "Nisso o SENHOR disse a Moisés:") que a IA não citou
+  const primeirasPalavras = palavrasCitado.slice(0, Math.min(5, palavrasCitado.length));
+  while (minIdx < maxIdx) {
+    const sPalavras = limparPalavras(sentencas[minIdx]).filter(p => p.length > 2);
+    const temInicioMatch = sPalavras.some(p => primeirasPalavras.includes(p));
+    const isFalaNarrativa = /[:]\s*$/.test(sentencas[minIdx]) && /\b(?:disse|falou|respondeu|clamou|chamou|disseram|perguntou|dizendo)\b/i.test(sentencas[minIdx]);
+    if (!temInicioMatch || isFalaNarrativa) {
+      minIdx++;
+    } else {
+      break;
+    }
+  }
+
+  // Ajuste do término: a citação deve terminar onde a IA parou de citar.
+  // Nunca injeta continuações de orações subsequentes além do trecho citado pela IA
+  const ultimasPalavras = palavrasCitado.slice(Math.max(0, palavrasCitado.length - 5));
+  while (maxIdx > minIdx) {
+    const sPalavras = limparPalavras(sentencas[maxIdx]).filter(p => p.length > 2);
+    const temFimMatch = sPalavras.some(p => ultimasPalavras.includes(p));
+    if (!temFimMatch) {
+      maxIdx--;
+    } else {
+      break;
+    }
   }
 
   let trecho = sentencas.slice(minIdx, maxIdx + 1).map(s => s.trim()).join(' ');
@@ -316,12 +338,13 @@ function validarRoteiroBiblico(texto, idioma = 'pt') {
     };
   }
 
-  // Regex para capturar referências bíblicas (ex: Filipenses 4:13, 1 Coríntios 13:4-7, Atos 2:42-47)
-  const refRegex = /\b([1-3]?\s*[A-Za-zÀ-ÖØ-öø-ÿ]+)\s+(\d+)[:\.](\d+)(?:-(\d+))?\b/g;
+  // Regex para capturar referências bíblicas (ex: Filipenses 4:13, 1 Coríntios 13:4-7, Êxodo 14:26)
+  // Suporta caracteres não-ASCII no início do nome do livro (como 'Ê' em Êxodo) usando lookbehind
+  const refRegex = /(?<=^|[\s\(\[,;:—\-])([1-3]?\s*[A-Za-zÀ-ÖØ-öø-ÿ]+)\s+(\d+)[:\.](\d+)(?:-(\d+))?(?=[\s\)\],;:.!?—\-]|[\.!?]|$)/g;
 
   // Pré-coleta capítulos bíblicos mencionados no roteiro inteiro para suporte da Camada 2
   const capitulosGerais = [];
-  const capRegexGeral = /\b([1-3]?\s*[A-Za-zÀ-ÖØ-öø-ÿ]+)\s+(\d+)\b/g;
+  const capRegexGeral = /(?<=^|[\s\(\[,;:—\-])([1-3]?\s*[A-Za-zÀ-ÖØ-öø-ÿ]+)\s+(\d+)(?=[\s\)\],;:.!?—\-]|[\.!?]|$)/g;
   let cmg;
   while ((cmg = capRegexGeral.exec(texto)) !== null) {
     const bCan = findBook(cmg[1].trim());
