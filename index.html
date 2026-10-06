@@ -1348,6 +1348,17 @@ textarea.h-180 {
           </div>
         </details>
 
+        <!-- Banner Fixo: Tema recebido do Radar de Conteúdo (Item 6) -->
+        <div id="banner-radar-tema" class="hidden" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.22), rgba(168, 85, 247, 0.22)); border: 1px solid rgba(99, 102, 241, 0.55); border-radius: 8px; padding: 12px 16px; margin: 14px 0 16px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 10px; color: #e0e7ff; font-size: 0.92rem;">
+            <span style="font-size: 1.3rem;">📡</span>
+            <div>
+              <strong style="color: #a5b4fc;">Tema recebido do Radar:</strong>
+              <span id="texto-banner-radar" style="color: #ffffff; font-weight: 600; margin-left: 6px;"></span>
+            </div>
+          </div>
+          <button id="btn-fechar-banner-radar" type="button" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: #c7d2fe; font-size: 1rem; cursor: pointer; padding: 3px 10px; border-radius: 6px; line-height: 1;" title="Fechar aviso">✕</button>
+        </div>
         <!-- Botão: Preencher com o padrão do canal -->
         <div style="margin: 18px 0 10px 0;">
           <button id="btn-preencher-padrao-canal" type="button" class="btn btn-secondary" style="background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.4); color: #c7d2fe; display: inline-flex; align-items: center; gap: 8px; font-weight: 600; padding: 10px 18px; cursor: pointer;">
@@ -1359,6 +1370,13 @@ textarea.h-180 {
         </div>
 
         <div class="form-grid">
+          <!-- Caixa de Título de Referência do Radar (Item 4) -->
+          <div id="container-titulo-radar" class="hidden form-group-full" style="background: rgba(15, 23, 42, 0.6); border: 1px dashed rgba(99, 102, 241, 0.45); border-radius: 6px; padding: 10px 14px; margin: 8px 0 14px 0;">
+            <label style="color: #a5b4fc; font-size: 0.82rem; font-weight: 600; margin-bottom: 4px; display: block;">
+              📌 Título de Referência do Radar (Base para SEO)
+            </label>
+            <div id="texto-titulo-radar" style="color: #f1f5f9; font-size: 0.92rem; font-weight: 500;"></div>
+          </div>
           <!-- Combobox: Tema do Vídeo -->
           <div class="form-group">
             <label for="select-tema">
@@ -6011,7 +6029,7 @@ function parseThumbnailResponse(text) {
 /**
  * Módulo de Interface do Usuário (UI Helper)
  */
-const UI = {
+const UI = window.UI = {
   initTabs() {
     const tabs = document.querySelectorAll('.nav-tab');
     const contents = document.querySelectorAll('.tab-content');
@@ -6190,7 +6208,7 @@ const UI = {
  * Módulo AutoSave — Rede de segurança contra perda acidental de dados.
  * Salva sessão no localStorage com debounce e restaura automaticamente ao carregar a página.
  */
-const AutoSave = {
+const AutoSave = window.AutoSave = {
   SESSION_KEY: 'dark_studio_session_v1',
   LEGACY_SESSION_KEY: 'dark_studio_session',
   DEBOUNCE_DELAY: 600,
@@ -6591,13 +6609,19 @@ window.limparTextoParaNarracao = limparTextoParaNarracao;
 window.validarRoteiroComBiblia = validarRoteiroComBiblia;
 
 /**
- * ITEM 0: Leitura e Preenchimento Automático de ?tema= e ?titulo= da URL (Radar de Conteúdo)
- * Sanitização estrita: textContent, remoção de tags HTML, limite de 300 caracteres.
- * NUNCA gera nada sozinho automaticamente para evitar custo de API desnecessário.
+ * ITEM 0: Leitura e Preenchimento Automático de ?tema=, ?titulo=, ?estilo= e ?itens= da URL (Radar de Conteúdo)
+ * Ordem estrita: Aplica-se DEPOIS do AutoSave.restore(), tendo precedência total sobre o estado salvo.
+ * Confirmação inteligente: Se já houver roteiro ou narração gerados na tela, pede confirmação via confirm().
+ * Preenche "Tema Personalizado" com o tema, exibe Banner fixo na Etapa 1 e caixa de título de referência.
+ * NUNCA gera nada sozinho automaticamente para garantir custo de API zero.
  */
 function processarParametrosURL() {
   try {
     const searchStr = (typeof window !== 'undefined' && window.location) ? (window.location.search || '') : '';
+    if (!searchStr || !searchStr.includes('=')) {
+      return;
+    }
+
     const urlParams = (typeof URLSearchParams !== 'undefined')
       ? new URLSearchParams(searchStr)
       : (typeof window !== 'undefined' && window.URLSearchParams)
@@ -6608,66 +6632,142 @@ function processarParametrosURL() {
               return match ? decodeURIComponent(match[1].replace(/\+/g, ' ')) : null;
             }
           };
+
     const temaParam = urlParams.get('tema');
     const tituloParam = urlParams.get('titulo');
+    const estiloParam = urlParams.get('estilo');
+    const itensParam = urlParams.get('itens');
+
+    if (!temaParam && !tituloParam && !estiloParam && !itensParam) {
+      return;
+    }
 
     const sanitizar = (str) => {
       if (!str || typeof str !== 'string') return '';
       let clean = str.replace(/<[^>]*>?/gm, '');
-      const tempEl = document.createElement('div');
-      tempEl.textContent = clean;
-      clean = tempEl.textContent || '';
+      if (typeof document !== 'undefined') {
+        const tempEl = document.createElement('div');
+        tempEl.textContent = clean;
+        clean = tempEl.textContent || '';
+      }
       return clean.slice(0, 300).trim();
     };
 
-    const temaSanitizado = sanitizar(temaParam || tituloParam);
+    const temaSanitizado = sanitizar(temaParam);
     const tituloSanitizado = sanitizar(tituloParam);
+    const estiloSanitizado = sanitizar(estiloParam);
+    const itensSanitizado = sanitizar(itensParam);
 
-    if (tituloSanitizado && typeof window !== 'undefined') {
-      window._radarTitulo = tituloSanitizado;
+    // 1. Checa se já existe trabalho efetivo gerado na tela (Roteiro Completo ou Narração de Áudio)
+    const outputRoteiro = (typeof document !== 'undefined') ? document.getElementById('output-prompt-roteiro') : null;
+    const outputTTS = (typeof document !== 'undefined') ? document.getElementById('output-prompt-tts') : null;
+    const roteiroGerado = outputRoteiro ? outputRoteiro.value.trim() : '';
+    const narracaoGerada = outputTTS ? outputTTS.value.trim() : '';
+
+    const temTrabalhoGerado = (roteiroGerado.length > 100) || (narracaoGerada.length > 50);
+
+    if (temTrabalhoGerado) {
+      const msgTema = temaSanitizado || tituloSanitizado || 'novo tema do Radar';
+      const confirmar = (typeof window !== 'undefined' && window.confirm)
+        ? window.confirm(`Um novo tema foi recebido do Radar:\n"${msgTema}"\n\nDeseja substituir o trabalho gerado atualmente na tela e iniciar este novo vídeo?`)
+        : true;
+
+      if (!confirmar) {
+        console.log('[Radar URL] Usuário recusou a substituição do trabalho existente na tela.');
+        return;
+      }
     }
 
+    if (typeof window !== 'undefined') {
+      window._veioDoRadar = true;
+    }
+
+    // 2. Processar Título de Referência do Radar (Item 4)
+    if (tituloSanitizado) {
+      if (typeof window !== 'undefined') {
+        window._radarTitulo = tituloSanitizado;
+      }
+      const containerTituloRadar = document.getElementById('container-titulo-radar');
+      const textoTituloRadar = document.getElementById('texto-titulo-radar');
+      if (containerTituloRadar && textoTituloRadar) {
+        textoTituloRadar.textContent = tituloSanitizado;
+        containerTituloRadar.classList.remove('hidden');
+      }
+
+      // Só preenche "Ideia de Vídeo Escolhida" se ela estiver VAZIA
+      const inputIdeiaEscolhida = document.getElementById('input-ideia-escolhida');
+      if (inputIdeiaEscolhida && !inputIdeiaEscolhida.value.trim()) {
+        inputIdeiaEscolhida.value = tituloSanitizado;
+        inputIdeiaEscolhida.dispatchEvent(new Event('input', { bubbles: true }));
+        inputIdeiaEscolhida.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+
+    // 3. Processar Tema do Vídeo (Item 3)
     if (temaSanitizado) {
       const selectTema = document.getElementById('select-tema');
       const containerTemaCustom = document.getElementById('container-tema-custom');
       const inputTemaCustom = document.getElementById('input-tema-custom');
-      const inputIdeiaEscolhida = document.getElementById('input-ideia-escolhida');
-      const outputRoteiro = document.getElementById('output-prompt-roteiro');
-      const outputIdeias = document.getElementById('output-prompt-ideias');
-
-      const temaAtual = inputTemaCustom ? inputTemaCustom.value.trim() : '';
-      const roteiroAtual = outputRoteiro ? outputRoteiro.value.trim() : '';
-      const ideiasAtual = outputIdeias ? outputIdeias.value.trim() : '';
-      const temTrabalhoNaTela = (temaAtual && temaAtual !== temaSanitizado) || (roteiroAtual.length > 50) || (ideiasAtual.length > 50);
-
-      if (temTrabalhoNaTela) {
-        const confirmar = window.confirm(`Foi detectado um novo tema recebido do Radar:
-"${temaSanitizado}"
-
-Deseja substituir o conteúdo atual da tela?`);
-        if (!confirmar) {
-          return;
-        }
-      }
 
       if (selectTema && inputTemaCustom) {
         selectTema.value = 'Personalizável';
         if (containerTemaCustom) containerTemaCustom.classList.remove('hidden');
         inputTemaCustom.value = temaSanitizado;
 
-        if (tituloSanitizado && inputIdeiaEscolhida) {
-          inputIdeiaEscolhida.value = tituloSanitizado;
-          inputIdeiaEscolhida.dispatchEvent(new Event('input', { bubbles: true }));
-          inputIdeiaEscolhida.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-
         selectTema.dispatchEvent(new Event('change', { bubbles: true }));
         inputTemaCustom.dispatchEvent(new Event('input', { bubbles: true }));
         inputTemaCustom.dispatchEvent(new Event('change', { bubbles: true }));
+      }
 
-        UI.showToast('Tema recebido do Radar', 'info');
+      // Exibe o Banner Fixo do Radar na Etapa 1 (Item 6)
+      const bannerRadar = document.getElementById('banner-radar-tema');
+      const textoBanner = document.getElementById('texto-banner-radar');
+      if (bannerRadar && textoBanner) {
+        textoBanner.textContent = temaSanitizado;
+        bannerRadar.classList.remove('hidden');
       }
     }
+
+    // 4. Processar ?estilo= (Item 5)
+    if (estiloSanitizado) {
+      const selectEstilo = document.getElementById('select-estilo-roteiro');
+      const containerNumItens = document.getElementById('container-num-itens-catalogo');
+      const estLower = estiloSanitizado.toLowerCase();
+
+      if (selectEstilo) {
+        if (estLower.includes('catalogo') || estLower.includes('catálogo') || estLower.includes('catalog')) {
+          selectEstilo.value = 'Catálogo em N itens (14-17 min)';
+          if (containerNumItens) containerNumItens.classList.remove('hidden');
+        } else if (estLower.includes('longo') || estLower.includes('18-20')) {
+          selectEstilo.value = 'YouTube Longo (18-20 minutos)';
+          if (containerNumItens) containerNumItens.classList.add('hidden');
+        } else if (estLower.includes('medio') || estLower.includes('médio') || estLower.includes('5-8')) {
+          selectEstilo.value = 'YouTube Médio (5-8 minutos)';
+          if (containerNumItens) containerNumItens.classList.add('hidden');
+        } else if (estLower.includes('shorts') || estLower.includes('50-60')) {
+          selectEstilo.value = 'Shorts/Reels — YouTube, Instagram, Facebook (50-60 segundos)';
+          if (containerNumItens) containerNumItens.classList.add('hidden');
+        }
+        selectEstilo.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+
+    // 5. Processar ?itens= (Item 5)
+    if (itensSanitizado) {
+      const inputNumItens = document.getElementById('input-num-itens-catalogo');
+      const numItensVal = parseInt(itensSanitizado, 10);
+      if (inputNumItens && !isNaN(numItensVal)) {
+        const clamped = Math.max(6, Math.min(12, numItensVal));
+        inputNumItens.value = clamped;
+        inputNumItens.dispatchEvent(new Event('input', { bubbles: true }));
+        inputNumItens.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+
+    if (typeof syncTema === 'function') syncTema();
+    if (typeof syncTomAudio === 'function') syncTomAudio();
+    if (typeof AutoSave !== 'undefined' && AutoSave.save) AutoSave.save();
+
   } catch (err) {
     console.warn('[Radar URL] Erro ao processar parâmetros da URL:', err);
   }
@@ -6875,6 +6975,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnPadraoCanal = document.getElementById('btn-preencher-padrao-canal');
   if (btnPadraoCanal) {
     btnPadraoCanal.addEventListener('click', () => {
+      if (typeof window !== 'undefined' && window._veioDoRadar) {
+        const confirmar = (typeof window.confirm === 'function')
+          ? window.confirm('Deseja substituir o tema recebido do Radar pelo tema padrão de exemplo?')
+          : true;
+        if (!confirmar) return;
+        window._veioDoRadar = false;
+        const bannerRadarEl = document.getElementById('banner-radar-tema');
+        if (bannerRadarEl) bannerRadarEl.classList.add('hidden');
+      }
       const selectTema = document.getElementById('select-tema');
       const containerTemaCustom = document.getElementById('container-tema-custom');
       const inputTemaCustom = document.getElementById('input-tema-custom');
@@ -8254,7 +8363,9 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
     const idioma = UI.getValue('select-idioma', 'input-idioma-custom');
     const modeloIdeias = OpenRouterAPI.getModelIdeas();
 
-    const promptText = PromptEngine.generateSeoPrompt({ tema, resumo, idioma });
+    const estiloRoteiro = UI.getValue('select-estilo-roteiro', 'input-estilo-roteiro-custom');
+    const tituloUrl = (typeof window !== 'undefined' && window._radarTitulo) ? window._radarTitulo : '';
+    const promptText = PromptEngine.generateSeoPrompt({ tema, resumo, idioma, estiloRoteiro, tituloUrl });
 
     const rawSeo = await executeApiCall(
       'btn-gerar-prompt-seo',
@@ -8539,6 +8650,15 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
 
   // === PRESET DEMONSTRATIVO ===
   document.getElementById('btn-load-preset').addEventListener('click', () => {
+    if (typeof window !== 'undefined' && window._veioDoRadar) {
+      const confirmar = (typeof window.confirm === 'function')
+        ? window.confirm('Deseja substituir o tema recebido do Radar pelo exemplo demonstrativo?')
+        : true;
+      if (!confirmar) return;
+      window._veioDoRadar = false;
+      const bannerRadarEl = document.getElementById('banner-radar-tema');
+      if (bannerRadarEl) bannerRadarEl.classList.add('hidden');
+    }
     selectTema.value = 'Fins Trágicos Bíblicos';
     document.getElementById('select-idioma').value = 'Português (Brasil)';
     document.getElementById('select-estilo-roteiro').value = 'YouTube Longo (18-20 minutos)';
