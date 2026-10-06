@@ -287,14 +287,14 @@ async function executarTestes() {
   // --------------------------------------------------------------------------
   // TESTE 3: Validador de Estrutura do Catálogo (9 Regras) & Reprodução de Defeitos (a)-(f)
   // --------------------------------------------------------------------------
-  console.log('\n📋 GRUPO 3: Validador de Estrutura do Catálogo (9 Regras)');
+  console.log('\n📋 GRUPO 3: Validador de Estrutura do Catálogo (10 Regras)');
 
   const validarCatalogo = getFn('validarEstruturaCatalogo');
 
-  // Teste 3.1: Roteiro perfeito deve passar 9/9
+  // Teste 3.1: Roteiro perfeito deve passar 10/10
   const validacaoCompleta = validarCatalogo(roteiroCatalogoProcessado, 9);
-  assert(validacaoCompleta.valido === true && validacaoCompleta.totalOk === 9,
-    `Roteiro completo do Catálogo passou em 9/9 regras do validador (total: ${validacaoCompleta.totalOk}/9).`);
+  assert(validacaoCompleta.valido === true && validacaoCompleta.totalOk === 10,
+    `Roteiro completo do Catálogo passou em 10/10 regras do validador (total: ${validacaoCompleta.totalOk}/10).`);
 
   // Defeito (a): Itens 1 e 2 sem título e sem número falado, colados
   const defeitoA = roteiroCatalogoProcessado
@@ -362,6 +362,15 @@ async function executarTestes() {
   assert(vMarkdown.regras.find(r => r.id === 'r1_abertura').ok === true && vMarkdown.regras.find(r => r.id === 'r2_qtd_itens').ok === true,
     'Validador reconhece com precisão formatos como "Um, Nadabe e Abiú." e "**Dois, Corá**".');
 
+  // Teste 3.12: (NOVO - Regra 10) Falha quando há atribuição de intenção não sustentada
+  const defeitoIntencao = roteiroCatalogoProcessado.replace(
+    'Um, Acabe de Samaria.',
+    'Um, Acabe de Samaria. Ele conhecia a lei e cometeu desobediência deliberada com pleno conhecimento.'
+  );
+  const vDefeito10 = validarCatalogo(defeitoIntencao, 9);
+  assert(vDefeito10.regras.find(r => r.id === 'r10_sem_intencao_nao_sustentada').ok === false,
+    'Regra 10: Validador detecta FALHA na presença de expressões de intenção ("conhecia a lei", "deliberada", "pleno conhecimento").');
+
   // --------------------------------------------------------------------------
   // TESTE 3.2: Fluxo Completo de gerarRoteiroCatalogo com Stub de Auto-Regeneração
   // --------------------------------------------------------------------------
@@ -372,16 +381,16 @@ async function executarTestes() {
     let chamadasCatalogo = 0;
     let promptsRecebidos = [];
 
-    // Configura stub do OpenRouterAPI para simular 1ª resposta com falha e 2ª resposta corrigida
+    // Configura stub do OpenRouterAPI para simular 1ª resposta com falha na regra 10 e regra 1, e 2ª corrigida
     openRouterTarget.generateContent = async (prompt) => {
       chamadasCatalogo++;
       promptsRecebidos.push(prompt);
 
       if (chamadasCatalogo === 1) {
-        // 1ª chamada: devolve roteiro imperfeito (sem "Um,", faltam itens)
-        return 'E saiu fogo de diante do Senhor consumindo os altares profanos. Dois, Corá e seus seguidores. Não é lenda, é fato sagrado. Se este estudo edifica sua fé, inscreva-se no canal para que o YouTube recomende mais vídeos como este para você. Vamos em frente. Três, Uzá e a arca.';
+        // 1ª chamada: devolve roteiro com defeitos de intenção e abertura
+        return 'E saiu fogo de diante do Senhor consumindo os altares profanos. Dois, Corá e seus seguidores cometeram desobediência deliberada pois sabiam exatamente o que era permitido. Não é lenda, é fato sagrado. Se este estudo edifica sua fé, inscreva-se no canal para que o YouTube recomende mais vídeos como este para você. Vamos em frente. Três, Uzá e a arca.';
       } else {
-        // 2ª chamada (auto-regeneração corretiva): devolve o roteiro corrigido completo
+        // 2ª chamada (auto-regeneração corretiva): devolve o roteiro corrigido sem expressões proibidas
         return roteiroCatalogoProcessado;
       }
     };
@@ -398,17 +407,37 @@ async function executarTestes() {
     });
 
     assert(chamadasCatalogo === 2, 'Geração de Catálogo acionou auto-regeneração única (2 chamadas no total).');
-    assert(promptsRecebidos[1].includes('FAILED RULES:') && promptsRecebidos[1].includes('Abertura imediata'),
-      'Prompt de auto-regeneração detalhou explicitamente as regras que haviam falhado.');
+    assert(promptsRecebidos[1].includes('FAILED RULES:') && promptsRecebidos[1].includes('Sem atribuição de intenção não sustentada'),
+      'Prompt de auto-regeneração detalhou explicitamente a falha na Regra 10 (Sem atribuição de intenção).');
 
     const validacaoFinalAuto = validarCatalogo(resultadoFinal, 9);
-    assert(validacaoFinalAuto.valido === true && validacaoFinalAuto.totalOk === 9,
-      'Roteiro final após auto-regeneração obteve 9/9 regras cumpridas no validador.');
+    assert(validacaoFinalAuto.valido === true && validacaoFinalAuto.totalOk === 10,
+      'Roteiro final após auto-regeneração obteve 10/10 regras cumpridas no validador.');
   }
 
   // --------------------------------------------------------------------------
-  // TESTE 4: Validação de URL (?tema= e ?titulo=)
+  // TESTE 3.3: Sincronização e Limpeza Imediata de "Versão Narração Limpa"
   // --------------------------------------------------------------------------
+  console.log('\n📋 GRUPO 3.3: Sincronização e Limpeza de Narração Limpa');
+  const syncFn = getFn('sincronizarRoteiroGeradoEmTodasAsCaixas');
+  const limparEtapasFn = getFn('limparResultadosEtapasPosteriores');
+
+  if (typeof syncFn === 'function') {
+    syncFn(roteiroCatalogoProcessado, 'Catálogo em N itens (14-17 min)');
+    const outLimpo = context.document.getElementById('output-roteiro-limpo');
+    const outNarracao = context.document.getElementById('textarea-narracao-limpa-audio');
+    assert(outLimpo && outLimpo.value.includes('Um, Acabe de Samaria'),
+      'Versão Narração Limpa foi atualizada imediatamente com o novo roteiro gerado.');
+    assert(outNarracao && outNarracao.value.includes('Um, Acabe de Samaria'),
+      'Caixa de Narração de Áudio da Etapa 5 foi sincronizada com o novo roteiro.');
+
+    if (typeof limparEtapasFn === 'function') {
+      limparEtapasFn();
+      assert(outLimpo.value === '' && outNarracao.value === '',
+        'Caixas de narração limpa são devidamente limpas antes de uma nova geração.');
+    }
+  }
+
   console.log('\n📋 GRUPO 4: Leitura e Sanitização de Parâmetros de URL (?tema= e ?titulo=)');
 
   // Simula URL com tags HTML maliciosas e mais de 300 caracteres

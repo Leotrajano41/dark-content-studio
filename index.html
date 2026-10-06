@@ -4464,7 +4464,7 @@ function validarEstruturaCatalogo(texto, numItens = 9) {
     return {
       valido: false,
       totalOk: 0,
-      totalRegras: 9,
+      totalRegras: 10,
       regras: []
     };
   }
@@ -4522,7 +4522,7 @@ function validarEstruturaCatalogo(texto, numItens = 9) {
   const matchesNaoE = (texto.match(regexNaoE) || []);
   const r6_ok = matchesNaoE.length >= 3;
 
-  // 7. (NOVO) Itens numerados em sequência estrita, sem repetir e sem passar de N
+  // 7. Itens numerados em sequência estrita, sem repetir e sem passar de N
   let r7_ok = true;
   let detalheR7 = 'Itens numerados em sequência estrita de 1 a ' + n + ', sem itens extras nem repetições.';
   
@@ -4570,13 +4570,13 @@ function validarEstruturaCatalogo(texto, numItens = 9) {
     }
   }
 
-  // 8. (NOVO) Nenhum rótulo entre colchetes nem menções a "Contagem"
+  // 8. Nenhum rótulo entre colchetes nem menções a "Contagem"
   const temColchetes = /\[[^\]]+\]/.test(texto);
   const temContagem = /(?:word\s+count|contagem\s+de\s+palavras|contagem\s+total|recuento\s+de\s+palabras)\b/i.test(texto);
   const r8_ok = !temColchetes && !temContagem;
   let detalheR8 = r8_ok ? 'Nenhum rótulo entre colchetes nem linha de contagem residual detectada.' : (temColchetes ? 'Rótulos entre colchetes vazaram no texto.' : 'Menção a contagem de palavras presente no texto.');
 
-  // 9. (NOVO) Citações bíblicas literais somam menos de 35% das palavras
+  // 9. Citações bíblicas literais somam menos de 35% das palavras
   const matchesAspas = texto.match(/"([^"]+)"|“([^”]+)”|«([^»]+)»/g) || [];
   const palavrasCitadas = matchesAspas.reduce((acc, c) => acc + (c.match(/\S+/g) || []).length, 0);
   const percentCitacoes = totalPalavras > 0 ? (palavrasCitadas / totalPalavras) * 100 : 0;
@@ -4584,6 +4584,14 @@ function validarEstruturaCatalogo(texto, numItens = 9) {
   let detalheR9 = r9_ok
     ? 'Citações bíblicas equilibradas: ' + percentCitacoes.toFixed(1) + '% do texto (' + palavrasCitadas + '/' + totalPalavras + ' palavras).'
     : 'Excesso de versículos literais: ' + percentCitacoes.toFixed(1) + '% do texto (máximo permitido: 35%).';
+
+  // 10. Sem atribuição de intenção não sustentada
+  const regexIntencaoProibida = /\b(?:deliberad[ao]s?|conhecia\s+a\s+lei|sabia(?:m)?\s+exatamente|pleno\s+conhecimento|hipocrisia\s+calculada|profana[çc][aã]o\s+deliberada)\b/i;
+  const matchIntencao = texto.match(regexIntencaoProibida);
+  const r10_ok = !matchIntencao;
+  let detalheR10 = r10_ok
+    ? 'Nenhuma atribuição indevida de intenção ou motivação interna detectada.'
+    : 'Encontrada expressão de intenção não sustentada pelo texto bíblico: \"' + (matchIntencao ? matchIntencao[0] : '') + '\".';
 
   const regras = [
     {
@@ -4648,6 +4656,13 @@ function validarEstruturaCatalogo(texto, numItens = 9) {
       descricao: 'Citações entre aspas somam menos de 35% do total de palavras',
       ok: r9_ok,
       detalhe: detalheR9
+    },
+    {
+      id: 'r10_sem_intencao_nao_sustentada',
+      nome: 'Sem atribuição de intenção não sustentada',
+      descricao: 'Proibição de "deliberado", "conhecia a lei", "sabia exatamente" e "pleno conhecimento"',
+      ok: r10_ok,
+      detalhe: detalheR10
     }
   ];
 
@@ -4751,6 +4766,9 @@ async function gerarRoteiroCatalogo({
 
   let limpo = roteiroGerado ? roteiroGerado.trim() : '';
 
+  // Padronização histórica e teológica de expressões ("comido de vermes")
+  limpo = limpo.replace(/\bcomid[ao]\s+por\s+vermes\b/gi, 'comido de vermes');
+
   // Limpeza de rótulos e pontuação
   if (typeof limparTextoParaNarracao === 'function') {
     limpo = limparTextoParaNarracao(limpo, 'Catálogo em N itens (14-17 min)');
@@ -4759,8 +4777,8 @@ async function gerarRoteiroCatalogo({
     limpo = garantirEspacamentoEPontuacaoCitacoes(limpo);
   }
 
-  // 3. Validação das 9 regras
-  updateProgress('Validando as 9 regras estruturais do Catálogo...', 60);
+  // 3. Validação das 10 regras
+  updateProgress('Validando as 10 regras estruturais do Catálogo...', 60);
   let validacao = validarEstruturaCatalogo(limpo, n);
 
   // 4. Auto-regeneração única se houver falhas críticas ou não atingir as regras
@@ -4774,7 +4792,9 @@ CRITICAL MANDATORY INSTRUCTIONS:
 - Opening MUST NOT contain Bible verses; must repeat title in under 30 words and immediately enter "Um, [Item 1]".
 - CTA for subscription with "vamos em frente" MUST appear strictly after Item 2 and before Item 3.
 - No item beyond Item ${n} is allowed (NO extra Item 9, 10, or numbered conclusion).
-- Concluding section MUST end with an open question directed to the comments section.
+- Length per item: STRICTLY MAXIMUM 220 words.
+- NO UNSUPPORTED INTENTION: Do NOT attribute intention, knowledge, or internal motivation to biblical characters unless explicitly stated in Scripture. If the reason is not given, state "o texto não explica o que levou ao ato". Strictly REMOVE any forbidden words like "deliberado", "conhecia a lei", "sabia exatamente", "pleno conhecimento", "profanação deliberada", "hipocrisia calculada".
+- Concluding section MUST end with an open question directed to the comments section and MUST NOT generalize intentions ("todos sabiam").
 - At least 3 contrast structures ("não é X, é Y").
 - Word count MUST be between 1,800 and 2,600 words total.
 - Keep biblical quotes moderate (< 35% of total words).
@@ -4795,6 +4815,7 @@ Please output ONLY the corrected, continuous script narration without any bracke
 
     if (roteiroCorrigido && roteiroCorrigido.trim()) {
       let limpoCorrigido = roteiroCorrigido.trim();
+      limpoCorrigido = limpoCorrigido.replace(/\bcomid[ao]\s+por\s+vermes\b/gi, 'comido de vermes');
       if (typeof limparTextoParaNarracao === 'function') {
         limpoCorrigido = limparTextoParaNarracao(limpoCorrigido, 'Catálogo em N itens (14-17 min)');
       }
@@ -4817,6 +4838,112 @@ Please output ONLY the corrected, continuous script narration without any bracke
 }
 
 window.gerarRoteiroCatalogo = gerarRoteiroCatalogo;
+
+function sincronizarRoteiroGeradoEmTodasAsCaixas(resultText, estiloRoteiro) {
+  if (typeof document === 'undefined') return;
+  const outputEl = document.getElementById('output-prompt-roteiro');
+  const textareaRoteiroGerado = document.getElementById('textarea-roteiro-gerado');
+  const outputRoteiroLimpoEl = document.getElementById('output-roteiro-limpo');
+  const textareaNarracaoLimpa = document.getElementById('textarea-narracao-limpa-audio');
+  const textareaResumoSeo = document.getElementById('textarea-resumo-seo');
+
+  if (outputEl) outputEl.value = resultText;
+  if (textareaRoteiroGerado) textareaRoteiroGerado.value = resultText;
+
+  const textoLimpo = typeof limparTextoParaNarracao === 'function'
+    ? limparTextoParaNarracao(resultText, estiloRoteiro)
+    : resultText;
+
+  if (outputRoteiroLimpoEl) {
+    outputRoteiroLimpoEl.value = textoLimpo;
+  }
+  if (textareaNarracaoLimpa) {
+    textareaNarracaoLimpa.value = textoLimpo;
+    if (textareaNarracaoLimpa.dataset) textareaNarracaoLimpa.dataset.autoSynced = 'true';
+  }
+  if (textareaResumoSeo && (!textareaResumoSeo.value.trim() || (textareaResumoSeo.dataset && textareaResumoSeo.dataset.autoSynced === 'true'))) {
+    textareaResumoSeo.value = resultText;
+    if (textareaResumoSeo.dataset) textareaResumoSeo.dataset.autoSynced = 'true';
+  }
+
+  // Validador de Estrutura do Catálogo (10 Regras)
+  if (estiloRoteiro && (estiloRoteiro.includes('Catálogo') || estiloRoteiro.includes('Catalogo'))) {
+    const numItensEl = document.getElementById('input-num-itens-catalogo');
+    const numItensVal = numItensEl ? parseInt(numItensEl.value, 10) : 9;
+    const validacao = validarEstruturaCatalogo(resultText, numItensVal);
+    if (typeof atualizarRelatorioValidadorCatalogo === 'function') {
+      atualizarRelatorioValidadorCatalogo(validacao);
+    }
+  } else {
+    const containerRelatorio = document.getElementById('relatorio-validador-catalogo');
+    if (containerRelatorio) containerRelatorio.classList.add('hidden');
+  }
+
+  if (typeof atualizarSeloAba === 'function') {
+    atualizarSeloAba(1, true);
+  }
+  if (typeof AutoSave !== 'undefined' && AutoSave && AutoSave.save) {
+    AutoSave.save();
+  }
+}
+
+window.sincronizarRoteiroGeradoEmTodasAsCaixas = sincronizarRoteiroGeradoEmTodasAsCaixas;
+
+function limparResultadosEtapasPosteriores() {
+  if (typeof document === 'undefined') return;
+  // 0. Etapa 1: Caixas derivadas de roteiro limpo e narração
+  const outLimpo = document.getElementById('output-roteiro-limpo');
+  if (outLimpo) outLimpo.value = '';
+  const outNarracaoLimpa = document.getElementById('textarea-narracao-limpa-audio');
+  if (outNarracaoLimpa) outNarracaoLimpa.value = '';
+
+  // 1. Etapa 2: Mídias
+  const outKeywords = document.getElementById('output-prompt-keywords');
+  if (outKeywords) outKeywords.value = '';
+  const outImagensIa = document.getElementById('output-prompt-imagens-ia');
+  if (outImagensIa) outImagensIa.value = '';
+
+  // 2. Etapa 3: Thumbnails
+  const outThumbA = document.getElementById('output-thumb-a');
+  if (outThumbA) outThumbA.value = '';
+  const outThumbB = document.getElementById('output-thumb-b');
+  if (outThumbB) outThumbB.value = '';
+  const outThumbC = document.getElementById('output-thumb-c');
+  if (outThumbC) outThumbC.value = '';
+
+  // 3. Etapa 4: SEO
+  const outSeo = document.getElementById('output-prompt-seo');
+  if (outSeo) outSeo.value = '';
+
+  // 4. Etapa 5: Narração & Legendas
+  const outSrt = document.getElementById('output-legenda-srt');
+  if (outSrt) outSrt.value = '';
+  const cardSrt = document.getElementById('card-legenda-output');
+  if (cardSrt) cardSrt.classList.add('hidden');
+  const cardAudio = document.getElementById('card-audio-preview');
+  if (cardAudio) cardAudio.classList.add('hidden');
+  const audioPreview = document.getElementById('audio-player-preview');
+  if (audioPreview && audioPreview.pause) {
+    audioPreview.pause();
+    audioPreview.src = '';
+  }
+
+  // 5. Resetar selos das etapas 2 a 5
+  if (typeof atualizarSeloAba === 'function') {
+    atualizarSeloAba(2, false);
+    atualizarSeloAba(3, false);
+    atualizarSeloAba(4, false);
+    atualizarSeloAba(5, false);
+  }
+
+  if (typeof AutoSave !== 'undefined' && AutoSave && AutoSave.save) {
+    AutoSave.save();
+  }
+}
+
+window.limparResultadosEtapasPosteriores = limparResultadosEtapasPosteriores;
+
+
 
 
 /**
@@ -5497,14 +5624,14 @@ Provide the 10 ideas numbered 1 to 10 in ${lang.name}, with Title (max 1 word in
 
     if (estilo.includes('Catálogo') || estilo.includes('Catalogo')) {
       const n = numItens || 9;
-      const palavrasAlvo = n * 200 + 300;
+      const palavrasAlvo = Math.min(2600, Math.max(1800, n * 200 + 250));
       const nomesNumerados = ['Um', 'Dois', 'Três', 'Quatro', 'Cinco', 'Seis', 'Sete', 'Oito', 'Nove', 'Dez', 'Onze', 'Doze'].slice(0, n);
       const listaExemplo = nomesNumerados.map((num, i) => `${num}, [Nome do Item ${i+1}]`).join('\n');
 
       instrucoesDuracaoEFormato = `FORMAT: Catalog in ${n} Items (Catálogo em N itens, 14-17 minutes of continuous narration)
 MANDATORY WORD COUNT TARGET: STRICTLY BETWEEN 1,800 AND 2,600 WORDS IN TOTAL (target ~${palavrasAlvo} words).
 
-ABSOLUTE STRUCTURAL RULES (STRICTLY ENFORCED):
+ABSOLUTE STRUCTURAL AND THEOLOGICAL RULES (STRICTLY ENFORCED):
 1. OPENING HOOK (MAXIMUM 30 WORDS):
    - Repeats the exact theme/title in an affirmative statement, says "explicado em poucos minutos" (or English "explained in a few minutes") and IMMEDIATELY starts "Um, [Item 1]".
    - STRICTLY FORBIDDEN to include Bible verses in the opening hook.
@@ -5515,33 +5642,42 @@ ABSOLUTE STRUCTURAL RULES (STRICTLY ENFORCED):
 ${listaExemplo}
    - Each item MUST be distinct and unique. STRICTLY FORBIDDEN to repeat characters, themes, or episodes (e.g. Uzzah appears only ONCE).
    - STRICTLY FORBIDDEN to create any extra item beyond ${n} (e.g. if N=${n}, NEVER create an item ${n+1}).
-   - Length per item: 170 to 230 words of rich, dramatic narrative.
+   - Length per item: STRICTLY MAXIMUM 220 WORDS (range: 160 to 220 words of dense biblical narrative).
 
-3. STRICT LIMIT ON BIBLICAL QUOTES (< 35% OF TOTAL WORDS):
+3. PROHIBITION OF INTERPRETATION STATED AS FACT (NO UNSUPPORTED INTENTION):
+   - Narre estritamente o que o texto bíblico afirma.
+   - NÃO atribua intenção, conhecimento prévio ou motivação interna aos personagens se o texto sagrado não disser explicitamente.
+   - Quando a Bíblia não der o motivo, diga expressamente: "o texto não explica o que levou ao ato".
+   - Interpretações teológicas posteriores devem ser obrigatoriamente marcadas como "segundo a leitura mais comum".
+   - ESTRITAMENTE PROIBIDO usar as expressões "deliberado/deliberada", "conhecia a lei", "sabia exatamente", "pleno conhecimento", "profanação deliberada" ou "hipocrisia calculada" quando não houver versículo bíblico explícito que as sustente.
+   - Para relatos como Herodes Agripa (Atos 12:23), padronize obrigatoriamente a expressão histórica: "comido de vermes".
+
+4. STRICT LIMIT ON BIBLICAL QUOTES (< 35% OF TOTAL WORDS):
    - MAXIMUM 1 direct scripture quote per item, up to 25 words.
    - The rest of the item must be narrated in your own words, stating the spoken reference (e.g. "Isso está em Levítico 10, versículos 1 e 2").
    - NEVER copy whole long passages. Total verbatim quotes across the script must be LESS than 35% of total words.
    - ALWAYS ensure proper spacing and punctuation before and after all quotation marks (e.g. 'conforme está escrito: "..." e continuou').
 
-4. SENSITIVE CONTENT DIRECTIVE:
+5. SENSITIVE CONTENT DIRECTIVE:
    - STRICTLY FORBIDDEN to describe explicit sexual acts, intimacy, or graphic anatomical violence.
    - Solemnly and concisely state only what the biblical text literally affirms.
 
-5. SUBSCRIPTION CTA SPECIFICALLY AFTER ITEM 2:
+6. SUBSCRIPTION CTA SPECIFICALLY AFTER ITEM 2:
    - Placed strictly after Item 2 and before Item 3: exactly 2 sentences explaining that subscribing helps YouTube recommend more studies like this, ending strictly with "vamos em frente" (or English "let's move on").
 
-6. CONCLUSION / CLOSING (NOT A NUMBERED ITEM):
+7. CONCLUSION / CLOSING (NOT A NUMBERED ITEM & NO FALSE GENERALIZATION):
    - Synthesis of 80 to 120 words.
+   - A síntese do fecho NÃO PODE generalizar ("todos pecaram com pleno conhecimento" / "todos sabiam o que faziam"); deve resumir apenas e fielmente o que os ${n} relatos individuais dizem.
    - Exactly ONE engaging question directed to the audience for comments.
    - Short final subscription request.
-   - This closing section is NEVER a numbered item.
+   - This closing section is NEVER a numbered item (NEVER write "Nove, ..." or "Dez, ...").
 
-7. MANDATORY RHETORICAL PATTERNS:
+8. MANDATORY RHETORICAL PATTERNS & HONESTY NOTES:
    - AT LEAST 3 uses of "não é X, é Y" (or "não foi X, foi Y", "not X, it was Y").
-   - Exactly 1 honest note on divergent historical sources ("vale um registro honesto aqui" / "an honest historical note is due here").
+   - Include AT LEAST 1 honest note on divergent historical sources per video when an account is read differently ("vale um registro honesto aqui" / "an honest historical note is due here").
    - Non-canonical tradition ONLY labeled as "segundo a tradição [named source]" (e.g. Eusébio, Orígenes).
 
-8. ZERO SYSTEM LABELS IN OUTPUT:
+9. ZERO SYSTEM LABELS IN OUTPUT:
    - STRICTLY FORBIDDEN to output bracketed labels like [ABERTURA], [ITEM 1], [CONCLUSÃO], or word count lines like "**Contagem total de palavras...**". Output ONLY the clean spoken narration text.`;
 
     } else if (estilo.includes('18-20') || estilo.includes('Longo')) {
@@ -7115,52 +7251,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function limparResultadosEtapasPosteriores() {
-    // 1. Etapa 2: Mídias
-    const outKeywords = document.getElementById('output-prompt-keywords');
-    if (outKeywords) outKeywords.value = '';
-    const outImagensIa = document.getElementById('output-prompt-imagens-ia');
-    if (outImagensIa) outImagensIa.value = '';
-
-    // 2. Etapa 3: Thumbnails
-    const outThumbA = document.getElementById('output-thumb-a');
-    if (outThumbA) outThumbA.value = '';
-    const outThumbB = document.getElementById('output-thumb-b');
-    if (outThumbB) outThumbB.value = '';
-    const outThumbC = document.getElementById('output-thumb-c');
-    if (outThumbC) outThumbC.value = '';
-
-    // 3. Etapa 4: SEO
-    const outSeo = document.getElementById('output-prompt-seo');
-    if (outSeo) outSeo.value = '';
-
-    // 4. Etapa 5: Narração & Legendas
-    const outSrt = document.getElementById('output-legenda-srt');
-    if (outSrt) outSrt.value = '';
-    const cardSrt = document.getElementById('card-legenda-output');
-    if (cardSrt) cardSrt.classList.add('hidden');
-    const cardAudio = document.getElementById('card-audio-preview');
-    if (cardAudio) cardAudio.classList.add('hidden');
-    const audioPreview = document.getElementById('audio-player-preview');
-    if (audioPreview) {
-      audioPreview.pause();
-      audioPreview.src = '';
-    }
-    currentAudioBlob = null;
-    currentAudioUrl = null;
-    currentSrtContent = '';
-    audioGeneratedInSession = false;
-    srtGeneratedInSession = false;
-
-    // 5. Resetar selos das etapas 2 a 5
-    atualizarSeloAba(2, false);
-    atualizarSeloAba(3, false);
-    atualizarSeloAba(4, false);
-    atualizarSeloAba(5, false);
-
-    AutoSave.save();
-  }
-
   function syncTema() {
     // Requisitos 6 e 8: Os campos de Thumbnail e SEO devem vir preenchidos com a ideia do Passo B (título)
     const ideiaEscolhida = (inputIdeiaEscolhida ? inputIdeiaEscolhida.value.trim() : '');
@@ -8209,16 +8299,8 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
           }
         });
 
-        if (outputEl) outputEl.value = resultText;
-
-        // Atualiza painel do validador de catálogo na tela
-        const validacao = validarEstruturaCatalogo(resultText, numItensVal);
-        if (typeof atualizarRelatorioValidadorCatalogo === 'function') {
-          atualizarRelatorioValidadorCatalogo(validacao);
-        }
-
-        UI.showToast('Roteiro do Catálogo gerado e validado com sucesso!');
-        AutoSave.save();
+        sincronizarRoteiroGeradoEmTodasAsCaixas(resultText, estiloRoteiro);
+        UI.showToast('Roteiro do Catálogo gerado e sincronizado com sucesso!');
       } catch (err) {
         UI.showToast(err.message, 'error');
         console.error('Erro na geração do Catálogo:', err);
