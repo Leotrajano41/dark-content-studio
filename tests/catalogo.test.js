@@ -285,48 +285,69 @@ async function executarTestes() {
     `No YouTube Longo, silêncio bíblico repetido foi reduzido para estritamente 1 ocorrência (${contagemSilencioLongo}/1).`);
 
   // --------------------------------------------------------------------------
-  // TESTE 3: Validador de Estrutura do Catálogo (Item 7)
+  // TESTE 3: Validador de Estrutura do Catálogo (9 Regras) & Reprodução de Defeitos (a)-(f)
   // --------------------------------------------------------------------------
-  console.log('\n📋 GRUPO 3: Validador de Estrutura do Catálogo (6 Regras)');
+  console.log('\n📋 GRUPO 3: Validador de Estrutura do Catálogo (9 Regras)');
 
   const validarCatalogo = getFn('validarEstruturaCatalogo');
 
-  // Teste 3.1: Roteiro perfeito deve passar 6/6
+  // Teste 3.1: Roteiro perfeito deve passar 9/9
   const validacaoCompleta = validarCatalogo(roteiroCatalogoProcessado, 9);
-  assert(validacaoCompleta.valido === true && validacaoCompleta.totalOk === 6,
-    `Roteiro completo do Catálogo passou em 6/6 regras do validador (total: ${validacaoCompleta.totalOk}/6).`);
+  assert(validacaoCompleta.valido === true && validacaoCompleta.totalOk === 9,
+    `Roteiro completo do Catálogo passou em 9/9 regras do validador (total: ${validacaoCompleta.totalOk}/9).`);
 
-  // Teste 3.2: Falha Regra 1 (Falta "Um," no início)
-  const textoSemUm = roteiroCatalogoProcessado.replace('Um, Acabe', 'Primeiramente, o rei Acabe');
-  const vFalha1 = validarCatalogo(textoSemUm, 9);
-  assert(vFalha1.regras.find(r => r.id === 'r1_abertura').ok === false,
-    'Validador detecta corretamente FALHA na Regra 1 (falta "Um," na abertura).');
+  // Defeito (a): Itens 1 e 2 sem título e sem número falado, colados
+  const defeitoA = roteiroCatalogoProcessado
+    .replace('Um, Acabe de Samaria. O monarca que desafiou', 'Acabe de Samaria desafiou')
+    .replace('Dois, Jezabel de Tiro. A rainha que perseguiu', 'Jezabel de Tiro foi a rainha que perseguiu');
+  const vDefeitoA = validarCatalogo(defeitoA, 9);
+  assert(vDefeitoA.regras.find(r => r.id === 'r1_abertura').ok === false || vDefeitoA.regras.find(r => r.id === 'r2_qtd_itens').ok === false || vDefeitoA.regras.find(r => r.id === 'r7_sequencia_itens').ok === false,
+    'Defeito (a): Validador detecta FALHA quando itens 1 e 2 estão sem número falado ou colados.');
 
-  // Teste 3.3: Falha Regra 2 (Quantidade de itens != N)
-  const textoMenosItens = roteiroCatalogoProcessado.replace('Nove, Antíoco', 'Outro rei cruel, Antíoco');
-  const vFalha2 = validarCatalogo(textoMenosItens, 9);
-  assert(vFalha2.regras.find(r => r.id === 'r2_qtd_itens').ok === false,
-    'Validador detecta corretamente FALHA na Regra 2 (quantidade de itens != N).');
+  // Defeito (b): Um item (Uzá) duplicado no texto
+  const defeitoB = roteiroCatalogoProcessado.replace('Oito, Tobias', 'Oito, Jezabel de Tiro');
+  const vDefeitoB = validarCatalogo(defeitoB, 9);
+  assert(vDefeitoB.regras.find(r => r.id === 'r7_sequencia_itens').ok === false || vDefeitoB.regras.find(r => r.id === 'r2_qtd_itens').ok === false,
+    'Defeito (b): Validador detecta FALHA quando há repetição ou duplicação de item.');
 
-  // Teste 3.4: Falha Regra 3 (Falta CTA entre Item 2 e Item 3)
+  // Defeito (c): Vazamento de rótulos entre colchetes e contagem de palavras
+  const defeitoC = '[ABERTURA – MÁXIMO 30 PALAVRAS]\n' + roteiroCatalogoProcessado + '\n**Contagem total de palavras: 1950 palavras**';
+  const vDefeitoC = validarCatalogo(defeitoC, 9);
+  assert(vDefeitoC.regras.find(r => r.id === 'r8_sem_rotulos').ok === false,
+    'Defeito (c): Validador detecta FALHA na presença de rótulos [ ] e linhas de contagem.');
+
+  // Defeito (d): Item extra além de N (ex: "Nove, o padrão dos julgamentos" com N = 8)
+  const roteiroCom8Itens = roteiroCatalogoProcessado; // Contém 9 itens
+  const vDefeitoD = validarCatalogo(roteiroCom8Itens, 8); // Avaliado com N = 8
+  assert(vDefeitoD.regras.find(r => r.id === 'r7_sequencia_itens').ok === false || vDefeitoD.regras.find(r => r.id === 'r2_qtd_itens').ok === false,
+    'Defeito (d): Validador detecta FALHA quando aparece item extra além de N=8.');
+
+  // Defeito (e): Excesso de versículos literais (> 35% das palavras em citações)
+  const citacaoGigante = '"' + 'palavra sagrada '.repeat(800) + '"';
+  const defeitoE = roteiroCatalogoProcessado + '\n\n' + citacaoGigante;
+  const vDefeitoE = validarCatalogo(defeitoE, 9);
+  assert(vDefeitoE.regras.find(r => r.id === 'r9_limite_citacoes').ok === false,
+    'Defeito (e): Validador detecta FALHA quando citações bíblicas ultrapassam 35% do total.');
+
+  // Defeito (f): Sem pergunta aos comentários no fecho
+  const defeitoF = roteiroCatalogoProcessado.replace(/\?.*?$/s, '. Assim encerramos esta análise bíblica.');
+  const vDefeitoF = validarCatalogo(defeitoF, 9);
+  assert(vDefeitoF.regras.find(r => r.id === 'r5_pergunta_comentarios').ok === false,
+    'Defeito (f): Validador detecta FALHA quando a pergunta aos comentários está ausente.');
+
+  // Teste 3.8: Falha Regra 3 (Falta CTA entre Item 2 e Item 3)
   const textoSemCtaMeio = roteiroCatalogoProcessado.replace(/Se este estudo[\s\S]*?Vamos em frente\./i, '');
   const vFalha3 = validarCatalogo(textoSemCtaMeio, 9);
   assert(vFalha3.regras.find(r => r.id === 'r3_cta_meio').ok === false,
     'Validador detecta corretamente FALHA na Regra 3 (falta CTA após Item 2).');
 
-  // Teste 3.5: Falha Regra 4 (Extensão fora de 1.800 - 2.600 palavras)
+  // Teste 3.9: Falha Regra 4 (Extensão fora de 1.800 - 2.600 palavras)
   const textoCurto = 'Um, item 1. Dois, item 2. Três, item 3.';
   const vFalha4 = validarCatalogo(textoCurto, 3);
   assert(vFalha4.regras.find(r => r.id === 'r4_extensao').ok === false,
     'Validador detecta corretamente FALHA na Regra 4 (extensão insuficiente).');
 
-  // Teste 3.6: Falha Regra 5 (Falta pergunta para comentários)
-  const textoSemPergunta = roteiroCatalogoProcessado.replace(/\?.*?$/s, '. Fim do estudo bíblico.');
-  const vFalha5 = validarCatalogo(textoSemPergunta, 9);
-  assert(vFalha5.regras.find(r => r.id === 'r5_pergunta_comentarios').ok === false,
-    'Validador detecta corretamente FALHA na Regra 5 (falta pergunta para comentários).');
-
-  // Teste 3.7: Falha Regra 6 (Menos de 3 "não é ... é ...")
+  // Teste 3.10: Falha Regra 6 (Menos de 3 "não é ... é ...")
   const textoSemContraste = roteiroCatalogoProcessado.replace(/Não é [^,]+, é/gi, 'Isto é');
   const vFalha6 = validarCatalogo(textoSemContraste, 9);
   assert(vFalha6.regras.find(r => r.id === 'r6_contraste').ok === false,

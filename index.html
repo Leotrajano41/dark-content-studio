@@ -1630,7 +1630,7 @@ textarea.h-180 {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
               <span>Validador de Estrutura: Catálogo em N itens</span>
             </div>
-            <span id="badge-catalogo-status" style="background: #d97706; color: #ffffff; padding: 2px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.78rem;">6/6 REGRAS OK</span>
+            <span id="badge-catalogo-status" style="background: #d97706; color: #ffffff; padding: 2px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.78rem;">9/9 REGRAS OK</span>
           </div>
           <div id="lista-regras-catalogo" style="line-height: 1.6; color: #fde68a; margin-top: 8px; font-size: 0.88rem;"></div>
           <div id="container-btn-regenerar-catalogo" class="hidden" style="margin-top: 10px;">
@@ -4464,7 +4464,7 @@ function validarEstruturaCatalogo(texto, numItens = 9) {
     return {
       valido: false,
       totalOk: 0,
-      totalRegras: 6,
+      totalRegras: 9,
       regras: []
     };
   }
@@ -4473,14 +4473,14 @@ function validarEstruturaCatalogo(texto, numItens = 9) {
   const palavras = texto.trim().match(/\S+/g) || [];
   const totalPalavras = palavras.length;
 
+  const nomesItensPT = ['Um', 'Dois', 'Tr[eê]s', 'Quatro', 'Cinco', 'Seis', 'Sete', 'Oito', 'Nove', 'Dez', 'Onze', 'Doze'];
+  const nomesItensEN = ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve'];
+
   // 1. "Um," ou "One," nas primeiras 40 palavras
   const primeiras40 = palavras.slice(0, 40).join(' ');
   const r1_ok = /\b(?:Um|One)\s*[,:]/i.test(primeiras40);
 
   // 2. Quantidade de itens falados = N
-  const nomesItensPT = ['Um', 'Dois', 'Tr[eê]s', 'Quatro', 'Cinco', 'Seis', 'Sete', 'Oito', 'Nove', 'Dez', 'Onze', 'Doze'];
-  const nomesItensEN = ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve'];
-  
   let itensEncontrados = 0;
   for (let idx = 0; idx < n; idx++) {
     const pattern = new RegExp(`(?:^|[\\n.!?]\\s*)(?:\\*\\*)?(?:${nomesItensPT[idx]}|${nomesItensEN[idx]}|${idx+1})\\s*[,:]`, 'i');
@@ -4509,13 +4509,76 @@ function validarEstruturaCatalogo(texto, numItens = 9) {
   const r4_ok = totalPalavras >= 1800 && totalPalavras <= 2600;
 
   // 5. Pergunta final para os comentários na conclusão
-  const ultimas300Palavras = palavras.slice(Math.max(0, totalPalavras - 300)).join(' ');
-  const r5_ok = /\?[^?]*$/s.test(ultimas300Palavras) && /\b(?:coment[aá]rios?|comente|opini[aã]o|voc[eê]|comments?|what\s+do\s+you\s+think|share\s+your\s+thoughts)\b/i.test(ultimas300Palavras);
+  const ultimas350Palavras = palavras.slice(Math.max(0, totalPalavras - 350)).join(' ');
+  const r5_ok = /\?[^?]*$/s.test(ultimas350Palavras) && /\b(?:coment[aá]rios?|comente|opini[aã]o|voc[eê]|qual\s+destes|qual\s+desses|comments?|what\s+do\s+you\s+think|share\s+your\s+thoughts)\b/i.test(ultimas350Palavras);
 
   // 6. Pelo menos 3 usos de "não é X, é Y"
   const regexNaoE = /\b(?:n[aã]o\s+(?:[eé]|foi|era|se\s+trata\s+de)\s+[^,;.!?]+[;,]?\s*(?:[eé]|foi|era|mas(?:\s+sim)?)|not\s+(?:only|just|a|an|the)?\s*[^,;.!?]+[;,]?\s*(?:it\s+(?:is|was)|but))\s+[^.!?]+/gi;
   const matchesNaoE = (texto.match(regexNaoE) || []);
   const r6_ok = matchesNaoE.length >= 3;
+
+  // 7. (NOVO) Itens numerados em sequência estrita, sem repetir e sem passar de N
+  let r7_ok = true;
+  let detalheR7 = 'Itens numerados em sequência estrita de 1 a ' + n + ', sem itens extras nem repetições.';
+  
+  // Verifica se há item além de N (ex: N=8 e existe Item 9/Nove)
+  if (n < 12) {
+    for (let idxExtra = n; idxExtra < 12; idxExtra++) {
+      const patternExtra = new RegExp(`(?:^|[\\n.!?]\\s*)(?:\\*\\*)?(?:${nomesItensPT[idxExtra]}|${nomesItensEN[idxExtra]}|${idxExtra+1})\\s*[,:]`, 'i');
+      if (patternExtra.test(texto)) {
+        r7_ok = false;
+        detalheR7 = `Foi detectado um item extra além de N=${n} (${nomesItensPT[idxExtra].replace('[eê]','ê')}).`;
+        break;
+      }
+    }
+  }
+
+  // Verifica se há repetições de nomes/personagens de itens
+  if (r7_ok) {
+    const regexItemName = /(?:^|[\n.!?]\s*)(?:\*\*)?(?:Um|Dois|Tr[eê]s|Quatro|Cinco|Seis|Sete|Oito|Nove|Dez|Onze|Doze|One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten|Eleven|Twelve|\d+)\s*[,:]\s*([^\n.!?]{3,60})/gi;
+    let matchNome;
+    const nomesEncontrados = [];
+    while ((matchNome = regexItemName.exec(texto)) !== null) {
+      const palavrasTitulo = matchNome[1].trim().toLowerCase().replace(/[^a-z0-9à-ú\s]/gi, '').split(/\s+/).filter(Boolean);
+      const chaveItem = palavrasTitulo.slice(0, 3).join(' ');
+      if (chaveItem) nomesEncontrados.push(chaveItem);
+    }
+    const unicos = new Set(nomesEncontrados);
+    if (unicos.size !== nomesEncontrados.length) {
+      r7_ok = false;
+      detalheR7 = 'Foram detectados itens com personagens ou temas repetidos no catálogo.';
+    }
+  }
+
+  // Verifica se os itens aparecem na ordem correta
+  if (r7_ok) {
+    let lastPos = -1;
+    for (let idx = 0; idx < n; idx++) {
+      const pattern = new RegExp(`(?:^|[\\n.!?]\\s*)(?:\\*\\*)?(?:${nomesItensPT[idx]}|${nomesItensEN[idx]}|${idx+1})\\s*[,:]`, 'i');
+      const pos = texto.search(pattern);
+      if (pos === -1 || (lastPos !== -1 && pos < lastPos)) {
+        r7_ok = false;
+        detalheR7 = `A ordem sequencial dos itens falhou no Item ${idx+1} (${nomesItensPT[idx].replace('[eê]','ê')}).`;
+        break;
+      }
+      lastPos = pos;
+    }
+  }
+
+  // 8. (NOVO) Nenhum rótulo entre colchetes nem menções a "Contagem"
+  const temColchetes = /\[[^\]]+\]/.test(texto);
+  const temContagem = /(?:word\s+count|contagem\s+de\s+palavras|contagem\s+total|recuento\s+de\s+palabras)\b/i.test(texto);
+  const r8_ok = !temColchetes && !temContagem;
+  let detalheR8 = r8_ok ? 'Nenhum rótulo entre colchetes nem linha de contagem residual detectada.' : (temColchetes ? 'Rótulos entre colchetes vazaram no texto.' : 'Menção a contagem de palavras presente no texto.');
+
+  // 9. (NOVO) Citações bíblicas literais somam menos de 35% das palavras
+  const matchesAspas = texto.match(/"([^"]+)"|“([^”]+)”|«([^»]+)»/g) || [];
+  const palavrasCitadas = matchesAspas.reduce((acc, c) => acc + (c.match(/\S+/g) || []).length, 0);
+  const percentCitacoes = totalPalavras > 0 ? (palavrasCitadas / totalPalavras) * 100 : 0;
+  const r9_ok = percentCitacoes < 35;
+  let detalheR9 = r9_ok
+    ? `Citações bíblicas equilibradas: ${percentCitacoes.toFixed(1)}% do texto (${palavrasCitadas}/${totalPalavras} palavras).`
+    : `Excesso de versículos literais: ${percentCitacoes.toFixed(1)}% do texto (máximo permitido: 35%).`;
 
   const regras = [
     {
@@ -4559,6 +4622,27 @@ function validarEstruturaCatalogo(texto, numItens = 9) {
       descricao: 'Pelo menos 3 usos de antítese afirmativa',
       ok: r6_ok,
       detalhe: r6_ok ? `Pelo menos 3 ocorrências de "não é X, é Y" encontradas (${matchesNaoE.length}).` : `Apenas ${matchesNaoE.length} ocorrência(s) de "não é X, é Y" encontradas (mínimo: 3).`
+    },
+    {
+      id: 'r7_sequencia_itens',
+      nome: 'Sequência estrita e sem repetições',
+      descricao: `Itens em ordem de 1 a ${n}, sem duplicatas nem itens extras`,
+      ok: r7_ok,
+      detalhe: detalheR7
+    },
+    {
+      id: 'r8_sem_rotulos',
+      nome: 'Zero rótulos e contagens',
+      descricao: 'Sem colchetes [ ] nem linhas de "Contagem de palavras"',
+      ok: r8_ok,
+      detalhe: detalheR8
+    },
+    {
+      id: 'r9_limite_citacoes',
+      nome: `Citações bíblicas literais (${percentCitacoes.toFixed(1)}% < 35%)`,
+      descricao: 'Citações entre aspas somam menos de 35% do total de palavras',
+      ok: r9_ok,
+      detalhe: detalheR9
     }
   ];
 
@@ -5297,28 +5381,52 @@ Provide the 10 ideas numbered 1 to 10 in ${lang.name}, with Title (max 1 word in
 
     if (estilo.includes('Catálogo') || estilo.includes('Catalogo')) {
       const n = numItens || 9;
-      const palavrasAlvo = n * 190 + 300;
-      instrucoesDuracaoEFormato = `FORMAT: Catalog in ${n} Items (Catálogo em N itens, 14-17 minutes)
+      const palavrasAlvo = n * 200 + 300;
+      const nomesNumerados = ['Um', 'Dois', 'Três', 'Quatro', 'Cinco', 'Seis', 'Sete', 'Oito', 'Nove', 'Dez', 'Onze', 'Doze'].slice(0, n);
+      const listaExemplo = nomesNumerados.map((num, i) => `${num}, [Nome do Item ${i+1}]`).join('\n');
+
+      instrucoesDuracaoEFormato = `FORMAT: Catalog in ${n} Items (Catálogo em N itens, 14-17 minutes of continuous narration)
 MANDATORY WORD COUNT TARGET: STRICTLY BETWEEN 1,800 AND 2,600 WORDS IN TOTAL (target ~${palavrasAlvo} words).
 
-STRUCTURE REQUIREMENTS:
-1. OPENING (MAXIMUM 30 WORDS):
-   - Repeats the title in an affirmative statement, says "explicado em poucos minutos" (or English equivalent "explained in a few minutes") and immediately enters "Um, [Item 1]".
+ABSOLUTE STRUCTURAL RULES (STRICTLY ENFORCED):
+1. OPENING HOOK (MAXIMUM 30 WORDS):
+   - Repeats the exact theme/title in an affirmative statement, says "explicado em poucos minutos" (or English "explained in a few minutes") and IMMEDIATELY starts "Um, [Item 1]".
+   - STRICTLY FORBIDDEN to include Bible verses in the opening hook.
    - NO greeting, NO opening question, NO channel presentation.
-2. SPOKEN NUMBERED ITEMS ("Um,", "Dois,", "Três,", ..., "${n}"):
-   - Exactly ${n} distinct items.
-   - Length per item: 160 to 220 words.
-   - Each item MUST contain: name and identity; scripture passage with book, chapter and verse; a specific surprising detail; the historical outcome; a short closing sentence.
-3. SUBSCRIPTION CTA AFTER ITEM 2:
-   - Placed strictly after Item 2 and before Item 3: exactly 2 sentences explaining that subscribing helps YouTube recommend more videos like this, ending strictly with "vamos em frente" (or English "let's move on").
-4. CONCLUSION / CLOSING:
+
+2. EXACTLY ${n} NUMBERED ITEMS (NEVER EXCEED ${n} ITEMS):
+   - Each item MUST begin strictly with the spoken word:
+${listaExemplo}
+   - Each item MUST be distinct and unique. STRICTLY FORBIDDEN to repeat characters, themes, or episodes (e.g. Uzzah appears only ONCE).
+   - STRICTLY FORBIDDEN to create any extra item beyond ${n} (e.g. if N=${n}, NEVER create an item ${n+1}).
+   - Length per item: 170 to 230 words of rich, dramatic narrative.
+
+3. STRICT LIMIT ON BIBLICAL QUOTES (< 35% OF TOTAL WORDS):
+   - MAXIMUM 1 direct scripture quote per item, up to 25 words.
+   - The rest of the item must be narrated in your own words, stating the spoken reference (e.g. "Isso está em Levítico 10, versículos 1 e 2").
+   - NEVER copy whole long passages. Total verbatim quotes across the script must be LESS than 35% of total words.
+   - ALWAYS ensure proper spacing and punctuation before and after all quotation marks (e.g. 'conforme está escrito: "..." e continuou').
+
+4. SENSITIVE CONTENT DIRECTIVE:
+   - STRICTLY FORBIDDEN to describe explicit sexual acts, intimacy, or graphic anatomical violence.
+   - Solemnly and concisely state only what the biblical text literally affirms.
+
+5. SUBSCRIPTION CTA SPECIFICALLY AFTER ITEM 2:
+   - Placed strictly after Item 2 and before Item 3: exactly 2 sentences explaining that subscribing helps YouTube recommend more studies like this, ending strictly with "vamos em frente" (or English "let's move on").
+
+6. CONCLUSION / CLOSING (NOT A NUMBERED ITEM):
    - Synthesis of 80 to 120 words.
-   - Exactly ONE engaging question for the comments.
+   - Exactly ONE engaging question directed to the audience for comments.
    - Short final subscription request.
-5. MANDATORY RHETORICAL & HISTORICAL PATTERNS:
+   - This closing section is NEVER a numbered item.
+
+7. MANDATORY RHETORICAL PATTERNS:
    - AT LEAST 3 uses of "não é X, é Y" (or "não foi X, foi Y", "not X, it was Y").
    - Exactly 1 honest note on divergent historical sources ("vale um registro honesto aqui" / "an honest historical note is due here").
-   - Non-canonical tradition ONLY labeled as "segundo a tradição [named source]" (e.g. Eusébio, Orígenes, Tertuliano, martirológio, tradição armênia). Deuterocanonical books identified as such. NEVER present tradition as canonical biblical fact.`;
+   - Non-canonical tradition ONLY labeled as "segundo a tradição [named source]" (e.g. Eusébio, Orígenes).
+
+8. ZERO SYSTEM LABELS IN OUTPUT:
+   - STRICTLY FORBIDDEN to output bracketed labels like [ABERTURA], [ITEM 1], [CONCLUSÃO], or word count lines like "**Contagem total de palavras...**". Output ONLY the clean spoken narration text.`;
 
     } else if (estilo.includes('18-20') || estilo.includes('Longo')) {
       instrucoesDuracaoEFormato = `FORMAT: YouTube Long Documentary (18-20 minutes of continuous narration)
@@ -6433,6 +6541,19 @@ const AutoSave = window.AutoSave = {
  * Remove marcadores de seção entre colchetes, cabeçalhos, rótulos estruturais,
  * marcações markdown e títulos duplicados.
  */
+/**
+ * Garante espaço e pontuação antes e depois de toda citação bíblica entre aspas
+ */
+function garantirEspacamentoEPontuacaoCitacoes(texto) {
+  if (!texto || typeof texto !== 'string') return '';
+  let res = texto;
+  res = res.replace(/([a-zA-Z0-9À-ÖØ-öø-ÿ])(["“«])/g, '$1 $2');
+  res = res.replace(/([,;:])(["“«])/g, '$1 $2');
+  res = res.replace(/(["”»])([a-zA-Z0-9À-ÖØ-öø-ÿ])/g, '$1 $2');
+  return res;
+}
+window.garantirEspacamentoEPontuacaoCitacoes = garantirEspacamentoEPontuacaoCitacoes;
+
 function limparTextoParaNarracao(texto, estiloRoteiro = '') {
   if (!texto || typeof texto !== 'string') return '';
 
@@ -8119,6 +8240,15 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
         resultText = ajustarExtensaoRoteiro(resultText, estiloRoteiro);
       }
 
+            // Sanitização de pontuação e espaçamento de citações
+      if (typeof garantirEspacamentoEPontuacaoCitacoes === 'function') {
+        resultText = garantirEspacamentoEPontuacaoCitacoes(resultText);
+      }
+
+      // Sanitização de rótulos entre colchetes e contagens no roteiro
+      resultText = resultText.replace(/^\s*\[(?:ABERTURA|ITEM\s*\d+|CONCLUSÃO|CONCLUSION|FECHO)[^\]]*\]\s*:?/gmi, '');
+      resultText = resultText.replace(/\[(?:ABERTURA|ITEM\s*\d+|CONCLUSÃO|CONCLUSION|FECHO)[^\]]*\]/gi, '');
+      resultText = resultText.replace(/^\s*(?:\*\*)?(?:WORD\s+COUNT|CONTAGEM\s+DE\s+PALAVRAS|CONTAGEM\s+TOTAL)[^\n]*/gmi, '');
       // 12. Validação e correção automática de aspas abertas/fechadas
       if (typeof validarECorrigirAspas === 'function') {
         resultText = validarECorrigirAspas(resultText);
@@ -8171,6 +8301,16 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
         textareaResumoSeo.value = resultText;
         textareaResumoSeo.dataset.autoSynced = 'true';
       }
+            // Validador de Estrutura do Catálogo (Item 8)
+      if (estiloRoteiro.includes('Catálogo') || estiloRoteiro.includes('Catalogo')) {
+        const numItensVal = parseInt(document.getElementById('input-num-itens-catalogo')?.value, 10) || 9;
+        const validacao = validarEstruturaCatalogo(resultText, numItensVal);
+        atualizarRelatorioValidadorCatalogo(validacao);
+      } else {
+        const containerRelatorio = document.getElementById('relatorio-validador-catalogo');
+        if (containerRelatorio) containerRelatorio.classList.add('hidden');
+      }
+
       atualizarSeloAba(1, true);
       AutoSave.save();
     }
