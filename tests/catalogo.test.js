@@ -353,6 +353,59 @@ async function executarTestes() {
   assert(vFalha6.regras.find(r => r.id === 'r6_contraste').ok === false,
     'Validador detecta corretamente FALHA na Regra 6 (menos de 3 contrastes "não é X, é Y").');
 
+  // Teste 3.11: Reconhecimento de formatos mistos com Markdown ("Um, Nadabe e Abiú." e "**Dois, Corá**")
+  const roteiroComMarkdown = roteiroCatalogoProcessado
+    .replace('Um, Acabe de Samaria', 'Um, Nadabe e Abiú.')
+    .replace('Dois, Jezabel de Tiro', '**Dois, Corá**')
+    .replace('Três, Senaqueribe da Assíria', '**Três**, Uzá e a arca.');
+  const vMarkdown = validarCatalogo(roteiroComMarkdown, 9);
+  assert(vMarkdown.regras.find(r => r.id === 'r1_abertura').ok === true && vMarkdown.regras.find(r => r.id === 'r2_qtd_itens').ok === true,
+    'Validador reconhece com precisão formatos como "Um, Nadabe e Abiú." e "**Dois, Corá**".');
+
+  // --------------------------------------------------------------------------
+  // TESTE 3.2: Fluxo Completo de gerarRoteiroCatalogo com Stub de Auto-Regeneração
+  // --------------------------------------------------------------------------
+  console.log('\n📋 GRUPO 3.2: Fluxo do Catálogo com Auto-Regeneração');
+
+  const gerarCatalogoFn = getFn('gerarRoteiroCatalogo');
+  if (typeof gerarCatalogoFn === 'function') {
+    let chamadasCatalogo = 0;
+    let promptsRecebidos = [];
+
+    // Configura stub do OpenRouterAPI para simular 1ª resposta com falha e 2ª resposta corrigida
+    openRouterTarget.generateContent = async (prompt) => {
+      chamadasCatalogo++;
+      promptsRecebidos.push(prompt);
+
+      if (chamadasCatalogo === 1) {
+        // 1ª chamada: devolve roteiro imperfeito (sem "Um,", faltam itens)
+        return 'E saiu fogo de diante do Senhor consumindo os altares profanos. Dois, Corá e seus seguidores. Não é lenda, é fato sagrado. Se este estudo edifica sua fé, inscreva-se no canal para que o YouTube recomende mais vídeos como este para você. Vamos em frente. Três, Uzá e a arca.';
+      } else {
+        // 2ª chamada (auto-regeneração corretiva): devolve o roteiro corrigido completo
+        return roteiroCatalogoProcessado;
+      }
+    };
+
+    const resultadoFinal = await gerarCatalogoFn({
+      ideia: 'Cada julgamento súbito de Deus na Bíblia',
+      estiloRoteiro: 'Catálogo em N itens (14-17 min)',
+      tomVoz: 'Solene',
+      tipoGancho: 'Citação',
+      idioma: 'Português (Brasil)',
+      numItens: 9,
+      modelo: 'anthropic/claude-sonnet-4.5',
+      onProgress: () => {}
+    });
+
+    assert(chamadasCatalogo === 2, 'Geração de Catálogo acionou auto-regeneração única (2 chamadas no total).');
+    assert(promptsRecebidos[1].includes('FAILED RULES:') && promptsRecebidos[1].includes('Abertura imediata'),
+      'Prompt de auto-regeneração detalhou explicitamente as regras que haviam falhado.');
+
+    const validacaoFinalAuto = validarCatalogo(resultadoFinal, 9);
+    assert(validacaoFinalAuto.valido === true && validacaoFinalAuto.totalOk === 9,
+      'Roteiro final após auto-regeneração obteve 9/9 regras cumpridas no validador.');
+  }
+
   // --------------------------------------------------------------------------
   // TESTE 4: Validação de URL (?tema= e ?titulo=)
   // --------------------------------------------------------------------------
