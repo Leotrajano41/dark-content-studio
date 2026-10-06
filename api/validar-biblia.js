@@ -125,6 +125,18 @@ const BOOK_CANONICAL = [
   { id: 'ap', pt: 'Apocalipse', en: 'Revelation', es: 'Apocalipsis', aliases: ['apocalipse', 'revelation', 'apocalipsis', 'ap', 'rev'] }
 ];
 
+// Livros deuterocanônicos / apócrifos não canônicos reconhecidos
+const BOOK_DEUTEROCANONICAL = [
+  { id: 'tb', pt: 'Tobias', en: 'Tobit', es: 'Tobías', aliases: ['tobias', 'tobit', 'tb'], isDeuterocanonical: true },
+  { id: 'jdt', pt: 'Judite', en: 'Judith', es: 'Judit', aliases: ['judite', 'judith', 'judit', 'jdt'], isDeuterocanonical: true },
+  { id: 'sb', pt: 'Sabedoria', en: 'Wisdom', es: 'Sabiduría', aliases: ['sabedoria', 'sabedoria de salomao', 'wisdom', 'wisdom of solomon', 'sabiduria', 'sb', 'wis'], isDeuterocanonical: true },
+  { id: 'eclo', pt: 'Eclesiástico', en: 'Sirach', es: 'Eclesiástico', aliases: ['eclesiastico', 'sirach', 'siracida', 'ecclesiasticus', 'eclo', 'sir'], isDeuterocanonical: true },
+  { id: 'br', pt: 'Baruque', en: 'Baruch', es: 'Baruc', aliases: ['baruque', 'baruch', 'baruc', 'br'], isDeuterocanonical: true },
+  { id: '1mc', pt: '1 Macabeus', en: '1 Maccabees', es: '1 Macabeos', aliases: ['1 macabeus', '1macabeus', '1 maccabees', '1 macabeos', '1 mc', '1mc', '1 mac'], isDeuterocanonical: true },
+  { id: '2mc', pt: '2 Macabeus', en: '2 Maccabees', es: '2 Macabeos', aliases: ['2 macabeus', '2macabeus', '2 maccabees', '2 macabeos', '2 mc', '2mc', '2 mac'], isDeuterocanonical: true },
+  { id: 'enoc', pt: 'Enoque', en: 'Enoch', es: 'Enoc', aliases: ['enoque', 'enoch', 'enoc', '1 enoque', '1 enoch'], isDeuterocanonical: true }
+];
+
 function normalizeStr(str) {
   if (!str) return '';
   return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
@@ -132,15 +144,21 @@ function normalizeStr(str) {
 
 function findBook(bookName) {
   const norm = normalizeStr(bookName);
-  // Prioridade 1: correspondência exata de nome sem acento
+  // Prioridade 1: correspondência exata de nome sem acento nos 66 livros canônicos
   for (const b of BOOK_CANONICAL) {
     if (normalizeStr(b.pt) === norm || normalizeStr(b.en) === norm || normalizeStr(b.es) === norm) {
       return b;
     }
   }
-  // Prioridade 2: correspondência exata de id ou aliases
+  // Prioridade 2: correspondência exata de id ou aliases nos 66 livros canônicos
   for (const b of BOOK_CANONICAL) {
     if (b.id === norm || b.aliases.some(a => normalizeStr(a) === norm)) {
+      return b;
+    }
+  }
+  // Prioridade 3: livros deuterocanônicos / apócrifos
+  for (const b of BOOK_DEUTEROCANONICAL) {
+    if (normalizeStr(b.pt) === norm || normalizeStr(b.en) === norm || normalizeStr(b.es) === norm || b.id === norm || b.aliases.some(a => normalizeStr(a) === norm)) {
       return b;
     }
   }
@@ -390,6 +408,17 @@ function validarRoteiroBiblico(texto, idioma = 'pt') {
 
     // 1. Checa referências inexistentes
     for (const r of refs) {
+      if (r.bookCan && r.bookCan.isDeuterocanonical) {
+        // Livros deuterocanônicos / apócrifos reconhecidos não são removidos nem tratados como erro
+        alteracoes.push({
+          tipo: 'DEUTEROCANONICO',
+          referencia: r.rawRef,
+          status: 'não verificado (deuterocanônico)',
+          motivo: 'Livro deuterocanônico / histórico mantido sem alteração no texto.'
+        });
+        continue;
+      }
+
       const realText = getVerseText(currentBible, r.bookCan, r.chap, r.vStart, r.vEnd);
       if (!realText) {
         const bookName = r.bookCan[langKey] || r.bookCan.pt;

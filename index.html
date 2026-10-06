@@ -1421,10 +1421,17 @@ textarea.h-180 {
             </label>
             <select id="select-estilo-roteiro" class="form-control">
               <option value="YouTube Longo (18-20 minutos)" selected>YouTube Longo (18-20 minutos)</option>
+              <option value="Catálogo em N itens (14-17 min)">Catálogo em N itens (14-17 min)</option>
               <option value="YouTube Médio (5-8 minutos)">YouTube Médio (5-8 minutos)</option>
               <option value="Shorts/Reels — YouTube, Instagram, Facebook (50-60 segundos)">Shorts/Reels — YouTube, Instagram, Facebook (50-60 segundos)</option>
               <option value="Shorts/Reels Estendido — YouTube, Instagram, Facebook (até 3 minutos)">Shorts/Reels Estendido — YouTube, Instagram, Facebook (até 3 minutos)</option>
             </select>
+            <div id="container-num-itens-catalogo" class="custom-input-container hidden" style="margin-top: 8px;">
+              <label for="input-num-itens-catalogo" style="font-size: 0.85rem; color: #a1a1aa; font-weight: 500;">
+                Nº de itens (6 a 12):
+              </label>
+              <input type="number" id="input-num-itens-catalogo" class="form-control" min="6" max="12" value="9" style="margin-top: 4px;">
+            </div>
           </div>
 
           <!-- Combobox: Tom de Voz da Narrativa -->
@@ -1598,6 +1605,23 @@ textarea.h-180 {
           <div id="lista-problemas-revisao" style="line-height: 1.5; color: #c7d2fe; margin-top: 8px; font-size: 0.88rem;"></div>
         </div>
 
+        <!-- Relatório do Validador de Estrutura do Catálogo (Item 7) -->
+        <div id="relatorio-validador-catalogo" class="hidden" style="background: rgba(217, 119, 6, 0.12); border: 1px solid #d97706; color: #fef3c7; padding: 14px 18px; border-radius: 8px; margin-top: 16px; font-size: 0.92rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+            <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #fbbf24;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+              <span>Validador de Estrutura: Catálogo em N itens</span>
+            </div>
+            <span id="badge-catalogo-status" style="background: #d97706; color: #ffffff; padding: 2px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.78rem;">6/6 REGRAS OK</span>
+          </div>
+          <div id="lista-regras-catalogo" style="line-height: 1.6; color: #fde68a; margin-top: 8px; font-size: 0.88rem;"></div>
+          <div id="container-btn-regenerar-catalogo" class="hidden" style="margin-top: 10px;">
+            <button id="btn-regenerar-trecho-catalogo" class="btn btn-warning btn-sm" style="background: #d97706; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; font-weight: 600;">
+              ⚡ Regenerar só o trecho com problema
+            </button>
+          </div>
+        </div>
+
         <!-- Output 2: Roteiro -->
         <div class="output-card mt-4">
           <div class="output-header">
@@ -1768,6 +1792,7 @@ textarea.h-180 {
             </label>
             <select id="select-estilo-thumb" class="form-control">
               <option value="Impacto Visual Dramático" selected>Impacto Visual Dramático</option>
+              <option value="Grade de ilustrações com legendas">Grade de ilustrações com legendas</option>
               <option value="Curiosidade Textual">Curiosidade Textual</option>
               <option value="Ilustração Simbólica">Ilustração Simbólica</option>
               <option value="Cena Bíblica Estilizada">Cena Bíblica Estilizada</option>
@@ -3193,9 +3218,16 @@ const DEDUP_STOPWORDS = new Set([
 
 /**
  * BUG 1: Remove parágrafos que tenham mais de 60% de palavras semânticas em comum com o parágrafo anterior (duplicatas de regeneração)
+ * EXCEÇÃO: No estilo Catálogo, itens numerados com moldes similares são preservados sem exclusão indevida.
  */
-function removerParagrafosDuplicadosPorSimilaridade(texto, threshold = 0.6) {
+function removerParagrafosDuplicadosPorSimilaridade(texto, threshold = 0.6, estiloRoteiro = '') {
   if (!texto || typeof texto !== 'string') return texto;
+  const isCatalogo = String(estiloRoteiro).includes('Catálogo') || String(estiloRoteiro).includes('Catalogo');
+  if (isCatalogo) {
+    // No Catálogo, pular deduplicação agressiva entre itens com estrutura similar
+    return texto;
+  }
+
   const paragrafos = texto.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
   if (paragrafos.length <= 1) return texto;
   const resultado = [];
@@ -3804,6 +3836,19 @@ function termoEstaEmNegacaoDeCeticismo(texto, matchIndex) {
   return negPT.test(oracaoAnterior) || negEN.test(oracaoAnterior);
 }
 
+function termoEstaComFonteNomeada(texto, matchIndex) {
+  const sentencas = texto.match(/[^.!?]+(?:[.!?]+["']?|$)/g) || [texto];
+  let pos = 0;
+  for (const s of sentencas) {
+    if (matchIndex >= pos && matchIndex < pos + s.length) {
+      const fontesRegex = /\b(?:eus[eé]bio|eusebius|or[ií]genes|origen|tertuliano|tertullian|martirol[oó]gio|martyrology|tradi[cç][aã]o\s+arm[eê]nia|armenian\s+tradition|jer[oô]nimo|jerome|josefo|josephus|clemente|clement|policarpo|polycarp|ireneu|irenaeus|papias|talmud|talmude|cris[oó]stomo|chrysostom|agostinho|augustine|fontes?\s+patr[ií]sticas?|patristic\s+sources?)\b/i;
+      return fontesRegex.test(s);
+    }
+    pos += s.length;
+  }
+  return false;
+}
+
 function encontrarTermosCeticismoNoParagrafo(paragrafo) {
   const encontrados = [];
   for (const item of TERMOS_TOM_CETICISMO) {
@@ -3811,6 +3856,10 @@ function encontrarTermosCeticismoNoParagrafo(paragrafo) {
     let match;
     while ((match = regex.exec(paragrafo)) !== null) {
       if (item.aceitaExcecaoNegacao && termoEstaEmNegacaoDeCeticismo(paragrafo, match.index)) {
+        continue;
+      }
+      // Exceção Catálogo e Fontes Nomeadas: "segundo a tradição" acompanhado de fonte histórica/patrística nomeada
+      if ((item.termo === 'segundo a tradição' || item.termo === 'according to tradition') && termoEstaComFonteNomeada(paragrafo, match.index)) {
         continue;
       }
       encontrados.push({
@@ -4083,7 +4132,7 @@ window.encontrarTermosCeticismoNoParagrafo = encontrarTermosCeticismoNoParagrafo
 function limitarFrasesHistoricas(texto, estiloRoteiro = '') {
   if (!texto || typeof texto !== 'string') return texto;
 
-  const isLongo = String(estiloRoteiro).includes('18-20') || String(estiloRoteiro).includes('Longo');
+  const isLongo = String(estiloRoteiro).includes('18-20') || String(estiloRoteiro).includes('Longo') || String(estiloRoteiro).includes('Catálogo');
   const limiteDescarte = isLongo ? 2 : 1;
 
   const paragrafos = texto.split(/\n\s*\n/);
@@ -4137,18 +4186,22 @@ function limitarFrasesHistoricas(texto, estiloRoteiro = '') {
 window.limitarFrasesHistoricas = limitarFrasesHistoricas;
 
 /**
- * PONTO 3: Garante que a afirmação sobre o silêncio da Bíblia apareça no MÁXIMO UMA VEZ no roteiro inteiro.
- * Analisa sentença por sentença no roteiro completo e elimina qualquer redundância a partir da 2ª.
+ * PONTO 3: Garante que a afirmação sobre o silêncio da Bíblia apareça no MÁXIMO UMA VEZ no roteiro inteiro
+ * (no estilo Catálogo, até 3 vezes).
+ * Analisa sentença por sentença no roteiro completo e elimina qualquer redundância a partir da cota máxima.
  */
-function limitarDeclaracoesDeSilencioBiblico(texto) {
+function limitarDeclaracoesDeSilencioBiblico(texto, estiloRoteiro = '') {
   if (!texto || typeof texto !== 'string') return texto;
+
+  const isCatalogo = String(estiloRoteiro).includes('Catálogo');
+  const limiteSilencio = isCatalogo ? 3 : 1;
 
   const paragrafos = texto.split(/\n\s*\n/);
   let ocorrenciasSilencio = 0;
 
   const termosSagradosRegex = /\b(?:scriptures?|bible|biblical\s+(?:text|record|account|narrative|writer|author)|inspired\s+(?:record|text|author|word)|holy\s+writ|canonical\s+(?:text|record|account)|sacred\s+(?:text|record|narrative)|b[ií]blia|escrituras?|texto\s+b[ií]blico|relato\s+b[ií]blico|sagradas\s+escrituras)\b/i;
-  const termosSilencioRegex = /\b(?:silence|silent|does\s+not\s+(?:explain|detail|elaborate|clarify|reveal|state|disclose|record|provide|tell)|offers?\s+no\s+(?:explanation|detail|account|record)|leaves?\s+(?:unexplained|unstated|unrevealed|unaddressed)|fails?\s+to\s+explain|without\s+explanation|unrevealed\s+mechanism|sil[eê]ncio|silencios[oa]|n[aã]o\s+(?:explica|detalha|revela|esclarece|informa)|n[aã]o\s+oferece\s+explica[cç][aã]o|guarda\s+sil[eê]ncio|permanece\s+em\s+sil[eê]ncio|deixa\s+sem\s+explica[cç][aã]o)\b/i;
-  const fraseExplicitaSilencioRegex = /\b(?:silence\s+of\s+scripture|scripture(?:'s)?\s+silence|sil[eê]ncio\s+da\s+(?:b[ií]blia|escritura))\b/i;
+  const termosSilencioRegex = /\b(?:silence|silent|does\s+not\s+(?:say|tell|explain|detail|elaborate|clarify|reveal|state|disclose|record|provide|mention)|offers?\s+no\s+(?:explanation|detail|account|record)|leaves?\s+(?:unexplained|unstated|unrevealed|unaddressed)|fails?\s+to\s+explain|without\s+explanation|unrevealed\s+mechanism|sil[eê]ncio|silencios[oa]|n[aã]o\s+(?:diz|explica|detalha|revela|esclarece|informa|menciona|registra)|n[aã]o\s+oferece\s+explica[cç][aã]o|guarda\s+sil[eê]ncio|permanece\s+em\s+sil[eê]ncio|deixa\s+sem\s+explica[cç][aã]o)\b/i;
+  const fraseExplicitaSilencioRegex = /\b(?:silence\s+of\s+scripture|scripture(?:'s)?\s+silence|sil[eê]ncio\s+da\s+(?:b[ií]blia|escritura)|a\s+b[ií]blia\s+n[aã]o\s+diz|the\s+bible\s+does\s+not\s+say)\b/i;
 
   const paragrafosCorrigidos = paragrafos.map(p => {
     const sentencas = p.match(/[^.!?]+(?:[.!?]+["']?|$)/g) || [p];
@@ -4162,8 +4215,8 @@ function limitarDeclaracoesDeSilencioBiblico(texto) {
 
       if (ehSilencioBiblico) {
         ocorrenciasSilencio++;
-        if (ocorrenciasSilencio === 1) {
-          sentencasMantidas.push(sent); // Mantém unicamente a 1ª ocorrência no roteiro inteiro
+        if (ocorrenciasSilencio <= limiteSilencio) {
+          sentencasMantidas.push(sent); // Mantém até o limite permitido no roteiro
         } else {
           console.log('[Silêncio Bíblico] Sentença repetida removida no pós-processamento:', sTrim);
         }
@@ -4278,29 +4331,27 @@ function garantirCtaNoUltimoParagrafo(texto, idioma = 'pt', estiloRoteiro = '') 
   if (!limpo) return texto;
 
   const totalPalavrasTexto = (limpo.match(/\S+/g) || []).length;
-  const isShorts = String(estiloRoteiro).includes('Shorts') ||
+  const isCatalogo = String(estiloRoteiro).includes('Catálogo') || String(estiloRoteiro).includes('Catalogo');
+  const isShorts = !isCatalogo && (String(estiloRoteiro).includes('Shorts') ||
                    String(estiloRoteiro).includes('50-60') ||
                    String(estiloRoteiro).includes('Estendido') ||
                    String(estiloRoteiro).includes('3 minutos') ||
-                   (totalPalavrasTexto < 350);
+                   (totalPalavrasTexto < 350));
 
-  // Regex para capturar frases completas de CTA (sem apagar conteúdo bíblico ou histórico ao redor)
-  const ctaSentenceRegex = /(?:^|[.!?]\s*)(?:[^.!?\n]*\b(?:subscrib(?:e|ing)|inscreva-se|inscrever|join\s+(?:this\s+)?channel|follow\s+(?:this\s+)?channel|acompanhe\s+este\s+canal|suscr[ií]bete|suscribir)\b[^.!?\n]*[.!?]?)/gi;
+  const ctaSentenceRegex = /(?:^|[.!?]\s*)(?:[^.!?\n]*\b(?:subscrib(?:e|ing)|inscreva-se|inscrever|join\s+(?:this\s+)?channel|follow\s+(?:this\s+)?channel|acompanhe\s+este\s+canal|suscr[ií]bete|suscribir|vamos\s+em\s+frente|let\x27?s\s+move\s+on)\b[^.!?\n]*[.!?]?)/gi;
 
   const id = (idioma || '').toLowerCase();
 
-  // CTA Curto (máximo 12 palavras) para Shorts e Shorts Estendido (texto fixo)
   const ctaCurto = id.includes('ingl') || id.includes('en')
-    ? 'Subscribe to the channel for more biblical studies and sacred accounts.' // 11 palavras
+    ? 'Subscribe to the channel for more biblical studies and sacred accounts.'
     : (id.includes('espanh') || id.includes('es'))
-      ? 'Suscríbete al canal para más relatos bíblicos y estudios sagrados.' // 10 palavras
-      : 'Inscreva-se no canal para mais estudos e relatos bíblicos sagrados.'; // 10 palavras
+      ? 'Suscríbete al canal para más relatos bíblicos y estudios sagrados.'
+      : 'Inscreva-se no canal para mais estudos e relatos bíblicos sagrados.';
 
-  // CTA Fixo para Vídeos Médios e Longos (YouTube 5-8 min e 18-20 min) - exatamente 20 palavras aprovadas
   const ctaLongo = id.includes('ingl') || id.includes('en')
     ? 'To continue discovering the historical depth and truth of the Holy Scriptures, subscribe to the channel and follow our upcoming studies.'
     : (id.includes('espanh') || id.includes('es'))
-      ? 'Para continuar descubriendo la profundidad histórica y la verdad de las Sagradas Escrituras, suscríbete al canal y acompaña nuestros próximos estudios.'
+      ? 'Para continuar descubriendo la profundidad histórica e a verdade de las Sagradas Escrituras, suscríbete al canal y acompaña nuestros próximos estudios.'
       : 'Para continuar desvendando a profundidade histórica e a verdade das Escrituras Sagradas, inscreva-se no canal e acompanhe nossos próximos estudos.';
 
   const ctaPadrao = isShorts ? ctaCurto : ctaLongo;
@@ -4308,19 +4359,70 @@ function garantirCtaNoUltimoParagrafo(texto, idioma = 'pt', estiloRoteiro = '') 
   let paragrafos = limpo.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
   if (paragrafos.length === 0) return ctaPadrao;
 
-  // 1. Limpa chamadas de CTA existentes das sentenças sem apagar frases de história
-  paragrafos = paragrafos.map(p => {
+  if (isCatalogo) {
+    // No Catálogo: preserva o pedido de inscrição de 2 frases localizado entre o Item 2 e o Item 3
+    let indexItem2 = -1;
+    let indexItem3 = -1;
+    let indexCtaIntermediario = -1;
+
+    for (let i = 0; i < paragrafos.length; i++) {
+      const p = paragrafos[i];
+      if (/^\s*(?:\*\*)?(?:Dois|Two|2)\s*[,:]/i.test(p)) {
+        indexItem2 = i;
+      }
+      if (/^\s*(?:\*\*)?(?:Tr[eê]s|Three|3)\s*[,:]/i.test(p)) {
+        indexItem3 = i;
+      }
+      if (indexItem2 !== -1 && (indexItem3 === -1 || i <= indexItem3) && (i > indexItem2)) {
+        if (/\b(?:inscreva-se|inscrever|subscribe|vamos\s+em\s+frente|let\'?s\s+move\s+on|youtube)\b/i.test(p)) {
+          indexCtaIntermediario = i;
+        }
+      }
+    }
+
+    if (indexCtaIntermediario === -1) {
+      for (let i = 1; i < paragrafos.length - 1; i++) {
+        if (/\b(?:vamos\s+em\s+frente|let\'?s\s+move\s+on)\b/i.test(paragrafos[i]) ||
+            (/\b(?:inscreva-se|subscribe)\b/i.test(paragrafos[i]) && i < Math.min(paragrafos.length / 2, 5))) {
+          indexCtaIntermediario = i;
+          break;
+        }
+      }
+    }
+
+    paragrafos = paragrafos.map((p, idx) => {
+      if (idx === indexCtaIntermediario) {
+        return p; // Preserva o CTA intermediário intacto
+      }
+      if (idx === paragrafos.length - 1) {
+        return p;
+      }
+      let pLimpo = p.replace(ctaSentenceRegex, (match) => {
+        const leadingPunct = match.match(/^[.!?]/);
+        return leadingPunct ? leadingPunct[0] : '';
+      }).trim();
+      pLimpo = pLimpo.replace(/\s+([.,;:!?])/g, '$1').replace(/[^\S\r\n]{2,}/g, ' ');
+      return pLimpo;
+    }).filter(Boolean);
+
+    const ultimoP = paragrafos[paragrafos.length - 1] || '';
+    if (ultimoP.toLowerCase() !== ctaPadrao.toLowerCase() && !/\b(?:inscreva-se|inscrever|subscribe|acompanhe\s+este\s+canal)\b/i.test(ultimoP)) {
+      paragrafos.push(ctaPadrao);
+    }
+    return paragrafos.join('\n\n');
+  }
+
+  // Comportamento padrão para outros estilos
+  paragrafos = paragrafos.map((p, idx) => {
+    if (idx === paragrafos.length - 1) return p;
     let pLimpo = p.replace(ctaSentenceRegex, (match) => {
-      // Se a oração iniciava com pontuação (. ! ?), preserva a pontuação anterior
       const leadingPunct = match.match(/^[.!?]/);
       return leadingPunct ? leadingPunct[0] : '';
     }).trim();
-    // Normaliza pontuação residual e espaços
     pLimpo = pLimpo.replace(/\s+([.,;:!?])/g, '$1').replace(/[^\S\r\n]{2,}/g, ' ');
     return pLimpo;
   }).filter(Boolean);
 
-  // 2. Se o último parágrafo já for idêntico ao CTA padrão, mantém; senão anexa o CTA padrão isolado
   const ultimoP = paragrafos[paragrafos.length - 1] || '';
   if (ultimoP.toLowerCase() === ctaPadrao.toLowerCase()) {
     return paragrafos.join('\n\n');
@@ -4332,12 +4434,182 @@ function garantirCtaNoUltimoParagrafo(texto, idioma = 'pt', estiloRoteiro = '') 
 window.garantirCtaNoUltimoParagrafo = garantirCtaNoUltimoParagrafo;
 
 /**
+ * VALIDADOR DE ESTRUTURA: Catálogo em N itens (Item 7)
+ * Analisa o roteiro completo e valida as 6 regras obrigatórias do catálogo.
+ */
+/**
+ * VALIDADOR DE ESTRUTURA: Catálogo em N itens (Item 7)
+ * Analisa o roteiro completo e valida as 6 regras obrigatórias do catálogo.
+ */
+function validarEstruturaCatalogo(texto, numItens = 9) {
+  if (!texto || typeof texto !== 'string') {
+    return {
+      valido: false,
+      totalOk: 0,
+      totalRegras: 6,
+      regras: []
+    };
+  }
+
+  const n = Math.max(6, Math.min(12, Number(numItens) || 9));
+  const palavras = texto.trim().match(/\S+/g) || [];
+  const totalPalavras = palavras.length;
+
+  // 1. "Um," ou "One," nas primeiras 40 palavras
+  const primeiras40 = palavras.slice(0, 40).join(' ');
+  const r1_ok = /\b(?:Um|One)\s*[,:]/i.test(primeiras40);
+
+  // 2. Quantidade de itens falados = N
+  const nomesItensPT = ['Um', 'Dois', 'Tr[eê]s', 'Quatro', 'Cinco', 'Seis', 'Sete', 'Oito', 'Nove', 'Dez', 'Onze', 'Doze'];
+  const nomesItensEN = ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve'];
+  
+  let itensEncontrados = 0;
+  for (let idx = 0; idx < n; idx++) {
+    const pattern = new RegExp(`(?:^|[\\n.!?]\\s*)(?:\\*\\*)?(?:${nomesItensPT[idx]}|${nomesItensEN[idx]}|${idx+1})\\s*[,:]`, 'i');
+    if (pattern.test(texto)) {
+      itensEncontrados++;
+    }
+  }
+  const r2_ok = (itensEncontrados === n);
+
+  // 3. Pedido de inscrição entre o item 2 e o item 3
+  let r3_ok = false;
+  const matchDois = texto.search(/(?:^|[\n.!?]\s*)(?:\*\*)?(?:Dois|Two|2)\s*[,:]/i);
+  const matchTres = texto.search(/(?:^|[\n.!?]\s*)(?:\*\*)?(?:Tr[eê]s|Three|3)\s*[,:]/i);
+  if (matchDois !== -1 && matchTres !== -1 && matchTres > matchDois) {
+    const trechoEntre2e3 = texto.substring(matchDois, matchTres);
+    const temCta = /\b(?:inscreva-se|inscrever|subscribe|acompanhe|canal|channel)\b/i.test(trechoEntre2e3);
+    const temFecho = /\b(?:vamos\s+em\s+frente|let\'?s\s+move\s+on)\b/i.test(trechoEntre2e3);
+    const temMotivo = /\b(?:ajuda|recomendar|mostrar|recommend|algorithm|algoritmo|vídeos\s+como\s+este|videos\s+like\s+this)\b/i.test(trechoEntre2e3);
+    r3_ok = temCta && (temFecho || temMotivo);
+  } else if (matchDois !== -1 && n === 2) {
+    const trechoApos2 = texto.substring(matchDois);
+    r3_ok = /\b(?:inscreva-se|subscribe)\b/i.test(trechoApos2) && /\b(?:vamos\s+em\s+frente|let\'?s\s+move\s+on)\b/i.test(trechoApos2);
+  }
+
+  // 4. Total de 1.800 a 2.600 palavras
+  const r4_ok = totalPalavras >= 1800 && totalPalavras <= 2600;
+
+  // 5. Pergunta final para os comentários na conclusão
+  const ultimas300Palavras = palavras.slice(Math.max(0, totalPalavras - 300)).join(' ');
+  const r5_ok = /\?[^?]*$/s.test(ultimas300Palavras) && /\b(?:coment[aá]rios?|comente|opini[aã]o|voc[eê]|comments?|what\s+do\s+you\s+think|share\s+your\s+thoughts)\b/i.test(ultimas300Palavras);
+
+  // 6. Pelo menos 3 usos de "não é X, é Y"
+  const regexNaoE = /\b(?:n[aã]o\s+(?:[eé]|foi|era|se\s+trata\s+de)\s+[^,;.!?]+[;,]?\s*(?:[eé]|foi|era|mas(?:\s+sim)?)|not\s+(?:only|just|a|an|the)?\s*[^,;.!?]+[;,]?\s*(?:it\s+(?:is|was)|but))\s+[^.!?]+/gi;
+  const matchesNaoE = (texto.match(regexNaoE) || []);
+  const r6_ok = matchesNaoE.length >= 3;
+
+  const regras = [
+    {
+      id: 'r1_abertura',
+      nome: 'Abertura imediata com "Um,"',
+      descricao: '"Um," ou "One," nas primeiras 40 palavras',
+      ok: r1_ok,
+      detalhe: r1_ok ? 'Abertura direta iniciada no Item 1 nas primeiras 40 palavras.' : 'Não foi encontrado "Um," nas primeiras 40 palavras da narração.'
+    },
+    {
+      id: 'r2_qtd_itens',
+      nome: `Quantidade de itens (${itensEncontrados}/${n})`,
+      descricao: `Estrutura com exatamente ${n} itens falados`,
+      ok: r2_ok,
+      detalhe: r2_ok ? `Exatamente ${n} itens identificados.` : `Detectados ${itensEncontrados} de ${n} itens esperados.`
+    },
+    {
+      id: 'r3_cta_meio',
+      nome: 'Pedido de inscrição após Item 2',
+      descricao: 'CTA de 2 frases entre Item 2 e Item 3 com "vamos em frente"',
+      ok: r3_ok,
+      detalhe: r3_ok ? 'Pedido de inscrição posicionado corretamente após o Item 2.' : 'Pedido de inscrição após o Item 2 não localizado ou sem o encerramento "vamos em frente".'
+    },
+    {
+      id: 'r4_extensao',
+      nome: `Extensão total (${totalPalavras} palavras)`,
+      descricao: 'Meta estrita entre 1.800 e 2.600 palavras',
+      ok: r4_ok,
+      detalhe: r4_ok ? `Extensão ideal (${totalPalavras} palavras).` : `Extensão fora da faixa: ${totalPalavras} palavras (esperado: 1.800 a 2.600).`
+    },
+    {
+      id: 'r5_pergunta_comentarios',
+      nome: 'Pergunta final para os comentários',
+      descricao: 'Encerramento com pergunta dirigida à audiência',
+      ok: r5_ok,
+      detalhe: r5_ok ? 'Pergunta final para comentários identificada no fecho.' : 'Não foi identificada pergunta para os comentários no fechamento do roteiro.'
+    },
+    {
+      id: 'r6_contraste',
+      nome: `Contraste "não é ... é ..." (${matchesNaoE.length}/3)`,
+      descricao: 'Pelo menos 3 usos de antítese afirmativa',
+      ok: r6_ok,
+      detalhe: r6_ok ? `Pelo menos 3 ocorrências de "não é X, é Y" encontradas (${matchesNaoE.length}).` : `Apenas ${matchesNaoE.length} ocorrência(s) de "não é X, é Y" encontradas (mínimo: 3).`
+    }
+  ];
+
+  const totalOk = regras.filter(r => r.ok).length;
+  const valido = totalOk === regras.length;
+
+  return {
+    valido,
+    totalOk,
+    totalRegras: regras.length,
+    regras
+  };
+}
+
+function atualizarRelatorioValidadorCatalogo(resultado) {
+  const containerRelatorio = document.getElementById('relatorio-validador-catalogo');
+  const listaEl = document.getElementById('lista-regras-catalogo');
+  const badgeEl = document.getElementById('badge-catalogo-status');
+  const containerBtn = document.getElementById('container-btn-regenerar-catalogo');
+
+  if (!containerRelatorio || !listaEl || !badgeEl) return;
+
+  if (!resultado) {
+    containerRelatorio.classList.add('hidden');
+    return;
+  }
+
+  containerRelatorio.classList.remove('hidden');
+  badgeEl.textContent = `${resultado.totalOk}/${resultado.totalRegras} REGRAS OK`;
+  badgeEl.style.background = resultado.valido ? '#059669' : '#d97706';
+
+  let htmlRegras = '<div style="display: flex; flex-direction: column; gap: 6px;">';
+  resultado.regras.forEach(r => {
+    const icone = r.ok ? '✅' : '❌';
+    const corTexto = r.ok ? '#86efac' : '#fca5a5';
+    htmlRegras += `
+      <div style="display: flex; align-items: flex-start; gap: 8px;">
+        <span>${icone}</span>
+        <div>
+          <strong style="color: ${corTexto};">${r.nome}:</strong>
+          <span style="color: #fef3c7; font-size: 0.85rem; margin-left: 4px;">${r.detalhe}</span>
+        </div>
+      </div>
+    `;
+  });
+  htmlRegras += '</div>';
+  listaEl.innerHTML = htmlRegras;
+
+  if (containerBtn) {
+    if (!resultado.valido) {
+      containerBtn.classList.remove('hidden');
+    } else {
+      containerBtn.classList.add('hidden');
+    }
+  }
+}
+
+window.validarEstruturaCatalogo = validarEstruturaCatalogo;
+window.atualizarRelatorioValidadorCatalogo = atualizarRelatorioValidadorCatalogo;
+
+/**
  * PONTO 5: Limitar a no máximo 2 vezes no roteiro cada uma de:
  * 'historical reality', 'the Scripture treats', 'Holy Scripture records', 'biblical record'.
  * Faz isso REGENERANDO a frase via LLM, nunca com troca automática/cega de palavras.
  */
-async function limitarRepeticaoExpressoes(texto, idioma, modelo) {
+async function limitarRepeticaoExpressoes(texto, idioma, modelo, estiloRoteiro = '') {
   if (!texto || typeof texto !== 'string') return texto;
+
+  const isCatalogo = String(estiloRoteiro).includes('Catálogo');
 
   const regras = [
     {
@@ -4379,6 +4651,11 @@ async function limitarRepeticaoExpressoes(texto, idioma, modelo) {
       let sent = sentencas[sIdx];
       let sentTrim = sent.trim();
       if (!sentTrim) continue;
+
+      // No estilo Catálogo: isenta referências bíblicas estruturais do molde do item
+      if (isCatalogo && /\b(?:isso\s+est[aá]\s+em|est[aá]\s+registrado\s+em|this\s+is\s+found\s+in|this\s+is\s+recorded\s+in)\s+[A-Za-zÀ-Ú0-9\s:]+/i.test(sentTrim)) {
+        continue;
+      }
 
       for (const regra of regras) {
         if (regra.regex.test(sentTrim)) {
@@ -4712,13 +4989,25 @@ Remember: Output EXCLUSIVELY a JSON array [ { "fraseOriginal": "...", "tipo": ".
   }
 
   // A2: Não reporta nem remove o CTA fixo obrigatório de encerramento como "CONCLUSÃO PREMATURA"
+  // e permite até 2 notas de honestidade sobre fontes divergentes por vídeo ("vale um registro honesto aqui")
   const ctaCheckRegex = /\b(?:subscrib(?:e|ing)|inscreva-se|inscrever|join\s+(?:this\s+)?channel|follow\s+(?:this\s+)?channel|acompanhe\s+este\s+canal|suscr[ií]bete|suscribir|próximos\s+estudos|relatos\s+bíblicos)\b/i;
+  const honestNoteRegex = /\b(?:vale\s+(?:um\s+)?registro\s+honesto|vale\s+notar\s+honestamente|an\s+honest\s+(?:historical\s+)?note|honest\s+historical\s+record|tradi[cç][aã]o\s+divergente|divergent\s+tradition)\b/i;
+
+  let notasHonestidadeContadas = 0;
   problemas = problemas.filter(item => {
     if (!item || !item.fraseOriginal) return false;
     const isCta = ctaCheckRegex.test(item.fraseOriginal);
     if (isCta) {
       console.log('[Revisão Automática] Ignorando falso positivo de CTA no relatório:', item.fraseOriginal);
       return false;
+    }
+    const isHonestNote = honestNoteRegex.test(item.fraseOriginal);
+    if (isHonestNote) {
+      notasHonestidadeContadas++;
+      if (notasHonestidadeContadas <= 2) {
+        console.log('[Revisão Automática] Permitindo nota de honestidade sobre fontes divergentes:', item.fraseOriginal);
+        return false;
+      }
     }
     return true;
   });
@@ -4861,6 +5150,13 @@ const SCRIPT_DURATION_CONFIGS = {
     limite85: Math.round(2700 * 0.85), // 2295
     duracaoTexto: '18 a 20 minutos'
   },
+  'Catálogo em N itens (14-17 min)': {
+    nome: 'Catálogo em N itens (14-17 min)',
+    palavrasMin: 1800,
+    palavrasMax: 2600,
+    limite85: Math.round(1800 * 0.85), // 1530
+    duracaoTexto: '14 a 17 minutos'
+  },
   'YouTube Médio (5-8 minutos)': {
     nome: 'YouTube Médio (5-8 minutos)',
     palavrasMin: 750,
@@ -4919,8 +5215,34 @@ const PromptEngine = {
     }
   },
 
-  generateIdeasPrompt({ tema, idioma }) {
+  generateIdeasPrompt({ tema, idioma, estiloRoteiro, numItens = 9 }) {
     const lang = this.getLanguageConfig(idioma);
+    const n = numItens || 9;
+    const isCatalogo = estiloRoteiro && (estiloRoteiro.includes('Catálogo') || estiloRoteiro.includes('Catalogo'));
+
+    if (isCatalogo) {
+      return `Act as a senior YouTube content strategist for biblical documentary dark channels following the catalog format formula of 'Explicador Bíblico'.
+Generate exactly 10 catalog-style video ideas for a video based on the theme: '${tema}'.
+Each catalog idea MUST follow formulas such as: "Cada [categoria] da Bíblia", "O fim de cada [grupo]", "O que acontece... em cada [grupo]", or neutral equivalents.
+Do NOT use concrete theme examples inside this prompt template; use neutral category placeholders.
+
+CRITICAL MANDATORY GUIDELINES:
+1. STRICT FORMAT PER IDEA:
+   - English Title (max 2 words in CAPS, e.g. "Every [Category] in the Bible EXPLAINED").
+   - Title in ${lang.name}.
+   - Numbered list of EXACTLY ${n} distinct catalog items.
+   - For EACH of the ${n} items, provide:
+     * Item Name / Identity
+     * Canonical Scripture Passage (Book, Chapter and Verse)
+     * 1-sentence intriguing detail.
+2. STRICT BIBLICAL FIDELITY:
+   - Every item and passage must be authentic to canonical Scripture or documented historical tradition where labeled.
+3. LANGUAGE COMPLIANCE: Output the items and descriptions in ${lang.name} with English title option.
+4. ZERO FORBIDDEN CLICHÉS: Do NOT use "delve", "dive deep", "profound", "meticulously", "shrouded in mystery", "fabric", "enigmatic", "fascinating", "journey through", "annals", "testament to", "sacred texts".
+
+OUTPUT FORMAT:
+Provide the 10 catalog ideas numbered 1 to 10, each with English Title, Local Title, and the list of ${n} numbered items with their respective scripture passages.`;
+    }
 
     return `Act as a senior YouTube content strategist for biblical documentary dark channels following the proven formula of 'Explicador Bíblico'.
 Generate exactly 10 viral video title and theme ideas for a video about: '${tema}'.
@@ -4950,12 +5272,37 @@ OUTPUT FORMAT:
 Provide the 10 ideas numbered 1 to 10 in ${lang.name}, with Title (max 1 word in CAPS, varied structure without repetitive parentheses) followed by a short 1-2 sentence hook premise.`;
   },
 
-  generateScriptPrompt({ ideia, estiloRoteiro, tomVoz, tipoGancho, idioma }) {
+  generateScriptPrompt({ ideia, estiloRoteiro, tomVoz, tipoGancho, idioma, numItens = 9 }) {
     const lang = this.getLanguageConfig(idioma);
     const estilo = estiloRoteiro || 'YouTube Longo (18-20 minutos)';
     let instrucoesDuracaoEFormato = '';
 
-    if (estilo.includes('18-20') || estilo.includes('Longo')) {
+    if (estilo.includes('Catálogo') || estilo.includes('Catalogo')) {
+      const n = numItens || 9;
+      const palavrasAlvo = n * 190 + 300;
+      instrucoesDuracaoEFormato = `FORMAT: Catalog in ${n} Items (Catálogo em N itens, 14-17 minutes)
+MANDATORY WORD COUNT TARGET: STRICTLY BETWEEN 1,800 AND 2,600 WORDS IN TOTAL (target ~${palavrasAlvo} words).
+
+STRUCTURE REQUIREMENTS:
+1. OPENING (MAXIMUM 30 WORDS):
+   - Repeats the title in an affirmative statement, says "explicado em poucos minutos" (or English equivalent "explained in a few minutes") and immediately enters "Um, [Item 1]".
+   - NO greeting, NO opening question, NO channel presentation.
+2. SPOKEN NUMBERED ITEMS ("Um,", "Dois,", "Três,", ..., "${n}"):
+   - Exactly ${n} distinct items.
+   - Length per item: 160 to 220 words.
+   - Each item MUST contain: name and identity; scripture passage with book, chapter and verse; a specific surprising detail; the historical outcome; a short closing sentence.
+3. SUBSCRIPTION CTA AFTER ITEM 2:
+   - Placed strictly after Item 2 and before Item 3: exactly 2 sentences explaining that subscribing helps YouTube recommend more videos like this, ending strictly with "vamos em frente" (or English "let's move on").
+4. CONCLUSION / CLOSING:
+   - Synthesis of 80 to 120 words.
+   - Exactly ONE engaging question for the comments.
+   - Short final subscription request.
+5. MANDATORY RHETORICAL & HISTORICAL PATTERNS:
+   - AT LEAST 3 uses of "não é X, é Y" (or "não foi X, foi Y", "not X, it was Y").
+   - Exactly 1 honest note on divergent historical sources ("vale um registro honesto aqui" / "an honest historical note is due here").
+   - Non-canonical tradition ONLY labeled as "segundo a tradição [named source]" (e.g. Eusébio, Orígenes, Tertuliano, martirológio, tradição armênia). Deuterocanonical books identified as such. NEVER present tradition as canonical biblical fact.`;
+
+    } else if (estilo.includes('18-20') || estilo.includes('Longo')) {
       instrucoesDuracaoEFormato = `FORMAT: YouTube Long Documentary (18-20 minutes of continuous narration)
 MANDATORY WORD COUNT TARGET: STRICTLY BETWEEN 2,800 AND 3,200 WORDS IN TOTAL.
 (Based on standard narration speed of 150 words per minute: 18 min = 2,700 words, 20 min = 3,000 words. MINIMUM: 2,800 words).
@@ -5096,8 +5443,77 @@ FINAL DIRECTIVES:
   /**
    * PARTE 2: Passo 1 - Gerar Esboço Estruturado Dinâmico de 7 Seções a partir do Tema/Ideia
    */
-  generateOutlinePrompt({ ideia, idioma, tomVoz }) {
+  generateOutlinePrompt({ ideia, idioma, tomVoz, estiloRoteiro, numItens = 9 }) {
     const lang = this.getLanguageConfig(idioma);
+    const isCatalogo = estiloRoteiro && (estiloRoteiro.includes('Catálogo') || estiloRoteiro.includes('Catalogo'));
+    const n = numItens || 9;
+
+    if (isCatalogo) {
+      return `Act as a senior biblical documentary script architect for the channel 'Explicador Bíblico'.
+Create a rigorous 7-section catalog outline for a catalog video in ${n} items on: '${ideia}'.
+Language: ${lang.code === 'pt' ? '100% em português do Brasil. Citações bíblicas pela Almeida. Nunca use palavras em inglês no roteiro.' : `100% in ${lang.name}.`}
+Tone of voice: '${tomVoz}'.
+
+CATALOG STRUCTURE (EXACTLY ${n} ITEMS DISTRIBUTED OVER 7 SECTIONS):
+- SECTION 1: Opening (max 30 words) + Item 1 + Item 2 + Subscription CTA after Item 2 (2 sentences ending with "vamos em frente").
+- SECTIONS 2 to 6: Items 3 through ${n} evenly distributed across sections. Each item spoken as "Três,", "Quatro,", etc., with 160-220 words per item (name, book/chapter/verse, surprising detail, outcome, closing sentence).
+- SECTION 7: Closing Synthesis (80-120 words) + 1 Question for comments + Short final CTA.
+
+CRITICAL: For EACH of the 7 sections, list the specific catalog items and canonical scripture passages assigned exclusively to it. Zero repetition across sections.
+
+OUTPUT FORMAT:
+Output EXACTLY the 7 sections formatted as follows:
+
+SECTION 1
+ROLE: Opening + Items 1 & 2 + Mid CTA
+TITLE: [Concise Title]
+SUMMARY: [Opening hook, Item 1, Item 2, and mid-video CTA]
+EVENTS: [Item 1 details and Item 2 details]
+VERSES: [Passages for Item 1 and Item 2]
+
+SECTION 2
+ROLE: Catalog Items
+TITLE: [Concise Title]
+SUMMARY: [Summary of items in this section]
+EVENTS: [Items assigned to Section 2]
+VERSES: [Passages for Section 2]
+
+SECTION 3
+ROLE: Catalog Items
+TITLE: [Concise Title]
+SUMMARY: [Summary of items in this section]
+EVENTS: [Items assigned to Section 3]
+VERSES: [Passages for Section 3]
+
+SECTION 4
+ROLE: Catalog Items
+TITLE: [Concise Title]
+SUMMARY: [Summary of items in this section]
+EVENTS: [Items assigned to Section 4]
+VERSES: [Passages for Section 4]
+
+SECTION 5
+ROLE: Catalog Items
+TITLE: [Concise Title]
+SUMMARY: [Summary of items in this section]
+EVENTS: [Items assigned to Section 5]
+VERSES: [Passages for Section 5]
+
+SECTION 6
+ROLE: Catalog Items
+TITLE: [Concise Title]
+SUMMARY: [Summary of items in this section]
+EVENTS: [Items assigned to Section 6]
+VERSES: [Passages for Section 6]
+
+SECTION 7
+ROLE: Conclusion + Final Question + Subscription Call
+TITLE: [Concise Title]
+SUMMARY: [Closing synthesis (80-120 words), engaging comment question, and final channel CTA]
+EVENTS: [Final synthesis]
+VERSES: [Summary passages]`;
+    }
+
     return `Act as a senior biblical documentary script architect for the channel 'Explicador Bíblico'.
 Create a rigorous 7-section documentary outline dynamically built for a long-form video on: '${ideia}'.
 Tone of voice: '${tomVoz}'.
@@ -5175,7 +5591,7 @@ VERSES: [List of specific scripture verses exclusive to Section 7]`;
   },
 
   /**
-   * PARTE 2: Passo 2 - Gerar Seção Individual Dinâmica (420 a 460 palavras por seção)
+   * PARTE 2: Passo 2 - Gerar Seção Individual Dinâmica (420 a 460 palavras por seção no Longo, ou molde específico de Catálogo)
    */
   generateSectionPrompt({
     ideia,
@@ -5192,11 +5608,14 @@ VERSES: [List of specific scripture verses exclusive to Section 7]`;
     versiculosJaCitados,
     idioma,
     tomVoz,
-    tipoGancho
+    tipoGancho,
+    estiloRoteiro,
+    numItens = 9
   }) {
     const lang = this.getLanguageConfig(idioma);
     const isFirst = secaoNumero === 1;
     const isLast = secaoNumero === totalSecoes;
+    const isCatalogo = estiloRoteiro && (estiloRoteiro.includes('Catálogo') || estiloRoteiro.includes('Catalogo'));
 
     const listaEventosProibidos = Array.isArray(eventosProibidos)
       ? eventosProibidos.filter(Boolean).join('\n  - ')
@@ -5205,6 +5624,55 @@ VERSES: [List of specific scripture verses exclusive to Section 7]`;
     const listaVersiculosProibidos = Array.isArray(versiculosProibidos)
       ? versiculosProibidos.filter(Boolean).join(', ')
       : (versiculosProibidos || 'None.');
+
+    if (isCatalogo) {
+      let instrucaoSecaoCatalogo = '';
+      if (isFirst) {
+        instrucaoSecaoCatalogo = `CATALOG SECTION 1 ARCHITECTURE:
+1. OPENING (MAXIMUM 30 WORDS):
+   - Repeats the title in an affirmative statement, says "explicado em poucos minutos" and immediately enters "Um, [Item 1 name]".
+   - NO greeting, NO opening question, NO channel presentation.
+2. ITEM 1 & ITEM 2 (160 to 220 words per item):
+   - Spoken as "Um," and "Dois,".
+   - For each item: name and identity; passage with book, chapter and verse; a specific surprising biblical detail; the outcome; a short closing sentence.
+3. SUBSCRIPTION CTA AFTER ITEM 2:
+   - Exactly 2 sentences explaining that subscribing helps YouTube recommend more videos like this, ending with "vamos em frente".`;
+      } else if (isLast) {
+        instrucaoSecaoCatalogo = `CATALOG SECTION 7 (CLOSING):
+1. SYNTHESIS (80 to 120 words): Reverent synthesis of what Scripture reveals regarding all items.
+2. ENGAGING QUESTION: Exactly ONE engaging question addressed to the audience for comments.
+3. FINAL CHANNEL CTA: Short concluding subscription request.`;
+      } else {
+        instrucaoSecaoCatalogo = `CATALOG SECTION ${secaoNumero} (CATALOG ITEMS):
+- Narrate the items assigned to this section spoken as "Três,", "Quatro,", etc.
+- 160 to 220 words per item.
+- For each item: name and identity; passage with book, chapter and verse; specific surprising detail; outcome; short closing sentence.`;
+      }
+
+      return `Act as a senior documentary scriptwriter and master storyteller for biblical YouTube channels following the catalog formula of 'Explicador Bíblico'.
+Write SECTION ${secaoNumero} of ${totalSecoes} for the catalog script: '${ideia}'.
+Language: ${lang.code === 'pt' ? '100% em português do Brasil. Citações bíblicas pela Almeida. Nunca use palavras em inglês no roteiro.' : `100% in ${lang.name}.`}
+Tone of voice: '${tomVoz}'.
+
+${instrucaoSecaoCatalogo}
+
+EXCLUSIVE ITEMS AND CONTENT FOR THIS SECTION:
+- Assigned Events/Items: ${eventosDestaSecao || 'The specific catalog items assigned to this section.'}
+- Assigned Verses: ${versiculosDestaSecao || 'The designated biblical passages.'}
+
+CRITICAL PROHIBITION — ITEMS AND EVENTS ALREADY COVERED (ZERO REPETITION):
+- DO NOT COVER OR REPEAT ANY OF THESE ITEMS/EVENTS:
+  - ${listaEventosProibidos}
+
+MANDATORY RHETORICAL & HISTORICAL RULES:
+- Use the spoken item markers ("Um,", "Dois,", "Três,", etc.) naturally in the text.
+- AT LEAST 1 usage of "não é X, é Y" in this section where appropriate.
+- If mentioning non-canonical tradition, label strictly as "segundo a tradição [named source]" (e.g. Eusébio, Orígenes, Tertuliano, martirológio, tradição armênia). Deuterocanonical books (e.g. Tobias) must be identified as such. NEVER present tradition as canonical Scripture.
+- If presenting divergent historical accounts, frame with honest historical restraint ("vale um registro honesto aqui").
+
+OUTPUT FORMAT:
+Output EXCLUSIVELY the narration paragraphs for Section ${secaoNumero}. No section headers, no role labels, no word counts.`;
+    }
 
     return `Act as a senior documentary scriptwriter and master storyteller for biblical YouTube channels following the proven formula of 'Explicador Bíblico'.
 Write SECTION ${secaoNumero} of ${totalSecoes} for the long-form documentary script: '${ideia}'.
@@ -5349,10 +5817,44 @@ OUTPUT FORMAT:
 Output the numbered prompts (Prompt 1 to Prompt 35) in English, each containing the scene description followed immediately by the mandatory fixed style block.`;
   },
 
-  generateThumbnailPrompts({ tema, estilo, cores, elementos, styleRef }) {
+  generateThumbnailPrompts({ tema, estilo, cores, elementos, styleRef, estiloRoteiro, numItens = 9 }) {
     const styleRefLine = styleRef ? `\n- Technical Style Reference (en): ${styleRef}` : '';
-    // Mesma estética cinematográfica fotorrealista da etapa 2 (Item 7)
+    const isGrade = estilo === 'Grade de ilustrações com legendas' || (estiloRoteiro && (estiloRoteiro.includes('Catálogo') || estiloRoteiro.includes('Catalogo')));
+    const n = numItens || 9;
     const thumbStyleBlock = ', cinematic lighting, chiaroscuro atmosphere, deep solemn shadows, historical biblical realism, 8k resolution, photorealistic cinematic composition, 16:9 widescreen, no text, no letters, no words';
+
+    if (isGrade) {
+      return `Act as a senior YouTube thumbnail designer for biblical catalog videos ('Explicador Bíblico').
+Create a high-converting 'Grid of Illustrations with Captions' (Grade de ilustrações com legendas) thumbnail concept for the catalog video: '${tema}'.
+
+MANDATORY RULES:
+1. IMAGE SPECIFICATION (16:9 SINGLE IMAGE GRID):
+   - A single 16:9 widescreen image composed of a balanced 2-row grid containing ${n} distinct panels/frames.
+   - Each panel contains a clean, simple, consistent-style biblical illustration representing one of the ${n} items.
+   - Warm beige / parchment background (#F5EBE0 tone) unifying all panels.
+   - Historical minimalist iconographic illustration style.
+   - ABSOLUTELY ZERO TEXT, ZERO LETTERS, AND ZERO WORDS inside the generated image!
+2. SEPARATE CAPTION LIST FOR EDITOR OVERLAY:
+   - Provide a separate ordered list of the ${n} short text captions (1 to 2 words per item, in English and in Portuguese) for the video editor to overlay manually on each panel.
+
+OUTPUT FORMAT:
+[[OPCAO_A]]
+Prompt Visual (en): (16:9 image prompt describing a 2-row grid of ${n} simple consistent biblical illustrations on warm beige background, historical iconographic style, absolutely no text, no letters, no words)
+Lista de Legendas (Overlay Captions for Editor, in order 1 to ${n}):
+1. [Caption 1]
+2. [Caption 2]
+...
+${n}. [Caption ${n}]
+[[OPCAO_B]]
+Prompt Visual (en): (Alternative artistic variation of the 2-row grid of ${n} illustrations on beige background, no text)
+Lista de Legendas (Overlay Captions for Editor):
+...
+[[OPCAO_C]]
+Prompt Visual (en): (Dramatic high-contrast variation of the 2-row grid of ${n} illustrations on beige background, no text)
+Lista de Legendas (Overlay Captions for Editor):
+...
+[[FIM]]`;
+    }
 
     return `Act as a senior YouTube thumbnail designer for biblical dark channels following the proven high-CTR formula of 'Explicador Bíblico'.
 Generate 3 distinct thumbnail concepts (Options A, B, and C) in ENGLISH for an A/B/C test for a video entitled: '${tema}'.
@@ -5390,8 +5892,37 @@ Texto da Thumbnail (Overlay Text): (1-3 specific words with number/name, complem
 [[FIM]]`;
   },
 
-  generateSeoPrompt({ tema, resumo, idioma }) {
+  generateSeoPrompt({ tema, resumo, idioma, estiloRoteiro, duracaoEstimada = 15, tituloUrl = '' }) {
     const lang = this.getLanguageConfig(idioma);
+    const isCatalogo = estiloRoteiro && (estiloRoteiro.includes('Catálogo') || estiloRoteiro.includes('Catalogo'));
+
+    if (isCatalogo) {
+      const duracaoMin = duracaoEstimada || 15;
+      const baseTitleInstruction = tituloUrl ? `\n- PREFERRED BASE TITLE from URL (?titulo=): '${tituloUrl}'. Prioritize adapting and optimizing this base title.` : '';
+
+      return `Act as a senior YouTube SEO and title strategist following the catalog formula of 'Explicador Bíblico'.
+Generate an optimized YouTube SEO package for a catalog video about '${tema}'.${baseTitleInstruction}
+
+MANDATORY OUTPUT GUIDELINES FOR CATALOG FORMAT:
+1. 3 HIGH-CTR TITLE OPTIONS IN ENGLISH:
+   - Must strictly follow the high-converting catalog title formulas:
+     Option 1: "Every [Category] in the Bible Explained in ${duracaoMin} Minutes"
+     Option 2: "The Tragic End of Every [Group] in the Bible"
+     Option 3: "What Happens After Death in Every [Group]"
+   - Adapt [Category] and [Group] to match the actual theme '${tema}'.
+   - MAXIMUM OF 2 WORDS IN CAPS LOCK per title (e.g. "Every Prophet in the Bible EXPLAINED in ${duracaoMin} Minutes").
+2. FULL VIDEO DESCRIPTION (2-3 DENSE PARAGRAPHS IN ENGLISH):
+   - Overview of the catalog items, breakdown of biblical books and chapters explored, and solemn reflection with subscribe CTA.
+   - ZERO FORBIDDEN CLICHÉS: "dive into", "dive deep", "profound", "meticulously", "unpack", "stark", "delve", "fabric".
+3. SEARCH TAGS (15-20 TAGS): High-volume search tags.
+4. HASHTAGS (5-7 HASHTAGS): #BiblicalHistory #ScriptureTruth #BibleCatalog, etc.
+
+OUTPUT FORMAT:
+- 3 TITLES (Catalog High CTR)
+- FULL VIDEO DESCRIPTION
+- SEARCH TAGS
+- HASHTAGS`;
+    }
 
     return `Act as a senior YouTube SEO and title strategist following the proven formula of the channel 'Explicador Bíblico'.
 Generate an optimized YouTube SEO package for a biblical video about '${tema}' based on the following script/summary:
@@ -5429,6 +5960,7 @@ window.PromptEngine = PromptEngine;
  */
 const THUMBNAIL_STYLE_REFS = {
   'Impacto Visual Dramático': 'dramatic impact composition, bold text overlay, intense cinematic lighting, high contrast dark background, hyperrealistic 8K photography, powerful visual presence',
+  'Grade de ilustrações com legendas': '16:9 aspect ratio thumbnail with a grid of 2 rows and multiple panels, each panel containing a clean, simple, consistent-style biblical illustration corresponding to each item, warm beige background, clean historical iconographic style, absolutely NO text or letters inside the image, minimalist aesthetic',
   'Curiosidade Textual': 'curiosity-driven text-heavy thumbnail design, bold typography with question mark elements, dark background with gold accents, intrigue and suspense aesthetic',
   'Ilustração Simbólica': 'symbolic biblical illustration, spiritual iconography, hand-painted historical art style, rich chiaroscuro lighting, deep symbolism, detailed painterly style',
   'Cena Bíblica Estilizada': 'stylized biblical scene, epic historical painting aesthetic, divine lighting rays, ancient Middle Eastern setting, cinematic biblical epic style, 8K hyperrealistic',
@@ -5956,7 +6488,7 @@ function limparTextoParaNarracao(texto, estiloRoteiro = '') {
     limpo = limitarTermosCanonicos(limpo);
   }
   if (typeof limitarDeclaracoesDeSilencioBiblico === 'function') {
-    limpo = limitarDeclaracoesDeSilencioBiblico(limpo);
+    limpo = limitarDeclaracoesDeSilencioBiblico(limpo, estiloRoteiro);
   }
 
   // 14.1 Remove referências bíblicas entre parênteses para o TTS não ler em voz alta (ex: "(Gênesis 1:1)", "(1 Samuel 17:49)")
@@ -6059,6 +6591,90 @@ window.limparTextoParaNarracao = limparTextoParaNarracao;
 window.validarRoteiroComBiblia = validarRoteiroComBiblia;
 
 /**
+ * ITEM 0: Leitura e Preenchimento Automático de ?tema= e ?titulo= da URL (Radar de Conteúdo)
+ * Sanitização estrita: textContent, remoção de tags HTML, limite de 300 caracteres.
+ * NUNCA gera nada sozinho automaticamente para evitar custo de API desnecessário.
+ */
+function processarParametrosURL() {
+  try {
+    const searchStr = (typeof window !== 'undefined' && window.location) ? (window.location.search || '') : '';
+    const urlParams = (typeof URLSearchParams !== 'undefined')
+      ? new URLSearchParams(searchStr)
+      : (typeof window !== 'undefined' && window.URLSearchParams)
+        ? new window.URLSearchParams(searchStr)
+        : {
+            get(k) {
+              const match = searchStr.match(new RegExp('[?&]' + k + '=([^&#]*)'));
+              return match ? decodeURIComponent(match[1].replace(/\+/g, ' ')) : null;
+            }
+          };
+    const temaParam = urlParams.get('tema');
+    const tituloParam = urlParams.get('titulo');
+
+    const sanitizar = (str) => {
+      if (!str || typeof str !== 'string') return '';
+      let clean = str.replace(/<[^>]*>?/gm, '');
+      const tempEl = document.createElement('div');
+      tempEl.textContent = clean;
+      clean = tempEl.textContent || '';
+      return clean.slice(0, 300).trim();
+    };
+
+    const temaSanitizado = sanitizar(temaParam || tituloParam);
+    const tituloSanitizado = sanitizar(tituloParam);
+
+    if (tituloSanitizado && typeof window !== 'undefined') {
+      window._radarTitulo = tituloSanitizado;
+    }
+
+    if (temaSanitizado) {
+      const selectTema = document.getElementById('select-tema');
+      const containerTemaCustom = document.getElementById('container-tema-custom');
+      const inputTemaCustom = document.getElementById('input-tema-custom');
+      const inputIdeiaEscolhida = document.getElementById('input-ideia-escolhida');
+      const outputRoteiro = document.getElementById('output-prompt-roteiro');
+      const outputIdeias = document.getElementById('output-prompt-ideias');
+
+      const temaAtual = inputTemaCustom ? inputTemaCustom.value.trim() : '';
+      const roteiroAtual = outputRoteiro ? outputRoteiro.value.trim() : '';
+      const ideiasAtual = outputIdeias ? outputIdeias.value.trim() : '';
+      const temTrabalhoNaTela = (temaAtual && temaAtual !== temaSanitizado) || (roteiroAtual.length > 50) || (ideiasAtual.length > 50);
+
+      if (temTrabalhoNaTela) {
+        const confirmar = window.confirm(`Foi detectado um novo tema recebido do Radar:
+"${temaSanitizado}"
+
+Deseja substituir o conteúdo atual da tela?`);
+        if (!confirmar) {
+          return;
+        }
+      }
+
+      if (selectTema && inputTemaCustom) {
+        selectTema.value = 'Personalizável';
+        if (containerTemaCustom) containerTemaCustom.classList.remove('hidden');
+        inputTemaCustom.value = temaSanitizado;
+
+        if (tituloSanitizado && inputIdeiaEscolhida) {
+          inputIdeiaEscolhida.value = tituloSanitizado;
+          inputIdeiaEscolhida.dispatchEvent(new Event('input', { bubbles: true }));
+          inputIdeiaEscolhida.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        selectTema.dispatchEvent(new Event('change', { bubbles: true }));
+        inputTemaCustom.dispatchEvent(new Event('input', { bubbles: true }));
+        inputTemaCustom.dispatchEvent(new Event('change', { bubbles: true }));
+
+        UI.showToast('Tema recebido do Radar', 'info');
+      }
+    }
+  } catch (err) {
+    console.warn('[Radar URL] Erro ao processar parâmetros da URL:', err);
+  }
+}
+window.processarParametrosURL = processarParametrosURL;
+
+/**
  * Controlador Principal
  */
 document.addEventListener('DOMContentLoaded', () => {
@@ -6109,12 +6725,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  
+
+
   UI.setupConditionalCombobox('select-tema', 'container-tema-custom', 'input-tema-custom');
   // Seletor de Idioma: A opção "Inglês" está disponível no dropdown, mas não calibrada/testada para produção. Consulte NOTES.md na raiz.
   UI.setupConditionalCombobox('select-idioma', 'container-idioma-custom', 'input-idioma-custom');
   UI.setupConditionalCombobox('select-tom', 'container-tom-custom', 'input-tom-custom');
   UI.setupConditionalCombobox('select-gancho', 'container-gancho-custom', 'input-gancho-custom');
   UI.setupConditionalCombobox('select-estilo-thumb', 'container-estilo-thumb-custom', 'input-estilo-thumb-custom');
+
+  // Toggle do campo "Nº de itens" para o estilo Catálogo
+  const selectEstiloCatalogoEl = document.getElementById('select-estilo-roteiro');
+  const containerNumItensEl = document.getElementById('container-num-itens-catalogo');
+  if (selectEstiloEl && containerNumItensEl) {
+    const atualizarVisibilidadeNumItens = () => {
+      const val = selectEstiloCatalogoEl ? (selectEstiloCatalogoEl.value || '') : '';
+      if (val.includes('Catálogo') || val.includes('Catalogo')) {
+        containerNumItensEl.classList.remove('hidden');
+      } else {
+        containerNumItensEl.classList.add('hidden');
+      }
+    };
+    selectEstiloCatalogoEl.addEventListener('change', atualizarVisibilidadeNumItens);
+    atualizarVisibilidadeNumItens();
+  }
+
   UI.setupConditionalCombobox('select-cores-thumb', 'container-cores-thumb-custom', 'input-cores-thumb-custom');
   UI.setupConditionalCombobox('select-elementos-thumb', 'container-elementos-thumb-custom', 'input-elementos-thumb-custom');
 
@@ -6784,10 +7420,18 @@ function ajustarExtensaoRoteiro(texto, estiloRoteiro = '') {
     if (obterContagem(res) > 1200) {
       res = apararParaLimiteMaximo(res, 1200);
     }
+  } else if (estilo.includes('Catálogo') || estilo.includes('Catalogo')) {
+    // Catálogo em N itens (14-17 min): meta 1.800 a 2.600 palavras
+    const nItensEl = (typeof document !== 'undefined') ? document.getElementById('input-num-itens-catalogo') : null;
+    const nItens = nItensEl ? parseInt(nItensEl.value, 10) : 9;
+    const metaMax = Math.min(2600, Math.max(1800, (nItens * 200) + 350));
+    if (obterContagem(res) > metaMax) {
+      res = apararParaLimiteMaximo(res, metaMax, estilo);
+    }
   } else if (estilo.includes('18-20') || estilo.includes('Longo')) {
     // YouTube Longo (18-20 min): meta 2.700 a 3.000 palavras
     if (obterContagem(res) > 3000) {
-      res = apararParaLimiteMaximo(res, 3000);
+      res = apararParaLimiteMaximo(res, 3000, estilo);
     }
   }
 
@@ -8464,7 +9108,81 @@ Desenvolvimento: A soberania divina cumpre cada detalhe profético anunciado pel
 
   // Renderiza botões de ideias se houver ideias presentes
   renderizarBotoesSelecaoIdeias(document.getElementById('output-prompt-ideias')?.value || '');
+  
+  // Handler para o botão "Regenerar só o trecho com problema" do Catálogo (Item 7)
+  const btnRegenerarCatalogo = document.getElementById('btn-regenerar-trecho-catalogo');
+  if (btnRegenerarCatalogo) {
+    btnRegenerarCatalogo.addEventListener('click', async () => {
+      const outputEl = document.getElementById('output-prompt-roteiro');
+      const textoAtual = outputEl ? outputEl.value : '';
+      if (!textoAtual) return;
+
+      const numItensVal = parseInt(document.getElementById('input-num-itens-catalogo')?.value, 10) || 9;
+      const validacao = validarEstruturaCatalogo(textoAtual, numItensVal);
+      const regrasFalhas = validacao.regras.filter(r => !r.ok);
+
+      if (regrasFalhas.length === 0) {
+        UI.showToast('Todas as regras do Catálogo estão cumpridas!', 'success');
+        return;
+      }
+
+      const descFalhas = regrasFalhas.map(r => `- ${r.nome}: ${r.detalhe}`).join('\n');
+      UI.showToast(`Regenerando trecho com problema (${regrasFalhas.length} regra(s))...`, 'info');
+
+      if (!OpenRouterAPI.getApiKey()) {
+        UI.showToast('Insira sua API Key para regeneração automática.', 'warning');
+        return;
+      }
+
+      UI.setButtonLoading(btnRegenerarCatalogo, true);
+      try {
+        const promptFix = `Act as an expert biblical script editor for 'Explicador Bíblico'.
+The following catalog script has structural issues that violate the channel format:
+
+FAILED RULES:
+${descFalhas}
+
+ORIGINAL SCRIPT:
+"""
+${textoAtual}
+"""
+
+TASK:
+Fix the script so that all catalog rules are 100% satisfied:
+1. "Um," must appear in the first 40 words.
+2. Exactly ${numItensVal} spoken numbered items ("Um,", "Dois,", "Três,", ..., "${numItensVal}").
+3. Subscription CTA placed specifically after Item 2 ending with "vamos em frente".
+4. Total word count strictly between 1,800 and 2,600 words.
+5. Concluding synthesis with exactly 1 question for comments.
+6. At least 3 uses of "não é X, é Y".
+
+Output EXCLUSIVELY the complete corrected script without explanations.`;
+
+        const modelo = OpenRouterAPI.getModelRoteiro();
+        const textoCorrigido = await OpenRouterAPI.generateContent(promptFix, modelo, SCRIPT_SYSTEM_PROMPT);
+
+        if (textoCorrigido && outputEl) {
+          let posTexto = textoCorrigido.trim();
+          posTexto = limparTextoParaNarracao(posTexto, 'Catálogo em N itens (14-17 min)');
+          outputEl.value = posTexto;
+          const novaValidacao = validarEstruturaCatalogo(posTexto, numItensVal);
+          atualizarRelatorioValidadorCatalogo(novaValidacao);
+          AutoSave.save();
+          UI.showToast('Trecho do catálogo regenerado e corrigido!', 'success');
+        }
+      } catch (err) {
+        console.error('Erro ao regenerar trecho:', err);
+        UI.showToast('Erro ao regenerar trecho: ' + err.message, 'error');
+      } finally {
+        UI.setButtonLoading(btnRegenerarCatalogo, false);
+      }
+    });
+  }
+
   AutoSave.setupDebounce();
+
+  // Processa parâmetros ?tema= e ?titulo= do Radar de Conteúdo
+  processarParametrosURL();
 });
   </script>
 </body>
