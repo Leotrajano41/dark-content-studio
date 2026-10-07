@@ -449,6 +449,8 @@
 
   /**
    * 1. PARSE: Extrai da "Ideia de Vídeo Escolhida" a lista de N itens com passagens bíblicas e instruções [colchetes]
+   * Suporta: uma linha só, múltiplas linhas, ponto e vírgula, introdução antes do "1.",
+   * separadores "-", "–", "—", ":" e parênteses.
    * Instrução por item: "4. Bete-Semes (1 Samuel 6:19) [omitir o número de mortos]"
    * Contexto extra por item: "[contexto: Gênesis 18:20-33; Gênesis 19:1-23]"
    */
@@ -457,119 +459,156 @@
       throw new Error('Por favor, informe a "Ideia de Vídeo Escolhida" com os itens e suas passagens bíblicas.');
     }
 
-    const linhas = ideiaTexto
-      .split('\n')
-      .map(l => l.trim())
-      .filter(l => l.length > 0);
-
+    const raw = ideiaTexto.trim();
     let tema = '';
-    const itens = [];
+    const itensBrutos = [];
 
-    const itemRegex = /^(?:item\s*)?(\d{1,2})[\.\)\s\:\-\–\—]+(.+)$/i;
+    // 1. Procurar onde começa o Item 1 (sequencial)
+    // Aceita: '1.', '1)', '1 -', 'Item 1.', 'Item 1:', 'Item 1 -', etc.
+    const reInicio1 = /(?:^|[\s;,\n])(?:item\s*)?1[\.\)\:\-–—]\s*/i;
+    const match1 = raw.match(reInicio1);
 
-    for (let i = 0; i < linhas.length; i++) {
-      const linha = linhas[i];
-      const match = linha.match(itemRegex);
+    if (match1) {
+      const idxInicio1 = match1.index;
+      tema = raw.slice(0, idxInicio1).replace(/[:\s;,-]+$/, '').trim();
 
-      if (match) {
-        const num = parseInt(match[1], 10);
-        let corpo = match[2].trim();
+      let posAtual = idxInicio1 + match1[0].length;
+      let k = 1;
 
-        // 1. Instrução específica entre colchetes [ ]
-        let instrucaoItem = '';
-        const colchetesMatch = corpo.match(/\[([^\]]+)\]/);
-        if (colchetesMatch) {
-          instrucaoItem = colchetesMatch[1].trim();
-          corpo = corpo.replace(/\[[^\]]+\]/g, '').trim();
+      while (k <= 14) {
+        const proximoK = k + 1;
+        const resto = raw.slice(posAtual);
+        // Próximo item sequencial: precedido por espaço, ;, quebra de linha ou vírgula
+        // e não seguido imediatamente de dígito ou : (para não confundir com versículos bíblicos)
+        const reProx = new RegExp('(?:^|[\\s;,\\n])(?:item\\s*)?' + proximoK + '[\\.\\)\\:\\-–—]\\s*(?![\\d:])', 'i');
+        const matchProx = resto.match(reProx);
+
+        if (matchProx) {
+          const fimItemAtual = posAtual + matchProx.index;
+          const conteudoItem = raw.slice(posAtual, fimItemAtual).trim().replace(/[;,\s]+$/, '');
+          itensBrutos.push({ numero: k, textoBruto: conteudoItem });
+          posAtual = fimItemAtual + matchProx[0].length;
+          k = proximoK;
+        } else {
+          const conteudoUltimo = raw.slice(posAtual).trim().replace(/[;,\s]+$/, '');
+          itensBrutos.push({ numero: k, textoBruto: conteudoUltimo });
+          break;
         }
-
-        // 1b. Contexto extra: "contexto: Livro cap:ver; Livro cap:ver"
-        let contextoExtra = '';
-        let instrucaoNarrativa = instrucaoItem;
-        const mCtx = instrucaoItem.match(/(?:^|[;,.]\s*)contexto\s*:\s*(.+)$/i);
-        if (mCtx) {
-          contextoExtra = mCtx[1].trim();
-          instrucaoNarrativa = instrucaoItem.slice(0, mCtx.index).replace(/[;,.\s]+$/, '').trim();
-        }
-
-        let nome = corpo;
-        let referenciaStr = '';
-        let observacaoParenteses = '';
-
-        // 2. Blocos entre parênteses: referência ou nota adicional
-        const parentesesMatches = [...corpo.matchAll(/\(([^)]+)\)/g)];
-        if (parentesesMatches.length > 0) {
-          for (const pMatch of parentesesMatches) {
-            const conteudo = pMatch[1].trim();
-            if (temReferenciaBiblica(conteudo) && !referenciaStr) {
-              referenciaStr = conteudo;
-            } else if (!observacaoParenteses) {
-              observacaoParenteses = conteudo;
-            }
-          }
-          nome = corpo.replace(/\([^)]+\)/g, '').trim();
-        }
-
-        // 3. Referência por hífen/dois-pontos/travessão
-        if (!referenciaStr) {
-          const sepMatch = corpo.match(/[-–—:]\s*([1-3]?\s*[A-Za-zÀ-ÖØ-öø-ÿ\s]+(?:\d+[:\.]\d+(?:[-–—\d,\s]+)*|\d+))\s*(?:\((.*)\))?$/i);
-          if (sepMatch) {
-            referenciaStr = sepMatch[1].trim();
-            nome = corpo.slice(0, sepMatch.index).trim();
-            if (sepMatch[2] && !observacaoParenteses) observacaoParenteses = sepMatch[2].trim();
-          }
-        }
-
-        // 4. Qualquer padrão bíblico no corpo
-        if (!referenciaStr) {
-          const refAvulsaMatch = corpo.match(/\b([1-3]?\s*[A-Za-zÀ-ÖØ-öø-ÿ]+(?:\s+[A-Za-zÀ-ÖØ-öø-ÿ]+)?\s+\d+(?:[:\.]\d+(?:[-–—]\d+)?))\b/i);
-          if (refAvulsaMatch && temReferenciaBiblica(refAvulsaMatch[1])) {
-            referenciaStr = refAvulsaMatch[1].trim();
-            nome = corpo.replace(refAvulsaMatch[0], '').trim();
-          }
-        }
-
-        nome = nome.replace(/^[-–—:\s]+|[-–—:\s]+$/g, '').trim();
-        const observacao = instrucaoNarrativa || observacaoParenteses;
-
-        itens.push({
-          numero: num,
-          numeroFalado: NUMEROS_EXTENSO[num] || String(num),
-          nome,
-          referenciaStr,
-          instrucaoItem: instrucaoItem || observacaoParenteses,
-          instrucaoNarrativa: observacao,
-          contextoExtra,
-          observacao,
-          linhaOriginal: linha
-        });
-      } else {
-        if (!tema && itens.length === 0) {
+      }
+    } else {
+      // Fallback: se não achar '1.', tenta dividir por linhas tradicionais
+      const linhas = raw.split('\n').map(l => l.trim()).filter(Boolean);
+      const itemRegex = /^(?:item\s*)?(\d{1,2})[\.\)\s\:\-\–\—]+(.+)$/i;
+      for (const linha of linhas) {
+        const m = linha.match(itemRegex);
+        if (m) {
+          itensBrutos.push({ numero: parseInt(m[1], 10), textoBruto: m[2].trim() });
+        } else if (!tema && itensBrutos.length === 0) {
           tema = linha;
         }
       }
     }
 
+    const itens = [];
+    for (const b of itensBrutos) {
+      let corpo = b.textoBruto;
+      const num = b.numero;
+
+      // 1. Instruções específicas entre colchetes [ ]
+      let instrucaoItem = '';
+      const colchetesMatch = corpo.match(/\[([^\]]+)\]/);
+      if (colchetesMatch) {
+        instrucaoItem = colchetesMatch[1].trim();
+        corpo = corpo.replace(/\[[^\]]+\]/g, '').trim();
+      }
+
+      // 1b. Contexto extra: [contexto: ...]
+      let contextoExtra = '';
+      let instrucaoNarrativa = instrucaoItem;
+      const mCtx = instrucaoItem.match(/(?:^|[;,.])\s*contexto\s*:\s*(.+)$/i);
+      if (mCtx) {
+        contextoExtra = mCtx[1].trim();
+        instrucaoNarrativa = instrucaoItem.slice(0, mCtx.index).replace(/[;,.\s]+$/, '').trim();
+      }
+
+      let nome = corpo;
+      let referenciaStr = '';
+      let observacaoParenteses = '';
+
+      // 2. Parênteses: referência bíblica ou nota
+      const parentesesMatches = [...corpo.matchAll(/\(([^)]+)\)/g)];
+      if (parentesesMatches.length > 0) {
+        for (const pMatch of parentesesMatches) {
+          const conteudo = pMatch[1].trim();
+          if (temReferenciaBiblica(conteudo) && !referenciaStr) {
+            referenciaStr = conteudo;
+          } else if (!observacaoParenteses) {
+            observacaoParenteses = conteudo;
+          }
+        }
+        nome = corpo.replace(/\([^)]+\)/g, '').trim();
+      }
+
+      // 3. Separador por hífen, meia-risca, travessão ou dois-pontos: ' - ', ' – ', ' — ', ':'
+      if (!referenciaStr) {
+        const sepMatch = corpo.match(/[-–—:]\s*([1-3]?\s*[A-Za-zÀ-ÖØ-öø-ÿ\s]+(?::?\s*\d+[:\.]\d+(?:[-–—\d,\s]+)*|\d+))\s*(?:\((.*)\))?$/i);
+        if (sepMatch) {
+          referenciaStr = sepMatch[1].trim();
+          nome = corpo.slice(0, sepMatch.index).trim();
+          if (sepMatch[2] && !observacaoParenteses) observacaoParenteses = sepMatch[2].trim();
+        }
+      }
+
+      // 4. Fallback: procurar padrão bíblico avulso no corpo
+      if (!referenciaStr) {
+        const refAvulsaMatch = corpo.match(/\b([1-3]?\s*[A-Za-zÀ-ÖØ-öø-ÿ]+(?:\s+[A-Za-zÀ-ÖØ-öø-ÿ]+)?\s+\d+(?:[:\.]\d+(?:[-–—]\d+)?))\b/i);
+        if (refAvulsaMatch && temReferenciaBiblica(refAvulsaMatch[1])) {
+          referenciaStr = refAvulsaMatch[1].trim();
+          nome = corpo.replace(refAvulsaMatch[0], '').trim();
+        }
+      }
+
+      nome = nome.replace(/^[-–—:\s]+|[-–—:\s]+$/g, '').trim();
+      const observacao = instrucaoNarrativa || observacaoParenteses;
+
+      itens.push({
+        numero: num,
+        numeroFalado: NUMEROS_EXTENSO[num] || String(num),
+        nome,
+        referenciaStr,
+        instrucaoItem: instrucaoItem || observacaoParenteses,
+        instrucaoNarrativa: observacao,
+        contextoExtra,
+        observacao,
+        linhaOriginal: b.textoBruto
+      });
+    }
+
     if (itens.length === 0) {
       throw new Error(
-        'Não foi possível extrair a lista de itens da ideia escolhida. ' +
-        'Certifique-se de listar de 6 a 12 itens numerados com suas respectivas passagens bíblicas ' +
-        '(Ex: 1. Nadabe e Abiú - Levítico 10:1-2).'
+        'Não foi possível extrair a lista de itens da ideia informada (foram identificados 0 itens).\n' +
+        'Formato aceito: Liste de 6 a 12 itens numerados sequencialmente (1., 2., 3...), em uma linha ou em várias linhas, com o nome do personagem e a passagem bíblica.\n' +
+        'Exemplos aceitos:\n' +
+        '- 1. Nadabe e Abiú - Levítico 10:1-2\n' +
+        '- 2. Corá (Números 16:31-35)\n' +
+        '- 3. Bete-Semes (1 Samuel 6:19) [omitir o número de mortos]\n' +
+        '- 4. Senaqueribe (2 Reis 19:35) [contexto: 2 Reis 18:13 a 19:7]'
       );
     }
 
     if (!permitirParcial && (itens.length < 6 || itens.length > 12)) {
+      const itensLidosTexto = itens.map(it => `${it.numero}. ${it.nome || 'sem nome'} (${it.referenciaStr || 'sem passagem'})`).join(', ');
       throw new Error(
-        `O estilo Catálogo exige entre 6 e 12 itens (foram identificados ${itens.length} itens). ` +
-        'Por favor, ajuste a lista de itens.'
+        `O estilo Catálogo exige entre 6 e 12 itens (foram identificados ${itens.length} itens: ${itensLidosTexto}).\n` +
+        `Por favor, informe uma lista com 6 a 12 itens numerados sequencialmente (1 a ${itens.length < 6 ? '8 ou 12' : '12'}).`
       );
     }
 
     for (const item of itens) {
       if (!item.referenciaStr || !temReferenciaBiblica(item.referenciaStr)) {
         throw new Error(
-          `O Item ${item.numero} ("${item.nome || 'sem nome'}") não possui uma passagem bíblica válida. ` +
-          'No estilo Catálogo, cada item precisa indicar o livro, capítulo e versículos correspondentes.'
+          `O Item ${item.numero} ("${item.nome || 'sem nome'}") não possui uma passagem bíblica válida (lido: "${item.linhaOriginal}").\n` +
+          `No estilo Catálogo, cada item precisa indicar o livro, capítulo e versículos correspondentes (Ex: "1. ${item.nome || 'Personagem'} - Livro cap:ver" ou "1. ${item.nome || 'Personagem'} (Livro cap:ver)").`
         );
       }
     }
