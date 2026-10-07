@@ -24,7 +24,7 @@ function assert(condicao, descricao) {
 const htmlPath = path.join(__dirname, '..', 'index.html');
 const html = fs.readFileSync(htmlPath, 'utf8');
 
-const scriptMatch = html.match(/<script[\s\S]*?>([\s\S]*?)<\/script>/i);
+const scriptMatch = html.match(/<script(?![^>]*src=)[\s\S]*?>([\s\S]*?)<\/script>/i);
 if (!scriptMatch) {
   throw new Error('Não foi possível extrair a tag <script> de index.html');
 }

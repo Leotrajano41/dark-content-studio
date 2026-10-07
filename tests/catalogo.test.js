@@ -23,8 +23,10 @@ function assert(condicao, descricao) {
 // 1. Carrega e prepara o ambiente sandbox a partir do index.html
 const htmlPath = path.join(__dirname, '..', 'index.html');
 const html = fs.readFileSync(htmlPath, 'utf8');
+const catalogoModulePath = path.join(__dirname, '..', 'js', 'catalogo.js');
+const catalogoModuleCode = fs.readFileSync(catalogoModulePath, 'utf8');
 
-const scriptMatch = html.match(/<script[\s\S]*?>([\s\S]*?)<\/script>/i);
+const scriptMatch = html.match(/<script(?![^>]*src=)[\s\S]*?>([\s\S]*?)<\/script>/i);
 if (!scriptMatch) {
   throw new Error('Não foi possível extrair a tag <script> de index.html');
 }
@@ -108,6 +110,9 @@ const mockWindow = {
 
 const sandbox = {
   console,
+  require,
+  process,
+  __dirname,
   setTimeout,
   clearTimeout,
   setInterval,
@@ -135,6 +140,7 @@ sandbox.window.document = mockDocument;
 sandbox.window.localStorage = mockLocalStorage;
 
 const context = vm.createContext(sandbox);
+vm.runInContext(catalogoModuleCode, context);
 vm.runInContext(scriptMatch[1], context);
 
 const openRouterTarget = context.window.OpenRouterAPI || context.OpenRouterAPI;
@@ -372,47 +378,59 @@ async function executarTestes() {
     'Regra 10: Validador detecta FALHA na presença de expressões de intenção ("conhecia a lei", "deliberada", "pleno conhecimento").');
 
   // --------------------------------------------------------------------------
-  // TESTE 3.2: Fluxo Completo de gerarRoteiroCatalogo com Stub de Auto-Regeneração
+  // TESTE 3.2: Fluxo Completo de gerarRoteiroCatalogo com Stub de IA
   // --------------------------------------------------------------------------
-  console.log('\n📋 GRUPO 3.2: Fluxo do Catálogo com Auto-Regeneração');
+  console.log('\n📋 GRUPO 3.2: Fluxo do Catálogo Item a Item com Stub');
 
   const gerarCatalogoFn = getFn('gerarRoteiroCatalogo');
   if (typeof gerarCatalogoFn === 'function') {
     let chamadasCatalogo = 0;
     let promptsRecebidos = [];
 
-    // Configura stub do OpenRouterAPI para simular 1ª resposta com falha na regra 10 e regra 1, e 2ª corrigida
+    const ideiaCatalogoTeste = `Cada julgamento súbito de Deus na Bíblia
+1. Nadabe e Abiú (Levítico 10:1-2)
+2. Corá (Números 16:31-33)
+3. Uzá (2 Samuel 6:6-7)
+4. Bete-Semes (1 Samuel 6:19)
+5. Senaqueribe (2 Reis 19:35)
+6. Sodoma e Gomorra (Gênesis 19:24-25)
+7. Ananias e Safira (Atos 5:1-10)
+8. Herodes Agripa (Atos 12:21-23)`;
+
     openRouterTarget.generateContent = async (prompt) => {
       chamadasCatalogo++;
       promptsRecebidos.push(prompt);
 
-      if (chamadasCatalogo === 1) {
-        // 1ª chamada: devolve roteiro com defeitos de intenção e abertura
-        return 'E saiu fogo de diante do Senhor consumindo os altares profanos. Dois, Corá e seus seguidores cometeram desobediência deliberada pois sabiam exatamente o que era permitido. Não é lenda, é fato sagrado. Se este estudo edifica sua fé, inscreva-se no canal para que o YouTube recomende mais vídeos como este para você. Vamos em frente. Três, Uzá e a arca.';
+      if (prompt.includes('auditor bíblico') || prompt.includes('CONFERÊNCIA')) {
+        return JSON.stringify({ aprovado: true, frases_nao_sustentadas: [] });
+      } else if (prompt.includes('parágrafo de fechamento') || prompt.includes('FECHAMENTO')) {
+        return 'Em síntese, os oito relatos bíblicos mostram com sobriedade os julgamentos registrados no texto sagrado. Qual desses relatos mais impactou você? Compartilhe sua perspectiva nos comentários.';
       } else {
-        // 2ª chamada (auto-regeneração corretiva): devolve o roteiro corrigido sem expressões proibidas
-        return roteiroCatalogoProcessado;
+        // Escrita de item
+        const matchNum = prompt.match(/Item\s+(\d+)/i);
+        const nItem = matchNum ? parseInt(matchNum[1], 10) : 1;
+        const numExtenso = ['Zero', 'Um', 'Dois', 'Três', 'Quatro', 'Cinco', 'Seis', 'Sete', 'Oito'][nItem] || 'Um';
+        return JSON.stringify({
+          texto: `${numExtenso}, relato bíblico do item ${nItem}. Isso está registrado nas Escrituras Sagradas. ` + 'texto '.repeat(170),
+          citacoes: []
+        });
       }
     };
 
     const resultadoFinal = await gerarCatalogoFn({
-      ideia: 'Cada julgamento súbito de Deus na Bíblia',
+      ideia: ideiaCatalogoTeste,
       estiloRoteiro: 'Catálogo em N itens (14-17 min)',
-      tomVoz: 'Solene',
-      tipoGancho: 'Citação',
+      tomVoz: 'Investigativo e Curioso',
+      tipoGancho: 'Citação Bíblica Impactante',
       idioma: 'Português (Brasil)',
-      numItens: 9,
+      numItens: 8,
       modelo: 'anthropic/claude-sonnet-4.5',
       onProgress: () => {}
     });
 
-    assert(chamadasCatalogo === 2, 'Geração de Catálogo acionou auto-regeneração única (2 chamadas no total).');
-    assert(promptsRecebidos[1].includes('FAILED RULES:') && promptsRecebidos[1].includes('Sem atribuição de intenção não sustentada'),
-      'Prompt de auto-regeneração detalhou explicitamente a falha na Regra 10 (Sem atribuição de intenção).');
-
-    const validacaoFinalAuto = validarCatalogo(resultadoFinal, 9);
-    assert(validacaoFinalAuto.valido === true && validacaoFinalAuto.totalOk === 10,
-      'Roteiro final após auto-regeneração obteve 10/10 regras cumpridas no validador.');
+    assert(chamadasCatalogo >= 16, `Geração executou chamadas item por item e conferência (chamadas: ${chamadasCatalogo}).`);
+    assert(resultadoFinal.includes('Um,') && resultadoFinal.includes('Oito,'), 'Roteiro final contém abertura com Um e encerramento com Oito.');
+    assert(resultadoFinal.includes('Vamos em frente'), 'Roteiro final contém CTA com Vamos em frente.');
   }
 
   // --------------------------------------------------------------------------

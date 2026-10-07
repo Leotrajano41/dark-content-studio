@@ -1449,6 +1449,13 @@ textarea.h-180 {
                 Nº de itens (6 a 12):
               </label>
               <input type="number" id="input-num-itens-catalogo" class="form-control" min="6" max="12" value="9" style="margin-top: 4px;">
+              <label for="select-traducao-biblica" style="font-size: 0.85rem; color: #a1a1aa; font-weight: 500; margin-top: 8px; display: block;">
+                Tradução Bíblica:
+              </label>
+              <select id="select-traducao-biblica" class="form-control" style="margin-top: 4px;">
+                <option value="arc" selected>Almeida Revista e Corrigida (ARC - Padrão)</option>
+                <option value="aa">Almeida Atualizada (ARA/AA)</option>
+              </select>
             </div>
           </div>
 
@@ -1639,6 +1646,9 @@ textarea.h-180 {
             </button>
           </div>
         </div>
+
+        <!-- Painel "Conferência de Fidelidade com a Bíblia" (Item 7) -->
+        <div id="painel-conferencia-biblia" class="hidden"></div>
 
         <!-- Output 2: Roteiro -->
         <div class="output-card mt-4">
@@ -2028,6 +2038,43 @@ textarea.h-180 {
             <span>⚡ Recomendação de Título da IA</span>
           </div>
           <div id="conteudo-avaliador-seo" style="line-height: 1.6; color: #f8fafc; font-size: 0.92rem; white-space: pre-wrap;"></div>
+        </div>
+
+        <hr class="divider" style="margin-top: 24px; margin-bottom: 20px;">
+
+        <!-- PACOTE DE PUBLICAÇÃO AUTOMÁTICO -->
+        <div class="section-subheader" style="margin-top: 10px;">
+          <h3>📦 Pacote de Publicação Automático (YouTube Pronto)</h3>
+          <p>Gere em 1 clique o pacote completo de lançamento: 3 títulos de alto CTR em inglês, descrição com capítulos e timestamps, tags, hashtags e prompts de thumbnail.</p>
+        </div>
+
+        <div class="action-box" style="margin-bottom: 16px;">
+          <button id="btn-gerar-pacote-publicacao" class="btn btn-accent">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+              <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+            <span class="btn-text">Gerar Pacote de Publicação</span>
+          </button>
+        </div>
+
+        <div id="container-pacote-publicacao" class="hidden" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(99, 102, 241, 0.4); border-radius: 8px; padding: 18px 20px; margin-top: 14px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #a5b4fc; font-size: 1.05rem;">
+              <span>🚀 Pacote de Lançamento Gerado</span>
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <button id="btn-copiar-pacote-publicacao" class="btn btn-secondary btn-sm" style="padding: 6px 12px; font-size: 0.82rem;">
+                Copiar Tudo
+              </button>
+              <button id="btn-download-pacote-txt" class="btn btn-primary btn-sm" style="padding: 6px 12px; font-size: 0.82rem;">
+                📥 Baixar Pacote (.txt)
+              </button>
+            </div>
+          </div>
+
+          <textarea id="output-pacote-publicacao-txt" class="form-control prompt-output" readonly style="min-height: 380px; font-family: var(--font-mono); font-size: 0.88rem; line-height: 1.5; color: #e2e8f0; background: rgba(0,0,0,0.35);"></textarea>
         </div>
       </section>
 
@@ -2774,6 +2821,9 @@ textarea.h-180 {
 
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container"></div>
+
+  <!-- Módulo Independente de Catálogo em N Itens e Pacote de Publicação -->
+  <script src="js/catalogo.js"></script>
 
   <!-- Scripts Incorporados para Máxima Compatibilidade no GitHub Pages -->
   <script>
@@ -4725,116 +4775,55 @@ window.atualizarRelatorioValidadorCatalogo = atualizarRelatorioValidadorCatalogo
 
 /**
  * GERAÇÃO DE ROTEIRO CATÁLOGO EM N ITENS (14-17 MINUTOS)
- * Executado em 1 ÚNICA CHAMADA ao modelo com a lista fixa dos N itens, sua ordem e passagens.
- * Se o validador falhar em pontos críticos ou regras, aciona UMA auto-regeneração corretiva explicando exatamente as regras faltantes.
+ * Executado ITEM A ITEM com os versículos canônicos como ÚNICA FONTE DOS FATOS,
+ * conferência por item, regeneração pontual e montagem estrutural em código.
  */
 async function gerarRoteiroCatalogo({
   ideia,
   estiloRoteiro = 'Catálogo em N itens (14-17 min)',
   tomVoz,
   tipoGancho,
-  idioma,
-  numItens = 9,
+  idioma = 'pt',
+  traducao = 'arc',
+  numItens = 8,
   modelo,
   onProgress
 }) {
-  const updateProgress = (texto, percentual) => {
-    if (typeof onProgress === 'function') {
-      onProgress(texto, percentual);
-    }
-  };
+  const modulo = typeof CatalogoModule !== 'undefined' ? CatalogoModule : (typeof require === 'function' ? require('./js/catalogo.js') : null);
+  if (!modulo) {
+    throw new Error('Módulo do Catálogo (js/catalogo.js) não foi carregado corretamente.');
+  }
 
-  const n = Math.max(6, Math.min(12, Number(numItens) || 9));
-  updateProgress(`Gerando roteiro do Catálogo em ${n} itens (chamada única)...`, 25);
+  const traducaoEl = document.getElementById('select-traducao-biblica');
+  const traducaoEscolhida = traducao || (traducaoEl ? traducaoEl.value : 'arc');
 
-  // 1. Gera o prompt do Catálogo com a lista explícita dos N itens
-  const promptCatalogo = PromptEngine.generateScriptPrompt({
+  const res = await modulo.executarFluxoCatalogo({
     ideia,
-    estiloRoteiro: 'Catálogo em N itens (14-17 min)',
-    tomVoz,
-    tipoGancho,
+    modelo: modelo || OpenRouterAPI.getModelRoteiro(),
     idioma,
-    numItens: n
+    traducao: traducaoEscolhida,
+    onProgress,
+    apiClient: OpenRouterAPI
   });
 
-  // 2. Chamada 1 ao modelo
-  let roteiroGerado = await OpenRouterAPI.generateContent(
-    promptCatalogo,
-    modelo,
-    SCRIPT_SYSTEM_PROMPT
-  );
-
-  let limpo = roteiroGerado ? roteiroGerado.trim() : '';
-
-  // Padronização histórica e teológica de expressões ("comido de vermes")
-  limpo = limpo.replace(/\bcomid[ao]\s+por\s+vermes\b/gi, 'comido de vermes');
-
-  // Limpeza de rótulos e pontuação
-  if (typeof limparTextoParaNarracao === 'function') {
-    limpo = limparTextoParaNarracao(limpo, 'Catálogo em N itens (14-17 min)');
-  }
-  if (typeof garantirEspacamentoEPontuacaoCitacoes === 'function') {
-    limpo = garantirEspacamentoEPontuacaoCitacoes(limpo);
+  // Salva dados no contexto global para uso no Pacote de Publicação
+  if (typeof window !== 'undefined') {
+    window._catalogoUltimoResultado = res;
+    window._catalogoDados = res.dadosConferencia;
   }
 
-  // 3. Validação das 10 regras
-  updateProgress('Validando as 10 regras estruturais do Catálogo...', 60);
-  let validacao = validarEstruturaCatalogo(limpo, n);
-
-  // 4. Auto-regeneração única se houver falhas críticas ou não atingir as regras
-  if (!validacao.valido) {
-    updateProgress('Ajustando roteiro automaticamente com base no validador...', 75);
-    const falhas = validacao.regras.filter(r => !r.ok).map(r => `- ${r.nome}: ${r.detalhe}`).join('\n');
-    
-    const promptCorrecao = `You are rewriting and correcting the previous Catalog Script to strictly fix ALL failed validation rules.
-CRITICAL MANDATORY INSTRUCTIONS:
-- You must keep the exact same ${n} cataloged items in order (from Item 1 to Item ${n}).
-- Opening MUST NOT contain Bible verses; must repeat title in under 30 words and immediately enter "Um, [Item 1]".
-- CTA for subscription with "vamos em frente" MUST appear strictly after Item 2 and before Item 3.
-- No item beyond Item ${n} is allowed (NO extra Item 9, 10, or numbered conclusion).
-- Length per item: STRICTLY MAXIMUM 220 words.
-- NO UNSUPPORTED INTENTION: Do NOT attribute intention, knowledge, or internal motivation to biblical characters unless explicitly stated in Scripture. If the reason is not given, state "o texto não explica o que levou ao ato". Strictly REMOVE any forbidden words like "deliberado", "conhecia a lei", "sabia exatamente", "pleno conhecimento", "profanação deliberada", "hipocrisia calculada".
-- Concluding section MUST end with an open question directed to the comments section and MUST NOT generalize intentions ("todos sabiam").
-- At least 3 contrast structures ("não é X, é Y").
-- Word count MUST be between 1,800 and 2,600 words total.
-- Keep biblical quotes moderate (< 35% of total words).
-
-FAILED RULES:
-${falhas}
-
-ORIGINAL DRAFT TO FIX:
-${limpo}
-
-Please output ONLY the corrected, continuous script narration without any bracketed labels or meta comments:`;
-
-    const roteiroCorrigido = await OpenRouterAPI.generateContent(
-      promptCorrecao,
-      modelo,
-      SCRIPT_SYSTEM_PROMPT
-    );
-
-    if (roteiroCorrigido && roteiroCorrigido.trim()) {
-      let limpoCorrigido = roteiroCorrigido.trim();
-      limpoCorrigido = limpoCorrigido.replace(/\bcomid[ao]\s+por\s+vermes\b/gi, 'comido de vermes');
-      if (typeof limparTextoParaNarracao === 'function') {
-        limpoCorrigido = limparTextoParaNarracao(limpoCorrigido, 'Catálogo em N itens (14-17 min)');
-      }
-      if (typeof garantirEspacamentoEPontuacaoCitacoes === 'function') {
-        limpoCorrigido = garantirEspacamentoEPontuacaoCitacoes(limpoCorrigido);
-      }
-      limpo = limpoCorrigido;
-    }
+  // Renderiza o Painel de Conferência de Fidelidade com a Bíblia
+  const painelBibliaEl = document.getElementById('painel-conferencia-biblia');
+  if (painelBibliaEl && modulo.renderizarPainelConferencia) {
+    modulo.renderizarPainelConferencia(res.dadosConferencia, painelBibliaEl);
   }
 
-  updateProgress('Finalizando roteiro e validação bíblica...', 90);
-
-  // Validação Bíblica (mantém livros deuterocanônicos / tradição sem adulterar)
-  if (typeof validarRoteiroComBiblia === 'function') {
-    limpo = await validarRoteiroComBiblia(limpo, idioma);
+  // Atualiza o relatório de regras do Catálogo
+  if (res.validacao && typeof atualizarRelatorioValidadorCatalogo === 'function') {
+    atualizarRelatorioValidadorCatalogo(res.validacao);
   }
 
-  updateProgress('Concluído!', 100);
-  return limpo;
+  return res.roteiro;
 }
 
 window.gerarRoteiroCatalogo = gerarRoteiroCatalogo;
@@ -8282,6 +8271,8 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       if (progressEl) progressEl.classList.remove('hidden');
       const numItensEl = document.getElementById('input-num-itens-catalogo');
       const numItensVal = numItensEl ? parseInt(numItensEl.value, 10) : 9;
+      const traducaoEl = document.getElementById('select-traducao-biblica');
+      const traducaoVal = traducaoEl ? traducaoEl.value : 'arc';
 
       try {
         resultText = await gerarRoteiroCatalogo({
@@ -8290,6 +8281,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
           tomVoz,
           tipoGancho,
           idioma,
+          traducao: traducaoVal,
           numItens: numItensVal,
           modelo: modeloRoteiro,
           onProgress: (texto, percentual) => {
@@ -8777,6 +8769,137 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
   });
 
   // =========================================================================
+  // PACOTE DE PUBLICAÇÃO AUTOMÁTICO (YouTube Pronto)
+  // =========================================================================
+
+  const btnGerarPacote = document.getElementById('btn-gerar-pacote-publicacao');
+  const btnCopiarPacote = document.getElementById('btn-copiar-pacote-publicacao');
+  const btnDownloadPacoteTxt = document.getElementById('btn-download-pacote-txt');
+  const containerPacote = document.getElementById('container-pacote-publicacao');
+  const outputPacoteTxt = document.getElementById('output-pacote-publicacao-txt');
+
+  if (btnGerarPacote) {
+    btnGerarPacote.addEventListener('click', () => {
+      const tema = UI.getValue('select-tema', 'input-tema-custom') || inputIdeiaEscolhida?.value.trim() || 'Estudo Bíblico Documental';
+      const roteiro = document.getElementById('output-roteiro-limpo')?.value.trim() ||
+                      document.getElementById('output-prompt-roteiro')?.value.trim() ||
+                      document.getElementById('textarea-roteiro-gerado')?.value.trim();
+
+      if (!roteiro) {
+        UI.showToast('Gere o roteiro completo na Etapa 1 antes de gerar o Pacote de Publicação!', 'warning');
+        return;
+      }
+
+      const srtConteudo = document.getElementById('output-legenda-srt')?.value.trim() || '';
+
+      const modulo = typeof CatalogoModule !== 'undefined' ? CatalogoModule : null;
+      if (!modulo) {
+        UI.showToast('Módulo CatalogoModule não está carregado.', 'error');
+        return;
+      }
+
+      let itensParaPacote = [];
+      if (window._catalogoDados && window._catalogoDados.itens) {
+        itensParaPacote = window._catalogoDados.itens;
+      } else {
+        try {
+          const parsed = modulo.parseIdeia(inputIdeiaEscolhida?.value || roteiro);
+          itensParaPacote = parsed.itens;
+        } catch (e) {
+          // Fallback para itens padrão
+          itensParaPacote = [];
+        }
+      }
+
+      let duracaoAudioSeg = null;
+      const audioEl = document.getElementById('audio-player-element');
+      if (audioEl && audioEl.duration && !isNaN(audioEl.duration) && audioEl.duration > 0) {
+        duracaoAudioSeg = Math.round(audioEl.duration);
+      }
+
+      const pacote = modulo.gerarPacotePublicacao({
+        tema,
+        roteiro,
+        itens: itensParaPacote,
+        srtConteudo,
+        duracaoAudioSegundos: duracaoAudioSeg
+      });
+
+      // Formata todo o pacote em um texto estruturado e limpo
+      let textoCompletoPacote = `======================================================\n`;
+      textoCompletoPacote += `📦 PACOTE DE PUBLICAÇÃO DO VÍDEO (DARK STUDIO PRO)\n`;
+      textoCompletoPacote += `Tema: ${tema}\n`;
+      textoCompletoPacote += `Data: ${new Date().toLocaleDateString('pt-BR')}\n`;
+      textoCompletoPacote += `======================================================\n\n`;
+
+      textoCompletoPacote += `--- 1. TÍTULOS SUGERIDOS EM INGLÊS (ALTO CTR) ---\n`;
+      pacote.titulos.forEach((t, i) => {
+        textoCompletoPacote += `Opção ${i + 1}: ${t}\n`;
+      });
+
+      textoCompletoPacote += `\n--- 2. DESCRIÇÃO COMPLETA DO VÍDEO (COM TIMESTAMPS) ---\n`;
+      textoCompletoPacote += `${pacote.descricao}\n`;
+
+      textoCompletoPacote += `\n--- 3. TAGS & HASHTAGS ---\n`;
+      textoCompletoPacote += `Tags: ${pacote.tags}\n`;
+      textoCompletoPacote += `Hashtags: ${pacote.hashtags}\n`;
+
+      textoCompletoPacote += `\n--- 4. PROMPT DE MINIATURA EM GRADE (16:9) ---\n`;
+      textoCompletoPacote += `Prompt: ${pacote.thumbnail.gridPrompt16x9}\n`;
+      textoCompletoPacote += `Legendas dos Quadros: ${pacote.thumbnail.legendasGrid.join(' | ')}\n`;
+
+      textoCompletoPacote += `\n--- 5. PROMPTS INDIVIDUAIS DE QUADROS QUADRADOS (1:1) ---\n`;
+      pacote.thumbnail.promptsQuadrados1x1.forEach((p) => {
+        textoCompletoPacote += `${p}\n\n`;
+      });
+
+      if (outputPacoteTxt) {
+        outputPacoteTxt.value = textoCompletoPacote.trim();
+      }
+      if (containerPacote) {
+        containerPacote.classList.remove('hidden');
+      }
+
+      UI.showToast('Pacote de Publicação gerado com sucesso!');
+      AutoSave.save();
+    });
+  }
+
+  if (btnCopiarPacote) {
+    btnCopiarPacote.addEventListener('click', () => {
+      const txt = outputPacoteTxt?.value;
+      if (!txt) return;
+      navigator.clipboard.writeText(txt).then(() => {
+        UI.showToast('Pacote de Publicação copiado para a área de transferência!');
+      }).catch(() => {
+        UI.showToast('Erro ao copiar pacote.', 'error');
+      });
+    });
+  }
+
+  if (btnDownloadPacoteTxt) {
+    btnDownloadPacoteTxt.addEventListener('click', () => {
+      const txt = outputPacoteTxt?.value;
+      if (!txt) {
+        UI.showToast('Gere o pacote antes de baixar o arquivo.', 'warning');
+        return;
+      }
+      const tema = UI.getValue('select-tema', 'input-tema-custom') || 'pacote-publicacao';
+      const slug = tema.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-');
+      const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dark-studio_pacote-publicacao_${slug}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      UI.showToast('Download do arquivo de publicação .txt iniciado!');
+    });
+  }
+
+  // =========================================================================
   // ETAPA 5: NARRAÇÃO & LEGENDAS (OpenAI TTS + AssemblyAI)
   // =========================================================================
 
@@ -8823,13 +8946,18 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
     let roteiro = textoNarracao.replace(/\s*\(\s*(?:[1-3]\s+|[1-3]ª\s+|[1-3]º\s+)?[A-Za-zÀ-ÖØ-öø-ÿ.]+\s+\d+(?:[:\.]\d+(?:[,\s\-–—/]+(?:\d+|[A-Za-zÀ-ÖØ-öø-ÿ.]+))*)*\s*\)/g, '');
     roteiro = roteiro.replace(/\s+([.,;:!?])/g, '$1').replace(/[^\S\r\n]{2,}/g, ' ').trim();
 
+    // Aplica o dicionário fonético de pronúncia exclusivamente ao texto enviado ao TTS
+    if (typeof CatalogoModule !== 'undefined' && CatalogoModule.aplicarPronunciaParaTTS) {
+      roteiro = CatalogoModule.aplicarPronunciaParaTTS(roteiro);
+    }
+
     // Log completo no console do navegador para auditoria e comparação exata
     console.log('[btnGerarAudio] === CONFERÊNCIA DE TEXTO ENVIADO AO /api/narrar ===');
     console.log('[btnGerarAudio] Texto presente na caixa (textareaNarracaoLimpa):\n', textoNarracao);
     console.log('[btnGerarAudio] Texto enviado para /api/narrar:\n', roteiro);
     console.log(`[btnGerarAudio] Caracteres na caixa: ${textoNarracao.length} | Caracteres enviados: ${roteiro.length}`);
     if (textoNarracao.length !== roteiro.length) {
-      console.log('[btnGerarAudio] Nota: Diferença refere-se à supressão de referências bíblicas entre parênteses para a locução neural.');
+      console.log('[btnGerarAudio] Nota: Diferença refere-se à supressão de referências bíblicas entre parênteses e fonética para a locução neural.');
     }
 
     const voz = document.getElementById('select-voz-audio').value || 'onyx';
