@@ -2972,7 +2972,7 @@ const OpenRouterAPI = {
       else if (activeModel.startsWith('openai/')) activeModel = activeModel.replace('openai/', '');
     }
 
-    const defaultSystemPrompt = 'You are an expert biblical documentary scriptwriter and YouTube dark channel strategist following the proven formula of "Explicador Bíblico".\n\nCRITICAL MANDATORY RULES FOR ALL GENERATIONS:\n1. HISTORICAL & BIBLICAL TRUTH: Always treat the biblical narrative as literal truth and real history. STRICTLY FORBIDDEN: never use skepticism, never use terms or concepts like "myth", "legend", "debate", "were they real", "scholars suggest", "traditional theology may not reveal", or any translations/equivalents in Portuguese, Spanish, or any other language (e.g., "mito", "lenda", "debate", "se eram reais", "estudiosos sugerem", "a teologia tradicional oculta").\n2. STRICTLY CANONICAL TEXT: Strictly restrict all content to the 66 canonical books of the Bible. STRICTLY FORBIDDEN: never include extra-biblical theories, secular ancient civilizational hypotheses, human evolutionary ancestry theories, or apocryphal/pseudepigraphal books (such as the Book of Enoch / Livro de Enoque).\n3. EXACT SCRIPTURAL TRANSLATIONS: Direct Bible quotations must always be 100% literal from the authorized canonical translation for the target language:\n   - English: King James Version (KJV)\n   - Portuguese: João Ferreira de Almeida (JFA)\n   - Spanish: Reina-Valera 1909 (RVR1909)\n4. STRICT LANGUAGE COMPLIANCE: Always deliver 100% of the output in the requested language.';
+    const defaultSystemPrompt = 'You are an expert biblical documentary scriptwriter and YouTube channel strategist for our biblical documentary channel.\n\nCRITICAL MANDATORY RULES FOR ALL GENERATIONS:\n1. HISTORICAL & BIBLICAL TRUTH: Always treat the biblical narrative as literal truth and real history. STRICTLY FORBIDDEN: never use skepticism, never use terms or concepts like "myth", "legend", "debate", "were they real", "scholars suggest", "traditional theology may not reveal", or any translations/equivalents in Portuguese, Spanish, or any other language (e.g., "mito", "lenda", "debate", "se eram reais", "estudiosos sugerem", "a teologia tradicional oculta").\n2. STRICTLY CANONICAL TEXT: Strictly restrict all content to the 66 canonical books of the Bible. STRICTLY FORBIDDEN: never include extra-biblical theories, secular ancient civilizational hypotheses, human evolutionary ancestry theories, or apocryphal/pseudepigraphal books (such as the Book of Enoch / Livro de Enoque).\n3. EXACT SCRIPTURAL TRANSLATIONS: Direct Bible quotations must always be 100% literal from the authorized canonical translation for the target language:\n   - English: King James Version (KJV)\n   - Portuguese: João Ferreira de Almeida (JFA)\n   - Spanish: Reina-Valera 1909 (RVR1909)\n4. STRICT LANGUAGE COMPLIANCE: Always deliver 100% of the output in the requested language.';
 
     const headers = {
       'Authorization': `Bearer ${apiKey}`,
@@ -3040,7 +3040,7 @@ window.OpenRouterAPI = OpenRouterAPI;
 /**
  * REGRAS DE CONTEÚDO E STORYTELLING BÍBLICO (Item 2 & Ajustes Finais) - System Prompt Exclusivo para Geração de Roteiro
  */
-const SCRIPT_SYSTEM_PROMPT = `You are a master biblical documentary storyteller and narrator following the proven formula of the YouTube dark channel 'Explicador Bíblico'.
+const SCRIPT_SYSTEM_PROMPT = `You are a master biblical documentary storyteller and narrator for our biblical documentary channel.
 
 POSTURA OBRIGATÓRIA DO NARRADOR:
 - Trate todo relato bíblico como verdade sagrada afirmada diretamente: 'o fogo caiu', nunca 'o relato diz que o fogo teria caído'.
@@ -3108,7 +3108,7 @@ ABSOLUTE CANONICAL & STORYTELLING RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
    - STRICTLY FORBIDDEN BACKSTAGE PHRASES: "in the next section", "as we transition", "we will explore", "as we continue our exploration", "moving ahead", "as the narrative unfolds".
 9. LITERAL SCRIPTURE FIDELITY & LANGUAGE COMPLIANCE:
    - Scripture quotes must be literal and verbatim from the target language's authorized Bible version:
-     * Portuguese: João Ferreira de Almeida (Almeida). Quando o roteiro for em português: Escreva 100% em português do Brasil. Citações bíblicas pela Almeida. Nunca use palavras em inglês no roteiro.
+     * Portuguese: João Ferreira de Almeida (Almeida). Quando o roteiro for em português: Escreva 100% em português do Brasil. Use SEMPRE os nomes próprios e geográficos da Bíblia Almeida em português (ex: use sempre "Ogue", nunca "Og"; "Nabucodonosor", não "Nebuchadnezzar"; "Ezequias", não "Hezekiah"). Citações bíblicas pela Almeida. Nunca use palavras em inglês no roteiro.
      * English: King James Version (KJV). (The KJV rule applies ONLY when the script language is English).
      * Spanish: Reina-Valera 1909 (RVR1909).
    - Deliver 100% of the script in the selected content language.`;
@@ -3118,9 +3118,12 @@ ABSOLUTE CANONICAL & STORYTELLING RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
  * Lista de clichês e termos proibidos monitorados rigorosamente
  */
 const FORBIDDEN_TERMS = [
+  // Proibição estrita do nome do canal e variações (com/sem acento, maiúsculas/minúsculas, junto/separado)
+  { term: 'Explicador Bíblico', pattern: /\bexplicador\s*b[ií]blico\b/i },
+  { term: 'Explicador', pattern: /\bexplicador\b/i },
+
   // Palavras soltas proibidas (Item 1 & Item 5)
   { term: 'tonight', pattern: /\btonight\b/i },
-  { term: 'esta noite', pattern: /\besta\s+noite\b/i },
   { term: 'this morning', pattern: /\bthis\s+morning\b/i },
   { term: 'esta manhã', pattern: /\besta\s+manh[aã]\b/i },
   { term: 'profound', pattern: /\bprofound(?:ly)?\b/i },
@@ -3414,7 +3417,27 @@ MANDATORY RULES:
     UI.showToast(`⚠️ Termos proibidos persistentes mantidos com aviso: ${avisosPersistentes.join('; ')}`, 'warning');
   }
 
-  return linhasAtualizadas.join('\n');
+  // Verificação contra "Explicador Bíblico" e variações em todo o bloco de ideias (Item 2)
+  let resultadoFinal = linhasAtualizadas.join('\n');
+  if (/\bexplicador(?:\s*b[ií]blico)?\b/i.test(resultadoFinal)) {
+    console.log('[Ideias] "Explicador Bíblico" detectado no texto de ideias. Regenerando com IA...');
+    try {
+      const promptFixIdeias = `Act as an expert YouTube strategist for our biblical documentary channel.
+Rewrite any lines in the following 10 video ideas that mention "Explicador Bíblico" or "Explicador", replacing them with neutral phrasing without any channel name, maintaining the exact numbering and structure:
+"""
+${resultadoFinal}
+"""
+Output exclusively the cleaned 10 ideas.`;
+      const fixedIdeias = await OpenRouterAPI.generateContent(promptFixIdeias, modelo || OpenRouterAPI.getModelIdeas());
+      if (fixedIdeias && fixedIdeias.trim()) {
+        resultadoFinal = fixedIdeias.trim();
+      }
+    } catch (eId) {
+      console.warn('[Ideias] Erro ao regenerar trecho com Explicador Bíblico:', eId);
+    }
+  }
+
+  return resultadoFinal;
 }
 
 /**
@@ -3435,10 +3458,12 @@ async function avaliarIdeiasComIA(ideiasTexto, tema, modelo) {
   const conteudo = document.getElementById('conteudo-avaliador-ideias');
   if (!card || !conteudo) return;
 
-  conteudo.textContent = 'Avaliando as 10 ideias com IA...';
+  conteudo.textContent = 'Avaliando as 10 ideias com IA (Critérios Ponderados)...';
   card.classList.remove('hidden');
 
-  const promptAvaliador = `Act as a senior YouTube content strategist and biblical scholar for dark documentary channels ('Explicador Bíblico').
+  const modeloAvaliacao = modelo || OpenRouterAPI.getModelRoteiro();
+
+  const promptAvaliador = `Act as a senior YouTube content strategist and biblical scholar for our biblical documentary YouTube channel.
 Carefully evaluate these 10 generated video ideas for the theme: "${tema}".
 
 IDEAS TO EVALUATE:
@@ -3446,23 +3471,30 @@ IDEAS TO EVALUATE:
 ${ideiasTexto}
 """
 
-EVALUATION CRITERIA:
-1. Biblical Fidelity: Strictly adheres to canonical Scripture without inventing prophecies, timeframes, or unwritten claims (e.g. never accept "as foretold" when Scripture is silent).
-2. Concrete Hook: Contains a curious question or tangible, physical detail (e.g. dimensions, Og's iron bed, specific geography, concrete biblical numbers).
-3. Thumbnail Visual Potential: High imagery potential with dramatic contrast and scale.
-4. Safe Solemn Theme: Reverent tone, zero justification or rejoicing in destruction of peoples.
+EVALUATION CRITERIA & WEIGHTS (Score each idea from 0 to 10 on each criterion):
+1. Detalhe Concreto (Weight: 2): Presence of a tangible, physical detail, number, dimension, ancient object, or specific scene from the script.
+2. Fidelidade Bíblica (Weight: 2): Strict fidelity to canonical Scripture without unwritten speculations or extra-biblical additions.
+3. Momento Visual para Miniatura (Weight: 1): Strong thumbnail potential with high contrast, dramatic scale, and focal subject.
+4. Gancho do Título (Weight: 1): Curiosity-inducing title with high CTR structure without excessive clichés.
+5. Tema Seguro (Weight: 1): Solemn reverent tone, no justification of destruction, completely safe for monetization.
 
-MANDATORY OUTPUT FORMAT (Write the explanations in Portuguese Brasil):
-⭐ Recomendada: nº [número da melhor ideia], porque [justificativa clara e convincente destacando a fidelidade ao texto bíblico, gancho concreto e potencial visual para thumbnail].
+MANDATORY OUTPUT FORMAT (Write the response in Portuguese Brasil):
+🏆 TOP 3 MELHORES IDEIAS:
+1. Ideia nº [X] — Nota: [Média ponderada de 0 a 10]/10
+   Motivo: [Explicação clara destacando o detalhe concreto, a fidelidade bíblica e o apelo visual para miniatura]
+2. Ideia nº [Y] — Nota: [Média ponderada de 0 a 10]/10
+   Motivo: [Explicação]
+3. Ideia nº [Z] — Nota: [Média ponderada de 0 a 10]/10
+   Motivo: [Explicação]
 
-⚠️ Evite: nº [número da ideia menos recomendada], porque [justificativa apontando fraqueza no gancho, falta de detalhe concreto, risco de interpretação ou tema sensível].
-
-Output EXCLUSIVELY the two lines above.`;
+⚠️ QUAIS EVITAR:
+- Ideia nº [W]: [Motivo apontando falta de detalhe concreto, risco teológico, sensibilidade ou gancho fraco]
+(Apresente as 2 ou 3 ideias menos recomendadas)`;
 
   try {
     const avaliacao = await OpenRouterAPI.generateContent(
       promptAvaliador,
-      modelo || OpenRouterAPI.getModelIdeas()
+      modeloAvaliacao
     );
     if (avaliacao && avaliacao.trim()) {
       conteudo.textContent = avaliacao.trim();
@@ -3488,7 +3520,7 @@ async function avaliarThumbnailsComIA(opcoesThumb, tema, modelo) {
   conteudo.textContent = 'Avaliando opções de thumbnail com IA...';
   card.classList.remove('hidden');
 
-  const promptAvaliador = `Act as an expert YouTube thumbnail and CTR director for biblical dark documentary channels ('Explicador Bíblico').
+  const promptAvaliador = `Act as an expert YouTube thumbnail and CTR director for our biblical documentary channel.
 Evaluate these 3 thumbnail concepts generated for the video: "${tema}".
 
 THUMBNAIL CONCEPTS:
@@ -3553,7 +3585,7 @@ async function validarERegenerarDescricaoSeo(textoSeo, tema, modelo) {
       console.log(`[SEO] Termo proibido na descrição: ${nomes} -> "${fraseTrim}"`);
 
       try {
-        const promptFraseSeo = `Act as an expert YouTube SEO copywriter for biblical dark channels ('Explicador Bíblico').
+        const promptFraseSeo = `Act as an expert YouTube SEO copywriter for our biblical documentary channel.
 Rewrite the following single sentence from a video description about "${tema}" to completely eliminate the forbidden cliché(s): ${nomes} (especially terms like "dive into", "profound", "meticulously", "unpack", "serves as a reminder").
 Original sentence: """${fraseTrim}"""
 
@@ -3580,7 +3612,28 @@ RULES:
     }
   }
 
-  return textoSeo.replace(textoDescricao, textoDescricaoModificado);
+  let resultadoSeo = textoSeo.replace(textoDescricao, textoDescricaoModificado);
+
+  // Verificação contra "Explicador Bíblico" e variações em todo o pacote de SEO (títulos, descrição, tags) (Item 2)
+  if (/\bexplicador(?:\s*b[ií]blico)?\b/i.test(resultadoSeo)) {
+    console.log('[SEO] "Explicador Bíblico" detectado no pacote SEO. Regenerando com IA...');
+    try {
+      const promptFixSeo = `Act as an expert YouTube SEO strategist for our biblical documentary channel.
+Rewrite any lines or tags in the following SEO package that mention "Explicador Bíblico" or "Explicador", completely removing any channel name while maintaining titles, description and tags structure:
+"""
+${resultadoSeo}
+"""
+Output exclusively the cleaned SEO package.`;
+      const fixedSeo = await OpenRouterAPI.generateContent(promptFixSeo, modelo || OpenRouterAPI.getModelIdeas());
+      if (fixedSeo && fixedSeo.trim()) {
+        resultadoSeo = fixedSeo.trim();
+      }
+    } catch (eSeo) {
+      console.warn('[SEO] Erro ao regenerar pacote SEO com Explicador Bíblico:', eSeo);
+    }
+  }
+
+  return resultadoSeo;
 }
 
 /**
@@ -3596,7 +3649,7 @@ async function avaliarTitulosSeoComIA(textoSeo, tema, modelo) {
   conteudo.textContent = 'Avaliando títulos de SEO com IA...';
   card.classList.remove('hidden');
 
-  const promptAvaliador = `Act as a senior YouTube SEO strategist for biblical dark channels ('Explicador Bíblico').
+  const promptAvaliador = `Act as a senior YouTube SEO strategist for our biblical documentary channel.
 Review the 3 generated title options in this SEO package for the theme: "${tema}".
 
 SEO PACKAGE:
@@ -3655,13 +3708,15 @@ async function aplicarFiltroTermosProibidos(roteiro, idioma, modelo) {
 
   for (let pIdx = 0; pIdx < paragrafos.length; pIdx++) {
     let paragrafo = paragrafos[pIdx];
-    let termosEncontrados = FORBIDDEN_TERMS.filter(f => f.pattern.test(paragrafo));
+    // Ignora citações bíblicas literais entre aspas ao detectar termos proibidos (Item 8)
+    const textoSemCitacoes = paragrafo.replace(/["“«][^"”»]*["”»]/g, '');
+    let termosEncontrados = FORBIDDEN_TERMS.filter(f => f.pattern.test(textoSemCitacoes));
 
     if (termosEncontrados.length === 0) continue;
 
     totalDetectados += termosEncontrados.length;
     termosEncontrados.forEach(t => termosCorrigidosLista.push(t.term));
-    console.log(`[Filtro Pós-Geração] Parágrafo ${pIdx + 1} contém termos proibidos:`, termosEncontrados.map(t => t.term));
+    console.log(`[Filtro Pós-Geração] Parágrafo ${pIdx + 1} contém termos proibidos fora de citações:`, termosEncontrados.map(t => t.term));
 
     // Contexto vizinho
     const prevContext = pIdx > 0 ? paragrafos[pIdx - 1].trim().slice(0, 300) : '(Beginning of the section)';
@@ -3688,12 +3743,13 @@ ${termosEncontrados.map(t => `"${t.term}"`).join(', ')}
 
 MANDATORY RULES:
 1. ELIMINATE PROHIBITED TERMS: Completely rephrase without using: ${termosEncontrados.map(t => `"${t.term}"`).join(', ')}.
-2. NEVER use "tonight", "this morning", "profound", "fabric", "stark", "debate", "shrouded in mystery", "annals", "in the next section", "as we transition", "we will explore", "as we continue our exploration", "moving ahead", "as the narrative unfolds".
-3. STRICT BIBLICAL FIDELITY: Never contradict canonical Scripture. When Scripture is silent on a specific detail or mechanism, state that silence in at most ONE honest sentence in the entire script. NEVER speculate or introduce unwritten conjectures.
-4. BATTLES & SOLEMN RESTRAINT: Narrate battles strictly from biblical citation without evaluating or justifying the destruction of peoples. Never use "eliminated", "hunted down", "not an injustice", "populations were".
-5. NO DUPLICATION: Flow naturally from the previous paragraph into the next without repeating sentences from either.
-6. Keep the exact same historical narrative tone and language (${lang.name}).
-7. Output EXCLUSIVELY the rewritten paragraph text. Do NOT include commentary, quotes around the paragraph, or preamble.`;
+2. NEVER ALTER SCRIPTURE QUOTATIONS: NEVER alter, modify, replace, or rephrase any words inside quotation marks or biblical citations ("..."). Keep every scripture quote 100% verbatim as written.
+3. NEVER use "tonight", "this morning", "profound", "fabric", "stark", "debate", "shrouded in mystery", "annals", "in the next section", "as we transition", "we will explore", "as we continue our exploration", "moving ahead", "as the narrative unfolds".
+4. STRICT BIBLICAL FIDELITY: Never contradict canonical Scripture. When Scripture is silent on a specific detail or mechanism, state that silence in at most ONE honest sentence in the entire script. NEVER speculate or introduce unwritten conjectures.
+5. BATTLES & SOLEMN RESTRAINT: Narrate battles strictly from biblical citation without evaluating or justifying the destruction of peoples. Never use "eliminated", "hunted down", "not an injustice", "populations were".
+6. NO DUPLICATION: Flow naturally from the previous paragraph into the next without repeating sentences from either.
+7. Keep the exact same historical narrative tone and language (${lang.name}).
+8. Output EXCLUSIVELY the rewritten paragraph text. Do NOT include commentary, quotes around the paragraph, or preamble.`;
 
         const novoParagrafo = await OpenRouterAPI.generateContent(
           rewritePrompt,
@@ -4019,7 +4075,7 @@ async function validarERegenerarTomAfirmativo(roteiro, idioma, modelo) {
     while (termos.length > 0 && tentativas < 2) {
       tentativas++;
       try {
-        const promptReescrita = `Act as an expert biblical documentary script editor for 'Explicador Bíblico'.
+        const promptReescrita = `Act as an expert biblical documentary script editor for our biblical documentary channel.
 Rewrite the following target paragraph to strictly enforce an ABSOLUTE AFFIRMATIVE HISTORICAL TONE.
 Treat the biblical record as literal historical fact witnessed and recorded by Scripture. Eliminate every trace of skepticism, uncertainty, hesitation, or critical questioning.
 
@@ -5231,7 +5287,7 @@ MANDATORY EDITING RULES:
  * Retorna JSON com lista de problemas: fraseOriginal, tipo e fraseCorrigida.
  * Tipos: CRONOLOGIA, AFIRMAÇÃO ALÉM DO TEXTO, FRASE QUEBRADA, ASPAS, EVENTO REPETIDO.
  */
-const REVIEWER_SYSTEM_PROMPT = `You are a senior biblical documentary script editor, fact-checker, and canonical auditor for the YouTube channel 'Explicador Bíblico'.
+const REVIEWER_SYSTEM_PROMPT = `You are a senior biblical documentary script editor, fact-checker, and canonical auditor for our biblical documentary channel.
 Your role is to rigorously inspect the provided complete 7-section documentary script across the ENTIRE text (comparing all sections, not just adjacent ones) and return a strictly structured JSON array of every genuine error, repetition, premature conclusion, or flaw found.
 
 CHECK ACROSS THE ENTIRE SCRIPT FOR EXACTLY THESE 9 CATEGORIES:
@@ -5543,7 +5599,7 @@ const PromptEngine = {
         name: 'Português (Brasil)',
         code: 'pt',
         bibleTranslation: 'João Ferreira de Almeida (Almeida)',
-        citationRule: 'Escreva 100% em português do Brasil. Citações bíblicas pela Almeida. Nunca use palavras em inglês no roteiro.',
+        citationRule: 'Escreva 100% em português do Brasil. Use sempre os nomes da Bíblia Almeida em português (ex: "Ogue", não "Og"). Citações bíblicas pela Almeida. Nunca use palavras em inglês no roteiro.',
         titleHookSample: 'A REAL Verdade Sobre a Profecia (Muitos Não Sabem)'
       };
     }
@@ -5555,9 +5611,12 @@ const PromptEngine = {
     const isCatalogo = estiloRoteiro && (estiloRoteiro.includes('Catálogo') || estiloRoteiro.includes('Catalogo'));
 
     if (isCatalogo) {
-      return `Act as a senior YouTube content strategist for biblical documentary dark channels following the catalog format formula of 'Explicador Bíblico'.
+      return `Act as a senior YouTube content strategist for our biblical documentary channel.
 Generate exactly 10 catalog-style video ideas for a video based on the theme: '${tema}'.
-Each catalog idea MUST follow formulas such as: "Cada [categoria] da Bíblia", "O fim de cada [grupo]", "O que acontece... em cada [grupo]", or neutral equivalents.
+CATALOG FORMAT SPECIFICATION:
+- Title pattern must follow: "Cada [categoria] da Bíblia Explicado em N Minutos" (or in English: "Every [Category] in the Bible EXPLAINED in N Minutes", "The Tragic End of Every [Group] in the Bible", "What Happens After Death in Every [Category] Explained").
+- Numbered list of items in strict sequential order from 1 to ${n}.
+- Each item MUST explicitly state its distinct canonical Scripture passage (Book, Chapter, Verse) and a concrete, tangible historical detail.
 Do NOT use concrete theme examples inside this prompt template; use neutral category placeholders.
 
 CRITICAL MANDATORY GUIDELINES:
@@ -5578,32 +5637,38 @@ OUTPUT FORMAT:
 Provide the 10 catalog ideas numbered 1 to 10, each with English Title, Local Title, and the list of ${n} numbered items with their respective scripture passages.`;
     }
 
-    return `Act as a senior YouTube content strategist for biblical documentary dark channels following the proven formula of 'Explicador Bíblico'.
+    return `Act as a senior YouTube content strategist for our biblical documentary YouTube channel.
 Generate exactly 10 viral video title and theme ideas for a video about: '${tema}'.
 
-CRITICAL MANDATORY GUIDELINES & 4 EVALUATION PILLARS (ITEM 4):
-1. STRICT BIBLICAL FIDELITY (DO NOT CLAIM WHAT SCRIPTURE DOES NOT SAY):
+CRITICAL MANDATORY GUIDELINES & EVALUATION PILLARS:
+1. MANDATORY CONTENT PER IDEA (SCRIPTURE REFERENCE + CONCRETE DETAIL):
+   - Every single idea MUST explicitly include:
+     a) Primary Canonical Scripture Reference (e.g. Livro, Capítulo e Versículos).
+     b) Primary Concrete Tangible Detail (an exact number, measurement, specific ancient biblical object, artifact, or specific visual scene).
+   - Ideas lacking the primary scripture reference or the concrete tangible detail are STRICTLY FORBIDDEN and must not appear.
+2. STRICT BIBLICAL FIDELITY:
    - Every hook premise and title must be 100% faithful to what canonical Scripture actually states.
    - NEVER state or invent claims that the biblical text does not make (e.g. NEVER use "as foretold" unless explicitly documented in canonical Scripture).
-   - Restrict content strictly to the 66 canonical books of the Bible. Do NOT use extra-biblical theories, secular speculations, or apocryphal books (e.g. Book of Enoch).
-2. CONCRETE HOOK (CURIOSITY & TANGIBLE BIBLICAL DETAIL):
-   - Every idea must feature either a curious, gripping investigative question or a concrete, tangible biblical detail (e.g. dimensions, Og's iron bed, specific geographical locations, numbers, artifacts).
-   - Avoid vague theological abstractions.
-3. THUMBNAIL VISUAL POTENTIAL:
-   - Ideas must lend themselves to powerful, high-contrast visual scenes with dramatic scale, focal objects, and mystery (e.g. massive iron bed with human figure for scale, ancient shadows, monoliths).
+   - Restrict content strictly to the 66 canonical books of the Bible. Do NOT use extra-biblical theories, secular speculations, or apocryphal books.
+3. CONCRETE HOOK & THUMBNAIL VISUAL POTENTIAL:
+   - Center each idea on a curious, gripping question and a tangible biblical detail that lends itself to high-contrast imagery with dramatic scale (e.g. massive iron bed with human figure for scale, ancient monoliths).
 4. SAFE & SOLEMN REVERENT THEME:
    - Narrate with solemn historical reverence.
    - STRICTLY FORBIDDEN to evaluate, moralize, or justify the destruction or wiping out of peoples.
-5. STRICT LANGUAGE COMPLIANCE: All 10 titles, premises, and descriptions MUST be written 100% in ${lang.name}. Never output in any other language.
+5. STRICT LANGUAGE COMPLIANCE: All 10 titles, references, concrete details, and descriptions MUST be written 100% in ${lang.name}.
 6. ZERO FORBIDDEN CLICHÉS:
    - STRICTLY FORBIDDEN to use words such as: "profound", "pivotal", "delve", "dive deep", "dive into", "unpack", "meticulously", "shrouded in mystery", "debate", "stark", "fabric", "enigmatic", "fascinating", "journey through", "annals", "testament to", "sacred texts", "navigate", or equivalents in ${lang.name}.
 7. MANDATORY TITLE VARIETY & FORMATTING (HIGH CTR):
    - MAXIMUM OF 1 WORD IN CAPS LOCK per title (e.g., "${lang.titleHookSample}"). Never write an entire title in uppercase.
    - MAXIMUM OF 2 out of the 10 titles may use parentheses.
-   - All 10 titles MUST exhibit distinct grammatical structures (direct question, historical revelation, moment of crisis, factual paradox, chronological turning point, verse focus, provocative query, solemn narrative, curiosity parenthesis, punchy statement).
+   - All 10 titles MUST exhibit distinct grammatical structures.
 
 OUTPUT FORMAT:
-Provide the 10 ideas numbered 1 to 10 in ${lang.name}, with Title (max 1 word in CAPS, varied structure without repetitive parentheses) followed by a short 1-2 sentence hook premise.`;
+Provide the 10 ideas numbered 1 to 10 in ${lang.name}. Format for each idea:
+[Número]. [Título com no máx 1 palavra em MAIÚSCULAS]
+- Referência Bíblica Principal: [Livro X:Y]
+- Detalhe Concreto Principal: [Número, objeto físico ou cena específica]
+- Gancho / Premissa: [1 a 2 frases curtas instigantes]`;
   },
 
   generateScriptPrompt({ ideia, estiloRoteiro, tomVoz, tipoGancho, idioma, numItens = 9 }) {
@@ -5741,7 +5806,7 @@ STRUCTURE:
 - Strong conclusion and follow CTA.`;
     }
 
-    return `Act as a senior documentary scriptwriter and master storyteller for biblical YouTube channels following the proven formula of 'Explicador Bíblico'.
+    return `Act as a senior documentary scriptwriter and master storyteller for our biblical documentary channel.
 Create a complete narration script about: '${ideia}'.
 Tone of voice: '${tomVoz}'.
 Opening hook style: '${tipoGancho}'.
@@ -5816,8 +5881,9 @@ FINAL DIRECTIVES:
     const n = numItens || 9;
 
     if (isCatalogo) {
-      return `Act as a senior biblical documentary script architect for the channel 'Explicador Bíblico'.
+      return `Act as a senior biblical documentary script architect for our biblical documentary channel.
 Create a rigorous 7-section catalog outline for a catalog video in ${n} items on: '${ideia}'.
+Format: Numbered items in sequence from 1 to ${n}, each item anchored in its canonical Scripture passage and concrete biblical detail. Title pattern: "Cada [categoria] da Bíblia Explicado em N Minutos".
 Language: ${lang.code === 'pt' ? '100% em português do Brasil. Citações bíblicas pela Almeida. Nunca use palavras em inglês no roteiro.' : `100% in ${lang.name}.`}
 Tone of voice: '${tomVoz}'.
 
@@ -5881,7 +5947,7 @@ EVENTS: [Final synthesis]
 VERSES: [Summary passages]`;
     }
 
-    return `Act as a senior biblical documentary script architect for the channel 'Explicador Bíblico'.
+    return `Act as a senior biblical documentary script architect for our biblical documentary channel.
 Create a rigorous 7-section documentary outline dynamically built for a long-form video on: '${ideia}'.
 Tone of voice: '${tomVoz}'.
 Language: ${lang.code === 'pt' ? '100% em português do Brasil. Citações bíblicas pela Almeida. Nunca use palavras em inglês no roteiro.' : `100% in ${lang.name}.`}
@@ -6016,8 +6082,8 @@ VERSES: [List of specific scripture verses exclusive to Section 7]`;
 - For each item: name and identity; passage with book, chapter and verse; specific surprising detail; outcome; short closing sentence.`;
       }
 
-      return `Act as a senior documentary scriptwriter and master storyteller for biblical YouTube channels following the catalog formula of 'Explicador Bíblico'.
-Write SECTION ${secaoNumero} of ${totalSecoes} for the catalog script: '${ideia}'.
+      return `Act as a senior documentary scriptwriter and master storyteller for our biblical documentary channel.
+Write SECTION ${secaoNumero} of ${totalSecoes} for the catalog script in ${n} sequential items: '${ideia}'.
 Language: ${lang.code === 'pt' ? '100% em português do Brasil. Citações bíblicas pela Almeida. Nunca use palavras em inglês no roteiro.' : `100% in ${lang.name}.`}
 Tone of voice: '${tomVoz}'.
 
@@ -6041,7 +6107,7 @@ OUTPUT FORMAT:
 Output EXCLUSIVELY the narration paragraphs for Section ${secaoNumero}. No section headers, no role labels, no word counts.`;
     }
 
-    return `Act as a senior documentary scriptwriter and master storyteller for biblical YouTube channels following the proven formula of 'Explicador Bíblico'.
+    return `Act as a senior documentary scriptwriter and master storyteller for our biblical documentary channel.
 Write SECTION ${secaoNumero} of ${totalSecoes} for the long-form documentary script: '${ideia}'.
 Language: ${lang.code === 'pt' ? '100% em português do Brasil. Citações bíblicas pela Almeida. Nunca use palavras em inglês no roteiro.' : `100% in ${lang.name}.`}
 Tone of voice: '${tomVoz}'.
@@ -6132,7 +6198,7 @@ Just the pure, powerful spoken narration paragraphs.`;
   },
 
   generateMediaKeywordsPrompt({ roteiro }) {
-    return `Act as a senior stock footage researcher and b-roll director for cinematic biblical documentaries (Explicador Bíblico).
+    return `Act as a senior stock footage researcher and b-roll director for our biblical documentary channel.
 Based on the following script, generate a curated list of exactly 25 to 35 high-converting stock footage search keywords strictly in ENGLISH for Pixabay, Pexels, and Envato Elements.
 
 MANDATORY RULES:
@@ -6165,27 +6231,38 @@ Read the entire script below in strict chronological order and generate between 
 
 MANDATORY RULES FOR SCENE DESCRIPTIONS:
 1. QUANTITY & CHRONOLOGICAL COVERAGE: Generate exactly 30 to 40 prompts, walking through the entire narrative progression of the script without skipping any section.
-2. LANGUAGE: Every prompt description must be entirely in ENGLISH.
+2. LANGUAGE & NAMES IN ENGLISH: Every prompt description must be entirely in ENGLISH. Character names MUST always be in English (e.g., use "Simon Peter", NEVER "Simão Pedro"; "Hezekiah", NEVER "Ezequias"; "Moses", NEVER "Moisés"; "John", NEVER "João").
 3. HISTORICAL TERMINOLOGY (STRICT): Always use "Israelites" or "Israelite army". NEVER use "Israeli" or "Israeli army", which refers to the modern state.
-4. PROHIBITED OBJECTS & NO WRITTEN TEXT (STRICT):
+4. PROHIBITED OBJECTS, NO SPOKEN DIALOGUE & NO TEXT:
    - Absolutely FORBIDDEN to depict maps, stone tablets, plaques, signboards, opened scrolls, or any object bearing writing or inscriptions.
+   - NEVER include spoken dialogue, lines, or phrases in quotation marks in the prompts; describe ONLY the physical visual scene.
    - Absolutely NEVER request visible letters, words, titles, signs, banners, or typography in the image.
    - If depicting ancient stones, altars, or closed rolled scrolls, show only blank, weathered physical textures without any legible letters or carved writing.
 5. STRICT SCRIPT FIDELITY & NO FABRICATED SCENES:
    - Every scene MUST originate strictly from something explicitly stated in the script. Do NOT invent feasts, celebrations, or scenes not described in the script.
    - NEVER depict people worshiping, bowing before, or paying homage to physical objects.
-6. SCENE VARIETY & CONCRETE SUBJECTS:
+6. SCENE VARIETY & PACING:
    - Limit to a maximum of 2 similar landscapes across the entire video.
+   - MAXIMUM OF 2 CONSECUTIVE SCENES OF THE SAME TYPE (e.g., at most two consecutive scenes of two people conversing). Constantly alternate with concrete close-up objects, physical details, and environments from the script.
    - Strongly prioritize specific physical objects, characters, and concrete moments from the script over generic landscape vistas.
-7. ONE SINGLE FOCAL SUBJECT: Each description must have exactly ONE clear main subject/focal point. Keep generous empty parchment space around it; avoid crowded or cluttered compositions.
-8. CONCRETE & TANGIBLE DETAILS FROM THE SCRIPT:
+7. BIBLICALLY COHERENT TIME OF DAY:
+   - Lighting and time of day MUST be strictly coherent with the canonical biblical account (e.g. early morning dawn at the Sea of Galilee for John 21).
+8. ACCURATE GUARDS & SOLDIERS:
+   - In the high priest's courtyard and before the Sanhedrin, depict Jewish Temple guards in linen tunics with staves/spears (NO Roman armor, NO Roman helmets).
+   - Depict Roman soldiers ONLY where canonical Scripture explicitly indicates Roman jurisdiction (Pontius Pilate's praetorium, the crucifixion at Golgotha, Roman prison cohorts).
+9. MANDATORY FIXED DESCRIPTION FOR JESUS:
+   - Whenever Jesus appears in a scene, you MUST use this EXACT visual description:
+     "Jesus as a first-century Jewish man with shoulder-length dark brown hair, short beard, calm and kind expression, cream linen tunic with a deep red mantle, subtle soft golden halo"
+10. ONE SINGLE FOCAL SUBJECT: Each description must have exactly ONE clear main subject/focal point. Keep generous empty parchment space around it; avoid crowded or cluttered compositions.
+11. CONCRETE & TANGIBLE DETAILS FROM THE SCRIPT:
    - Bring concrete, physical and visual details directly from the script: exact measurements, specific ancient materials (e.g., acacia wood, weathered bronze, rough limestone, beaten gold, woven linen), and exact quantities.
    - SCALE COMPARISON: Whenever something large or massive is depicted (giants, colossal walls, large structures, oversized objects), ALWAYS include a size comparison with a normal-sized human being standing nearby to clearly convey the scale. When a giant is depicted, show him side by side with normal-sized people at the same distance from the camera, about twice their height.
-9. NO BLOOD OR FALLEN CORPSES (AVOID SAFETY FILTER REFUSAL):
-   - To prevent AI image generators from triggering safety filters, NEVER depict blood, gore, pools of blood, or fallen dead bodies.
+12. ABSOLUTELY NO CORPSES OR DEAD BODIES:
+   - NEVER depict fallen corpses, dead bodies, blood, or gore.
+   - In scenes depicting deaths or divine judgments (e.g. Ananias and Sapphira, executions, sudden judgments), depict EITHER the tense dramatic moment immediately before the event, OR the psychological reaction of onlookers (terrified faces, people recoiling in shock, hands raised in awe) — NEVER the fallen body.
    - Convey the aftermath of battles through abandoned ancient weapons stuck in the ground, ruined stone ramparts, charred debris, and distant smoke.
-10. NO MIDJOURNEY SYNTAX: Do NOT use '--ar 16:9'.
-11. MANDATORY FIXED VISUAL STYLE BLOCK AT THE END OF EVERY PROMPT:
+13. NO MIDJOURNEY SYNTAX: Do NOT use '--ar 16:9'.
+14. MANDATORY FIXED VISUAL STYLE BLOCK AT THE END OF EVERY PROMPT:
    Every single prompt MUST conclude with this EXACT fixed visual style block:
    ", ${fixedStyleBlock}"
 
@@ -6205,12 +6282,12 @@ Prompt [N]: [Concrete scene description in English with single focal subject, ta
     const thumbStyleBlock = ', cinematic lighting, chiaroscuro atmosphere, deep solemn shadows, historical biblical realism, 8k resolution, photorealistic cinematic composition, 16:9 widescreen, no text, no letters, no words';
 
     if (isGrade) {
-      return `Act as a senior YouTube thumbnail designer for biblical catalog videos ('Explicador Bíblico').
-Create a high-converting 'Grid of Illustrations with Captions' (Grade de ilustrações com legendas) thumbnail concept for the catalog video: '${tema}'.
+      return `Act as a senior YouTube thumbnail designer for our biblical documentary channel.
+Create a high-converting 'Grid of Illustrations with Captions' (Grade de ilustrações com legendas: miniatura em grade com um card por item) thumbnail concept for the catalog video: '${tema}'.
 
 MANDATORY RULES:
 1. IMAGE SPECIFICATION (16:9 SINGLE IMAGE GRID):
-   - A single 16:9 widescreen image composed of a balanced 2-row grid containing ${n} distinct panels/frames.
+   - A single 16:9 widescreen image composed of a balanced 2-row grid containing exactly ${n} distinct panels/cards, one card per item.
    - Each panel contains a clean, simple, consistent-style biblical illustration representing one of the ${n} items.
    - Warm beige / parchment background (#F5EBE0 tone) unifying all panels.
    - Historical minimalist iconographic illustration style.
@@ -6237,7 +6314,7 @@ Lista de Legendas (Overlay Captions for Editor):
 [[FIM]]`;
     }
 
-    return `Act as a senior YouTube thumbnail designer for biblical dark channels following the proven high-CTR formula of 'Explicador Bíblico'.
+    return `Act as a senior YouTube thumbnail designer for our biblical documentary channel.
 Generate 3 distinct thumbnail concepts (Options A, B, and C) in ENGLISH for an A/B/C test for a video entitled: '${tema}'.
 
 User Preferences:
@@ -6281,8 +6358,8 @@ Texto da Thumbnail (Overlay Text): (1-3 specific words with number/name, complem
       const duracaoMin = duracaoEstimada || 15;
       const baseTitleInstruction = tituloUrl ? `\n- PREFERRED BASE TITLE from URL (?titulo=): '${tituloUrl}'. Prioritize adapting and optimizing this base title.` : '';
 
-      return `Act as a senior YouTube SEO and title strategist following the catalog formula of 'Explicador Bíblico'.
-Generate an optimized YouTube SEO package for a catalog video about '${tema}'.${baseTitleInstruction}
+      return `Act as a senior YouTube SEO and title strategist for our biblical documentary channel.
+Generate an optimized YouTube SEO package for a catalog video in sequential items about '${tema}'. Title pattern must follow: "Cada [categoria] da Bíblia Explicado em N Minutos" (in English: "Every [Category] in the Bible Explained in ${duracaoMin} Minutes").${baseTitleInstruction}
 
 MANDATORY OUTPUT GUIDELINES FOR CATALOG FORMAT:
 1. 3 HIGH-CTR TITLE OPTIONS IN ENGLISH:
@@ -6305,7 +6382,7 @@ OUTPUT FORMAT:
 - HASHTAGS`;
     }
 
-    return `Act as a senior YouTube SEO and title strategist following the proven formula of the channel 'Explicador Bíblico'.
+    return `Act as a senior YouTube SEO and title strategist for our biblical documentary channel.
 Generate an optimized YouTube SEO package for a biblical video about '${tema}' based on the following script/summary:
 ${resumo || tema}
 
@@ -7397,8 +7474,8 @@ document.addEventListener('DOMContentLoaded', () => {
       textoFinalIdeias = ideiasLimpas;
       AutoSave.save();
 
-      // Avaliador de Ideias com IA
-      await avaliarIdeiasComIA(ideiasLimpas, tema, modeloIdeias);
+      // Avaliador de Ideias com IA usando o Modelo para Roteiro (Item 10)
+      await avaliarIdeiasComIA(ideiasLimpas, tema, OpenRouterAPI.getModelRoteiro());
     }
 
     if (typeof renderizarBotoesSelecaoIdeias === 'function' && textoFinalIdeias) {
@@ -8727,7 +8804,24 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
 
     try {
       if (hasApiKey) {
-        const aiResponse = await OpenRouterAPI.generateContent(promptText, modeloIdeias);
+        let aiResponse = await OpenRouterAPI.generateContent(promptText, modeloIdeias);
+
+        // Verificação contra "Explicador Bíblico" e variações em miniaturas (Item 2)
+        if (/\bexplicador(?:\s*b[ií]blico)?\b/i.test(aiResponse)) {
+          console.log('[Thumbnails] "Explicador Bíblico" detectado na thumbnail. Regenerando com IA...');
+          try {
+            const promptFixThumb = `Rewrite the following thumbnail concepts to completely remove any reference to "Explicador Bíblico" or "Explicador":
+"""
+${aiResponse}
+"""
+Output exclusively the corrected thumbnail concepts with identical markers [[OPCAO_A]], [[OPCAO_B]], [[OPCAO_C]].`;
+            const fixed = await OpenRouterAPI.generateContent(promptFixThumb, modeloIdeias);
+            if (fixed && fixed.trim()) aiResponse = fixed.trim();
+          } catch (eThumb) {
+            console.warn('[Thumbnails] Erro ao regenerar thumbnail:', eThumb);
+          }
+        }
+
         const parsed = parseThumbnailResponse(aiResponse);
 
         document.getElementById('output-thumb-a').value = parsed.a;
@@ -9798,7 +9892,7 @@ Desenvolvimento: A soberania divina cumpre cada detalhe profético anunciado pel
 
       UI.setButtonLoading(btnRegenerarCatalogo, true);
       try {
-        const promptFix = `Act as an expert biblical script editor for 'Explicador Bíblico'.
+        const promptFix = `Act as an expert biblical script editor for our biblical documentary channel.
 The following catalog script has structural issues that violate the channel format:
 
 FAILED RULES:
