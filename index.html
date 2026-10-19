@@ -865,6 +865,42 @@ textarea.h-180 {
   border-color: rgba(99, 102, 241, 0.5);
   background: rgba(30, 41, 59, 0.8);
 }
+.ideia-card.selecionada,
+.ideia-card.ideia-card-escolhida {
+  border: 2px solid #d4af37 !important;
+  box-shadow: 0 0 14px rgba(212, 175, 55, 0.4) !important;
+  background: rgba(212, 175, 55, 0.1) !important;
+}
+.ideia-card.selecionada:hover,
+.ideia-card.ideia-card-escolhida:hover {
+  border-color: #d4af37 !important;
+  background: rgba(212, 175, 55, 0.16) !important;
+}
+.ideia-card.ideia-card-erro {
+  border: 1px solid #ef4444 !important;
+  background: rgba(239, 68, 68, 0.08) !important;
+}
+.badge-ideia-escolhida {
+  background: linear-gradient(135deg, #d4af37, #f59e0b);
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 8px;
+  vertical-align: middle;
+  letter-spacing: 0.02em;
+}
+.field-hint {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin: 3px 0 6px 0;
+  font-weight: 400;
+  line-height: 1.35;
+}
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -1338,9 +1374,9 @@ textarea.h-180 {
             <ol>
               <li><strong>Padrão do Canal:</strong> Clique no botão <em>"Preencher com o padrão do canal"</em> para carregar instantaneamente as opções ideais: Idioma = <code>Português (Brasil)</code>, Estilo = <code>YouTube Longo (18-20 minutos)</code>, Tom = <code>Dramático e Impactante</code>, Gancho = <code>Citação Impactante</code> e Tema = <code>-- Personalizável --</code>.</li>
               <li><strong>Tema do Vídeo:</strong> No campo "Tema Personalizado", digite o tema em português com as passagens bíblicas. <em>Exemplo pronto para copiar:</em> <code>Ogue, rei de Basã: o último dos gigantes (Números 21:33-35, Deuteronômio 3:1-11)</code>.</li>
-              <li><strong>Gerar e Avaliar Ideias:</strong> Clique no botão <em>"Gerar Ideias de Vídeo com IA"</em>. O sistema gera 10 títulos com estruturas variadas, valida se há palavras proibidas e exibe o <strong>Avaliador da IA</strong> indicando a ideia recomendada e qual evitar.</li>
-              <li><strong>Usar a Ideia:</strong> Clique em <em>"Usar esta ideia"</em> ao lado da ideia escolhida. Ela vai para o campo <em>"Ideia de Vídeo Escolhida"</em> (você ainda pode editar o texto).</li>
-              <li><strong>Gerar Roteiro Completo:</strong> Clique em <em>"Gerar Roteiro Completo com IA"</em> e aguarde a geração das 7 seções com auditoria e validação bíblica automática.</li>
+              <li><strong>Gerar e Avaliar Ideias:</strong> Ao clicar em <em>"Gerar Ideias de Vídeo com IA"</em>, a ideia anterior e o destaque são limpos automaticamente. Uma faixa de progresso mostra cada etapa em tempo real: <code>⏳ Gerando ideias... (1/3)</code>, <code>⏳ Avaliando fidelidade bíblica... (2/3)</code> e <code>⏳ Substituindo ideias com erro — tentativa X de 2... (3/3)</code>. Enquanto a ferramenta trabalha, os botões de escolha e de roteiro ficam desativados. Ao terminar, uma faixa verde confirma: <code>✅ Pronto! Ideias avaliadas e corrigidas — pode escolher</code>.</li>
+              <li><strong>Usar a Ideia:</strong> Clique em <em>"Usar esta ideia"</em> no card desejado. O card fica destacado com borda dourada e o selo <strong>✓ Ideia escolhida</strong> (permanecendo destacado mesmo após recarregar a página), e o texto é enviado para o campo <em>"Ideia de Vídeo Escolhida"</em> (que continua editável). Se alguma ideia apresentar o aviso vermelho <em>"⚠ Possível erro bíblico — evite esta ideia"</em>, você pode ignorá-la ou clicar em <strong>↻ Gerar outra no lugar</strong>.</li>
+              <li><strong>Gerar Roteiro Completo:</strong> Clique em <em>"Gerar Roteiro Completo com IA"</em> e acompanhe a geração e as revisões automáticas. Ao final de todas as auditorias e revisões, uma faixa verde confirma <code>✅ Roteiro pronto</code>.</li>
             </ol>
             <div class="step-guide-alert">
               <span>⚠️ <strong>Lembrete:</strong> Ao iniciar um novo vídeo, gere de novo antes de copiar, para não usar o resultado de outro vídeo.</span>
@@ -1383,6 +1419,7 @@ textarea.h-180 {
               Tema do Vídeo
               <span class="tooltip-wrapper" data-tooltip="Escolha um tema pré-definido ou digite um novo para o seu vídeo.">?</span>
             </label>
+            <p class="field-hint">Selecione um tema pronto da lista ou escolha Personalizável para digitar o seu próprio tema bíblico.</p>
             <select id="select-tema" class="form-control">
               <option value="Fins Trágicos Bíblicos">Fins Trágicos Bíblicos</option>
               <option value="Versículos Mal Interpretados">Versículos Mal Interpretados</option>
@@ -1407,6 +1444,7 @@ textarea.h-180 {
               Idioma do Conteúdo
               <span class="tooltip-wrapper" data-tooltip="Selecione o idioma em que o conteúdo será gerado.">?</span>
             </label>
+            <p class="field-hint">Escolha o idioma em que todo o roteiro, títulos e ideias serão gerados pela inteligência artificial.</p>
             <select id="select-idioma" class="form-control">
               <option value="Português (Brasil)" selected>Português (Brasil)</option>
               <option value="Inglês">Inglês</option>
@@ -1437,6 +1475,7 @@ textarea.h-180 {
               Estilo de Roteiro
               <span class="tooltip-wrapper" data-tooltip="Defina a duração aproximada do roteiro para adaptar a profundidade do conteúdo.">?</span>
             </label>
+            <p class="field-hint">Defina o formato e a duração do vídeo, como YouTube Longo (18-20 min), Médio ou Shorts.</p>
             <select id="select-estilo-roteiro" class="form-control">
               <option value="YouTube Longo (18-20 minutos)" selected>YouTube Longo (18-20 minutos)</option>
               <option value="Catálogo em N itens (14-17 min)">Catálogo em N itens (14-17 min)</option>
@@ -1465,6 +1504,7 @@ textarea.h-180 {
               Tom de Voz da Narrativa
               <span class="tooltip-wrapper" data-tooltip="Escolha o tom que a IA deve usar ao criar a narrativa.">?</span>
             </label>
+            <p class="field-hint">Escolha a atmosfera da locução, como Dramático e Impactante ou Investigativo e Curioso.</p>
             <select id="select-tom" class="form-control">
               <option value="Didático e Sério">Didático e Sério</option>
               <option value="Investigativo e Curioso" selected>Investigativo e Curioso</option>
@@ -1483,6 +1523,7 @@ textarea.h-180 {
               Tipo de Gancho Inicial (Hook 0-15s)
               <span class="tooltip-wrapper" data-tooltip="Selecione o tipo de gancho para prender a atenção do espectador nos primeiros segundos.">?</span>
             </label>
+            <p class="field-hint">Defina a estratégia dos primeiros 15 segundos para prender a atenção imediata do público.</p>
             <select id="select-gancho" class="form-control">
               <option value="Pergunta Intrigante" selected>Pergunta Intrigante ("Você sabia que...?")</option>
               <option value="Afirmação Provocativa">Afirmação Provocativa ("A maioria das pessoas entendeu isso errado")</option>
@@ -1519,6 +1560,12 @@ textarea.h-180 {
               Copiar Conteúdo
             </button>
           </div>
+          <p class="field-hint" style="margin-bottom: 8px;">Lista de 10 ideias geradas: leia os títulos e clique em "Usar esta ideia" no card da sua preferência.</p>
+          <!-- Faixa de Progresso das Ideias (Item 5) -->
+          <div id="banner-progresso-ideias" class="hidden" style="border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.9rem; font-weight: 600; display: flex; align-items: center; gap: 10px; transition: all 0.3s ease;">
+            <span id="icone-progresso-ideias"></span>
+            <span id="texto-progresso-ideias"></span>
+          </div>
           <textarea id="output-prompt-ideias" class="form-control prompt-output" readonly placeholder="As 10 ideias de vídeos geradas pela IA aparecerão aqui..."></textarea>
           
           <!-- Lista de 10 Ideias com Botão "Usar esta ideia" (Item B) -->
@@ -1536,12 +1583,13 @@ textarea.h-180 {
 
         <!-- Card Avaliador de Ideias (Item 4) -->
         <div id="card-avaliador-ideias" class="hidden" style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 8px; padding: 14px 18px; margin-top: 14px;">
-          <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #fbbf24; margin-bottom: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #fbbf24; margin-bottom: 4px;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
             </svg>
             <span>⚡ Avaliação Estratégica da IA</span>
           </div>
+          <p class="field-hint" style="color: #fde68a; margin-bottom: 8px;">Análise das ideias: veja as 3 melhores com nota e motivos, e quais evitar por riscos de clique ou fidelidade.</p>
           <div id="conteudo-avaliador-ideias" style="line-height: 1.6; color: #f8fafc; font-size: 0.92rem; white-space: pre-wrap;"></div>
         </div>
 
@@ -1558,6 +1606,7 @@ textarea.h-180 {
             Ideia de Vídeo Escolhida
             <span class="tooltip-wrapper" data-tooltip="Cole a ideia de vídeo que você selecionou para que a IA possa criar o roteiro completo.">?</span>
           </label>
+          <p class="field-hint">Ideia que será roteirizada: preenchida ao clicar em "Usar esta ideia", ou digitada livremente por você.</p>
           <input type="text" id="input-ideia-escolhida" class="form-control" placeholder="Cole aqui a ideia de vídeo que você mais gostou das geradas acima.">
         </div>
 
@@ -1662,6 +1711,12 @@ textarea.h-180 {
               Copiar Roteiro
             </button>
           </div>
+          <p class="field-hint" style="margin-bottom: 8px;">Roteiro Completo: texto com marcações, referências e passagens bíblicas para você revisar.</p>
+          <!-- Faixa de Conclusão / Progresso do Roteiro (Item 5) -->
+          <div id="banner-progresso-roteiro-status" class="hidden" style="border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.9rem; font-weight: 600; display: flex; align-items: center; gap: 10px; transition: all 0.3s ease;">
+            <span id="icone-progresso-roteiro-status"></span>
+            <span id="texto-progresso-roteiro-status"></span>
+          </div>
           <textarea id="output-prompt-roteiro" class="form-control prompt-output" readonly placeholder="O roteiro completo gerado pela IA aparecerá aqui..."></textarea>
         </div>
 
@@ -1677,6 +1732,7 @@ textarea.h-180 {
               Copiar Narração Limpa
             </button>
           </div>
+          <p class="field-hint" style="margin-bottom: 8px;">Narração Limpa: texto pronto para gerar o áudio, sem rótulos, sem contagens e sem marcações.</p>
           <textarea id="output-roteiro-limpo" class="form-control prompt-output" readonly placeholder="A versão limpa (sem [Hook], sem 'Ponto 1', sem rótulos e sem contagens) aparecerá aqui automaticamente..."></textarea>
         </div>
       </section>
@@ -1716,13 +1772,14 @@ textarea.h-180 {
             Roteiro Gerado
             <span class="tooltip-wrapper" data-tooltip="O roteiro do seu vídeo será usado para gerar as palavras-chave e prompts visuais.">?</span>
           </label>
+          <p class="field-hint">Texto base do roteiro: sincronizado da Etapa 1 para extração de cenas, objetos e termos de busca.</p>
           <textarea id="textarea-roteiro-gerado" class="form-control h-180" placeholder="Cole aqui o roteiro completo ou ele será preenchido automaticamente ao gerar na Seção 1."></textarea>
         </div>
 
         <div class="button-group">
           <button id="btn-gerar-prompt-keywords" class="btn btn-secondary">
             <span class="spinner hidden"></span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="18" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8"></circle>
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
@@ -1752,6 +1809,7 @@ textarea.h-180 {
               Copiar Keywords
             </button>
           </div>
+          <p class="field-hint" style="margin-bottom: 8px;">Palavras-chave em inglês: termos visuais prontos para copiar e colar em bancos de vídeo e fotos.</p>
           <textarea id="output-prompt-keywords" class="form-control prompt-output" readonly placeholder="A lista de keywords de mídia gerada pela IA aparecerá aqui..."></textarea>
         </div>
 
@@ -1767,6 +1825,7 @@ textarea.h-180 {
               Copiar Prompts Visuais
             </button>
           </div>
+          <p class="field-hint" style="margin-bottom: 8px;">Prompts para imagens: descrições no estilo manuscrito iluminado para colar em ferramentas de IA visual.</p>
           <textarea id="output-prompt-imagens-ia" class="form-control prompt-output" readonly placeholder="Os prompts em inglês para IA de criação visual aparecerão aqui..."></textarea>
         </div>
       </section>
@@ -1809,6 +1868,7 @@ textarea.h-180 {
               Tema do Vídeo para Thumbnail
               <span class="tooltip-wrapper" data-tooltip="O tema principal do seu vídeo, usado para gerar as thumbnails.">?</span>
             </label>
+            <p class="field-hint">Título central do vídeo: carregado da ideia escolhida para orientar o conceito visual das miniaturas.</p>
             <input type="text" id="input-tema-thumb" class="form-control" placeholder="O tema do vídeo será preenchido automaticamente.">
           </div>
 
@@ -1818,6 +1878,7 @@ textarea.h-180 {
               Estilo da Thumbnail
               <span class="tooltip-wrapper" data-tooltip="Escolha o estilo visual predominante para a thumbnail.">?</span>
             </label>
+            <p class="field-hint">Formato estético da miniatura, como Impacto Visual Dramático ou Grade de ilustrações.</p>
             <select id="select-estilo-thumb" class="form-control">
               <option value="Impacto Visual Dramático" selected>Impacto Visual Dramático</option>
               <option value="Grade de ilustrações com legendas">Grade de ilustrações com legendas</option>
@@ -1851,6 +1912,7 @@ textarea.h-180 {
               Cores Predominantes
               <span class="tooltip-wrapper" data-tooltip="Defina a paleta de cores para a thumbnail.">?</span>
             </label>
+            <p class="field-hint">Paleta de iluminação e tons para destacar o card no feed do YouTube e elevar a taxa de clique.</p>
             <select id="select-cores-thumb" class="form-control">
               <option value="Sóbrias e Dramáticas (tons escuros, sépia)" selected>Sóbrias e Dramáticas (tons escuros, sépia)</option>
               <option value="Contrastes Fortes (vermelho, amarelo em fundo escuro)">Contrastes Fortes (vermelho, amarelo em fundo escuro)</option>
@@ -1868,6 +1930,7 @@ textarea.h-180 {
               Elementos Visuais Chave
               <span class="tooltip-wrapper" data-tooltip="Selecione os elementos visuais que devem se destacar na thumbnail.">?</span>
             </label>
+            <p class="field-hint">Foco central da imagem, combinando contraste luminoso, escala humana e elementos bíblicos tangíveis.</p>
             <select id="select-elementos-thumb" class="form-control">
               <option value="Texto Grande e Impactante" selected>Texto Grande e Impactante</option>
               <option value="Ilustração Central Única">Ilustração Central Única</option>
@@ -1907,6 +1970,7 @@ textarea.h-180 {
                 Copiar
               </button>
             </div>
+            <p class="field-hint" style="margin-bottom: 6px;">Conceito A: prompt focado em texto misterioso e detalhe concreto do roteiro para teste A/B.</p>
             <textarea id="output-thumb-a" class="form-control prompt-output" readonly placeholder="Prompt Thumbnail A gerado pela IA aparecerá aqui..."></textarea>
           </div>
 
@@ -1922,6 +1986,7 @@ textarea.h-180 {
                 Copiar
               </button>
             </div>
+            <p class="field-hint" style="margin-bottom: 6px;">Conceito B: prompt focado em atmosfera simbólica e alto contraste dramático para teste A/B.</p>
             <textarea id="output-thumb-b" class="form-control prompt-output" readonly placeholder="Prompt Thumbnail B gerado pela IA aparecerá aqui..."></textarea>
           </div>
 
@@ -1937,18 +2002,20 @@ textarea.h-180 {
                 Copiar
               </button>
             </div>
+            <p class="field-hint" style="margin-bottom: 6px;">Conceito C: prompt focado em choque, revelação e escala épica para teste A/B.</p>
             <textarea id="output-thumb-c" class="form-control prompt-output" readonly placeholder="Prompt Thumbnail C gerado pela IA aparecerá aqui..."></textarea>
           </div>
         </div>
 
         <!-- Card Avaliador de Thumbnails (Item 7) -->
         <div id="card-avaliador-thumb" class="hidden" style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 8px; padding: 14px 18px; margin-top: 14px;">
-          <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #fbbf24; margin-bottom: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #fbbf24; margin-bottom: 4px;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
             </svg>
             <span>⚡ Recomendação de Thumbnail da IA</span>
           </div>
+          <p class="field-hint" style="color: #fde68a; margin-bottom: 8px;">Veredito da IA: indicação da melhor miniatura entre A, B e C com justificativa estratégica de CTR.</p>
           <div id="conteudo-avaliador-thumb" style="line-height: 1.6; color: #f8fafc; font-size: 0.92rem; white-space: pre-wrap;"></div>
         </div>
       </section>
@@ -1990,6 +2057,7 @@ textarea.h-180 {
               Tema do Vídeo para SEO
               <span class="tooltip-wrapper" data-tooltip="O tema principal do seu vídeo, usado para otimização de SEO.">?</span>
             </label>
+            <p class="field-hint">Assunto principal: sincronizado da Etapa 1 para gerar títulos otimizados para o algoritmo.</p>
             <input type="text" id="input-tema-seo" class="form-control" placeholder="O tema do vídeo será preenchido automaticamente.">
           </div>
 
@@ -1999,6 +2067,7 @@ textarea.h-180 {
               Roteiro Resumido / Palavras-Chave Principais
               <span class="tooltip-wrapper" data-tooltip="Forneça um resumo ou palavras-chave para ajudar a IA a gerar um SEO mais preciso.">?</span>
             </label>
+            <p class="field-hint">Resumo do conteúdo: base para a IA redigir a descrição completa e selecionar as tags mais buscadas.</p>
             <textarea id="textarea-resumo-seo" class="form-control" placeholder="Cole um resumo do roteiro ou as palavras-chave mais importantes aqui."></textarea>
           </div>
         </div>
@@ -2026,17 +2095,19 @@ textarea.h-180 {
               Copiar SEO
             </button>
           </div>
+          <p class="field-hint" style="margin-bottom: 8px;">Pacote de SEO: títulos ranqueáveis, descrição completa do vídeo, tags e hashtags para copiar para o YouTube.</p>
           <textarea id="output-prompt-seo" class="form-control prompt-output" readonly placeholder="Os títulos, descrição completa, tags e hashtags gerados pela IA aparecerão aqui..."></textarea>
         </div>
 
         <!-- Card Avaliador de SEO (Item 8) -->
         <div id="card-avaliador-seo" class="hidden" style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 8px; padding: 14px 18px; margin-top: 14px;">
-          <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #fbbf24; margin-bottom: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #fbbf24; margin-bottom: 4px;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
             </svg>
             <span>⚡ Recomendação de Título da IA</span>
           </div>
+          <p class="field-hint" style="color: #fde68a; margin-bottom: 8px;">Avaliação de títulos: a IA indica qual das 3 opções de título tem maior potencial de cliques e retenção.</p>
           <div id="conteudo-avaliador-seo" style="line-height: 1.6; color: #f8fafc; font-size: 0.92rem; white-space: pre-wrap;"></div>
         </div>
 
@@ -2060,9 +2131,12 @@ textarea.h-180 {
         </div>
 
         <div id="container-pacote-publicacao" class="hidden" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(99, 102, 241, 0.4); border-radius: 8px; padding: 18px 20px; margin-top: 14px;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
-            <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #a5b4fc; font-size: 1.05rem;">
-              <span>🚀 Pacote de Lançamento Gerado</span>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #a5b4fc; font-size: 1.05rem;">
+                <span>🚀 Pacote de Lançamento Gerado</span>
+              </div>
+              <p class="field-hint" style="margin-top: 2px;">Arquivo consolidado: todos os títulos, descrição formatada com timestamps e tags para download em 1 clique.</p>
             </div>
             <div style="display: flex; gap: 10px;">
               <button id="btn-copiar-pacote-publicacao" class="btn btn-secondary btn-sm" style="padding: 6px 12px; font-size: 0.82rem;">
@@ -2117,6 +2191,7 @@ textarea.h-180 {
               Narrador / Voz (OpenAI TTS)
               <span class="tooltip-wrapper" data-tooltip="Selecione a voz neural da OpenAI para narrar seu roteiro.">?</span>
             </label>
+            <p class="field-hint">Escolha o timbre neural da narração; recomendamos Onyx para documentários bíblicos solenes.</p>
             <select id="select-voz-audio" class="form-control">
               <option value="onyx" selected>Onyx (Grave e Sério)</option>
               <option value="echo">Echo (Neutro e Claro)</option>
@@ -2146,6 +2221,7 @@ textarea.h-180 {
               Texto da Narração Limpa (Exclusivo para Síntese de Voz / TTS)
               <span class="tooltip-wrapper" data-tooltip="Este é o texto exato que será falado pela voz neural. Ele é automaticamente higienizado da Etapa 1, sem marcações [Hook], sem 'Ponto 1', sem rótulos e sem contagens.">?</span>
             </label>
+            <p class="field-hint">Texto que será lido pela voz neural: sem marcadores ou colchetes, pronto para síntese direta.</p>
             <textarea id="textarea-narracao-limpa-audio" class="form-control h-180" placeholder="A versão limpa para locução (sem rótulos ou marcações) gerada na Etapa 1 aparecerá aqui para ser narrada..."></textarea>
           </div>
         </div>
@@ -2442,11 +2518,11 @@ textarea.h-180 {
               </div>
               <div class="guia-detalhe-item">
                 <span class="guia-tag-acao tag-oque">O que Escolher:</span>
-                <span>Aguarde a IA gerar as alternativas com ganchos e ângulos de curiosidade.</span>
+                <span>Ao clicar, a ideia anterior e o destaque são limpos automaticamente. Acompanhe a faixa de progresso no topo: <code>⏳ Gerando ideias... (1/3)</code>, <code>⏳ Avaliando fidelidade bíblica... (2/3)</code> e <code>⏳ Substituindo ideias com erro — tentativa X de 2... (3/3)</code>. Durante esse tempo, os botões ficam temporariamente desativados.</span>
               </div>
               <div class="guia-detalhe-item">
                 <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
-                <span>Aparecem <strong>10 ideias</strong> em cards individuais e um quadro com a <strong>Recomendação de Ideia da IA</strong> apontando a melhor opção.</span>
+                <span>Uma faixa verde <strong>✅ Pronto! Ideias avaliadas e corrigidas — pode escolher</strong> é exibida, com os cards das 10 ideias liberados e a <strong>Avaliação Estratégica da IA</strong> formatada com títulos e notas (sem códigos ou markdown).</span>
               </div>
             </div>
           </div>
@@ -2464,11 +2540,11 @@ textarea.h-180 {
               </div>
               <div class="guia-detalhe-item">
                 <span class="guia-tag-acao tag-oque">O que Escolher:</span>
-                <span>Clique para preencher automaticamente. O campo continua 100% editável se você quiser fazer pequenos ajustes.</span>
+                <span>Clique para selecionar. O card da ideia fica destacado com borda dourada e o selo <strong>✓ Ideia escolhida</strong> (permanecendo destacado mesmo após recarregar a página). Se você escolher outra ideia, o destaque passa para a nova. Caso alguma ideia ainda apresente o aviso vermelho <em>"⚠ Possível erro bíblico — evite esta ideia"</em>, é só não usá-la ou clicar no botão <strong>↻ Gerar outra no lugar</strong>.</span>
               </div>
               <div class="guia-detalhe-item">
                 <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
-                <span>O texto limpo da ideia (sem asteriscos ou números) é transferido para o campo <strong>Ideia de Vídeo Escolhida</strong>.</span>
+                <span>O texto da ideia é transferido para o campo <strong>Ideia de Vídeo Escolhida</strong>, permanecendo totalmente editável.</span>
               </div>
             </div>
           </div>
@@ -2486,11 +2562,11 @@ textarea.h-180 {
               </div>
               <div class="guia-detalhe-item">
                 <span class="guia-tag-acao tag-oque">O que Escolher:</span>
-                <span>Aguarde o processamento. Se for roteiro Longo, acompanhe a barra de progresso avançar até o <em>Passo 7/7</em>.</span>
+                <span>Aguarde o processamento, a validação bíblica e as revisões automáticas. Se for roteiro Longo, acompanhe a barra de progresso avançar até o <em>Passo 7/7</em>.</span>
               </div>
               <div class="guia-detalhe-item">
                 <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
-                <span>O roteiro gerado em duas versões paralelas: <strong>Roteiro Completo</strong> e <strong>Narração Limpa</strong>.</span>
+                <span>Ao final de todas as auditorias e revisões, uma faixa verde confirma <strong>✅ Roteiro pronto</strong> e o roteiro aparece em duas versões: <strong>Roteiro Completo</strong> e <strong>Narração Limpa</strong>.</span>
               </div>
             </div>
           </div>
@@ -3451,29 +3527,284 @@ function filtrarTermosProibidosNasIdeias(texto) {
  * Avaliador de Ideias via IA (Item 4)
  * Mostra na tela:
  * ⭐ Recomendada: nº X, porque…
- * ⚠️ Evite: nº Y, porque…
+/**
+ * Estado global de ideias com erro bíblico persistente e ideia escolhida
+ */
+window._ideiasComErroBiblico = new Set();
+window._numeroIdeiaEscolhida = null;
+
+/**
+ * 5) Avisos de progresso e bloqueio dos botões
+ */
+function atualizarProgressoIdeias(etapa, texto, tipo = 'info') {
+  const banner = document.getElementById('banner-progresso-ideias');
+  if (!banner) return;
+  if (!texto) {
+    banner.classList.add('hidden');
+    banner.innerHTML = '';
+    return;
+  }
+  banner.classList.remove('hidden');
+  if (tipo === 'success') {
+    banner.style.background = 'rgba(16, 185, 129, 0.15)';
+    banner.style.borderColor = '#10b981';
+    banner.style.color = '#a7f3d0';
+    banner.innerHTML = `<span style="font-size: 1.15rem; margin-right: 6px;">✅</span> <strong>${texto}</strong>`;
+  } else {
+    banner.style.background = 'rgba(99, 102, 241, 0.15)';
+    banner.style.borderColor = '#6366f1';
+    banner.style.color = '#c7d2fe';
+    banner.innerHTML = `<span class="spinner-sm" style="display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(199, 210, 254, 0.3); border-top-color: #c7d2fe; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 8px; vertical-align: -2px;"></span><strong>${texto}</strong>`;
+  }
+}
+window.atualizarProgressoIdeias = atualizarProgressoIdeias;
+
+function setBotoesIdeiasBloqueados(bloqueado) {
+  document.querySelectorAll('.btn-usar-esta-ideia').forEach(btn => {
+    btn.disabled = bloqueado;
+    if (bloqueado) {
+      btn.style.opacity = '0.5';
+      btn.style.cursor = 'not-allowed';
+    } else {
+      btn.style.opacity = '1';
+      btn.style.cursor = 'pointer';
+    }
+  });
+  const btnRoteiro = document.getElementById('btn-gerar-prompt-roteiro');
+  if (btnRoteiro) {
+    btnRoteiro.disabled = bloqueado;
+    if (bloqueado) {
+      btnRoteiro.style.opacity = '0.5';
+      btnRoteiro.style.cursor = 'not-allowed';
+    } else {
+      btnRoteiro.style.opacity = '1';
+      btnRoteiro.style.cursor = 'pointer';
+    }
+  }
+}
+window.setBotoesIdeiasBloqueados = setBotoesIdeiasBloqueados;
+
+/**
+ * 3) Converte Markdown da Avaliação Estratégica em HTML estilizado e remove ERROS_BIBLICOS e asteriscos soltos
+ */
+function formatarAvaliacaoHtml(textoBruto) {
+  if (!textoBruto) return '';
+  // Remove qualquer variação da linha ERROS_BIBLICOS e asteriscos ao redor
+  let limpo = textoBruto
+    .replace(/(?:\*{1,3}|_{1,3})?\s*ERROS_BIBLICOS:\s*[^\n\r]*(?:\*{1,3}|_{1,3})?/gi, '')
+    .trim();
+  // Limpa asteriscos soltos no final do texto (ex: "**" solto)
+  limpo = limpo.replace(/[\s\*_]+$/g, '').trim();
+
+  const escapeHtml = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  const linhas = limpo.split(/\r?\n/);
+  const linhasHtml = linhas.map(linha => {
+    let l = linha.trim();
+    if (!l) return '<div style="height: 6px;"></div>';
+
+    // Remove asteriscos soltos no início ou fim da linha
+    l = l.replace(/\s+\*{2,}$/, '').replace(/^\*{2,}\s+/, '');
+
+    // Headers Markdown: ### Título ou ## Título
+    if (/^###\s+/.test(l)) {
+      const conteudoH = l.replace(/^###\s+/, '').replace(/\*\*/g, '').trim();
+      return `<h4 style="color: #a5b4fc; font-size: 0.96rem; font-weight: 700; margin: 12px 0 6px 0; border-bottom: 1px solid rgba(165, 180, 252, 0.2); padding-bottom: 4px;">${escapeHtml(conteudoH)}</h4>`;
+    }
+    if (/^##\s+/.test(l)) {
+      const conteudoH = l.replace(/^##\s+/, '').replace(/\*\*/g, '').trim();
+      return `<h3 style="color: #c7d2fe; font-size: 1.04rem; font-weight: 700; margin: 14px 0 6px 0;">${escapeHtml(conteudoH)}</h3>`;
+    }
+
+    // Seções de destaque: 🏆 TOP 3 ou ⚠️ QUAIS EVITAR
+    if (l.includes('🏆') || /top\s*3/i.test(l)) {
+      const textoSemMd = l.replace(/^[#\*\s]+/, '').replace(/[\*#]+$/, '');
+      return `<div style="color: #fbbf24; font-size: 0.98rem; font-weight: 700; margin: 10px 0 6px 0; display: flex; align-items: center; gap: 6px;">${escapeHtml(textoSemMd)}</div>`;
+    }
+    if (l.includes('⚠️') || /quais\s+evitar/i.test(l)) {
+      const textoSemMd = l.replace(/^[#\*\s]+/, '').replace(/[\*#]+$/, '');
+      return `<div style="color: #f87171; font-size: 0.98rem; font-weight: 700; margin: 14px 0 6px 0; display: flex; align-items: center; gap: 6px;">${escapeHtml(textoSemMd)}</div>`;
+    }
+
+    // Formatação inline: **negrito** e *itálico*
+    let formatada = escapeHtml(l);
+    formatada = formatada.replace(/\*\*(.+?)\*\*/g, '<strong style="color: #f8fafc; font-weight: 600;">$1</strong>');
+    formatada = formatada.replace(/\*([^\*]+?)\*/g, '<em style="color: #cbd5e1;">$1</em>');
+    formatada = formatada.replace(/\*{2,}/g, '');
+
+    return `<div style="margin-bottom: 4px; line-height: 1.5; color: #e2e8f0;">${formatada}</div>`;
+  });
+
+  return linhasHtml.join('\n');
+}
+window.formatarAvaliacaoHtml = formatarAvaliacaoHtml;
+
+/**
+ * 2) Validação estrita de formato e diversidade para ideias substitutas
+ */
+function validarFormatoIdeiaSubstituta(texto, outrasIdeiasTitulos = []) {
+  if (!texto || typeof texto !== 'string') return { valido: false, motivo: 'Texto vazio' };
+  const limpo = texto.replace(/^\s*(?:\*{0,2}(?:Ideia\s+)?\d+[\.:\)\-]\s*\*{0,2})\s*/i, '').replace(/\*{2,}/g, '').trim();
+  const linhas = limpo.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+
+  const temRef = /refer[êe]ncia\s+b[íi]blica/i.test(limpo);
+  const temDetalhe = /detalhe\s+concreto/i.test(limpo);
+  const temGancho = /gancho(?:\s*\/\s*premissa)?/i.test(limpo);
+
+  if (!temRef || !temDetalhe || !temGancho) {
+    return { valido: false, motivo: 'Formato incompleto: deve conter Referência Bíblica Principal, Detalhe Concreto Principal e Gancho / Premissa' };
+  }
+
+  const primeiraLinha = linhas[0].replace(/^#?\d+[\.:\)\-]\s*/, '').replace(/\*{1,3}/g, '').trim();
+  if (primeiraLinha.length > 95) {
+    return { valido: false, motivo: 'Título excede 80 caracteres recomendados' };
+  }
+
+  const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9à-ú]/gi, ' ').replace(/\s+/g, ' ').trim();
+  const tituloNorm = norm(primeiraLinha);
+
+  for (const outroTitulo of outrasIdeiasTitulos) {
+    const outroNorm = norm(outroTitulo);
+    if (outroNorm.length > 10 && (tituloNorm.includes(outroNorm) || outroNorm.includes(tituloNorm))) {
+      return { valido: false, motivo: `Ideia parecida com outra existente: "${outroTitulo}"` };
+    }
+  }
+
+  return { valido: true, textoFormatado: limpo };
+}
+
+/**
+ * Regenera uma única ideia que permaneceu com aviso de erro bíblico (Item c)
+ * Agora também envia a lista de ideias existentes e valida formato de 4 linhas e diversidade.
+ */
+async function regenerarIdeiaUnicaComErro(num) {
+  const tema = UI.getValue('select-tema', 'input-tema-custom');
+  const modelo = OpenRouterAPI.getModelRoteiro();
+  const outEl = document.getElementById('output-prompt-ideias');
+  if (!outEl) return;
+
+  UI.showToast(`Gerando e checando nova ideia para substituir o nº ${num}...`, 'info');
+
+  const extrairFn = window.extrairIdeiasIndividuais || extrairIdeiasIndividuais;
+  const textoAtual = outEl.value;
+  const itens = extrairFn(textoAtual);
+
+  const outrasIdeias = itens
+    .filter(it => String(it.numero) !== String(num) && it.texto && it.texto.trim())
+    .map(it => {
+      const primLinha = it.texto.split(/\r?\n/)[0].replace(/^#?\d+[\.:\)\-]\s*/, '').replace(/\*{1,3}/g, '').trim();
+      return `- Ideia #${it.numero}: ${primLinha}`;
+    })
+    .join('\n');
+
+  const titulosExistentes = itens
+    .filter(it => String(it.numero) !== String(num))
+    .map(it => it.texto.split(/\r?\n/)[0].replace(/^#?\d+[\.:\)\-]\s*/, '').replace(/\*{1,3}/g, '').trim());
+
+  const promptNovaIdeia = `Act as a senior biblical scholar and YouTube content strategist for our biblical documentary channel.
+Generate exactly 1 replacement video idea for idea #${num} on the theme: "${tema}".
+
+CRITICAL REQUIREMENT - DIVERSITY & NO DUPLICATION:
+The following ideas ALREADY EXIST in this video package:
+"""
+${outrasIdeias}
+"""
+You MUST create a completely DIFFERENT idea from all existing ones above:
+- Focus on a completely DIFFERENT miracle, event, character, or historical angle of the biblical account.
+- Do NOT repeat the same miracle, title phrasing, or hook premise of ANY existing idea above.
+- Strict canonical biblical fidelity. Zero mistakes in assigning miracles, prophets, kings, places, or events.
+
+MANDATORY OUTPUT FORMAT (EXACTLY 4 LINES in Portuguese Brasil, maximum 80 characters for title line):
+[Título curto com no máximo 80 caracteres e no máximo 1 palavra em MAIÚSCULAS]
+- Referência Bíblica Principal: [Livro X:Y]
+- Detalhe Concreto Principal: [Número exato, medida, objeto físico ou cena visual específica]
+- Gancho / Premissa: [1 a 2 frases curtas instigantes]
+
+Output EXCLUSIVELY the 4 lines above, without numbering preamble, without quotes, without introductory text.`;
+
+  try {
+    const novaIdeiaRaw = await OpenRouterAPI.generateContent(promptNovaIdeia, modelo);
+    if (!novaIdeiaRaw || !novaIdeiaRaw.trim()) {
+      UI.showToast('Não foi possível gerar a nova ideia. Tente novamente.', 'error');
+      return;
+    }
+
+    const validacao = validarFormatoIdeiaSubstituta(novaIdeiaRaw, titulosExistentes);
+    if (!validacao.valido) {
+      UI.showToast(`A substituta veio fora do padrão ou similar (${validacao.motivo}). Tente novamente.`, 'warning');
+      return;
+    }
+
+    const novaIdeiaLimpa = validacao.textoFormatado;
+
+    // Checagem bíblica dessa única nova ideia
+    const promptChecagem = `Act as a strict biblical scholar. Check if this biblical video idea has any factual biblical fidelity errors (e.g. miracles attributed to wrong prophet, wrong kings, unbiblical myths presented as fact):
+"${novaIdeiaLimpa}"
+Answer strictly with "OK" if it is biblically accurate, or "ERRO: [short explanation]" if there is a biblical error.`;
+
+    const checagem = await OpenRouterAPI.generateContent(promptChecagem, modelo);
+    const temErro = checagem && checagem.toUpperCase().includes('ERRO');
+
+    if (!temErro) {
+      const idx = itens.findIndex(it => String(it.numero) === String(num));
+      if (idx !== -1) {
+        itens[idx].texto = novaIdeiaLimpa;
+      }
+      const novoTextoCompleto = itens.map(it => `${it.numero}. ${it.texto}`).join('\n\n');
+      outEl.value = novoTextoCompleto;
+      if (window._ideiasComErroBiblico) {
+        window._ideiasComErroBiblico.delete(Number(num));
+        window._ideiasComErroBiblico.delete(String(num));
+      }
+      if (typeof window.renderizarBotoesSelecaoIdeias === 'function') {
+        window.renderizarBotoesSelecaoIdeias(novoTextoCompleto);
+      }
+      AutoSave.save();
+      UI.showToast(`Ideia #${num} substituída e aprovada com sucesso!`, 'success');
+    } else {
+      UI.showToast(`A nova tentativa ainda apresentou ressalva bíblica (${checagem.trim()}). Você pode clicar novamente em "↻ Gerar outra no lugar" ou escolher outra ideia.`, 'warning');
+    }
+  } catch (err) {
+    console.error('Erro ao regenerar ideia única:', err);
+    UI.showToast('Erro ao regenerar ideia: ' + err.message, 'error');
+  }
+}
+window.regenerarIdeiaUnicaComErro = regenerarIdeiaUnicaComErro;
+
+/**
+ * Avaliador de Ideias via IA (Item 4 + Itens a, b, c)
+ * Avalia as 10 ideias, identifica erros bíblicos na linha fixa ERROS_BIBLICOS,
+ * substitui automaticamente as ideias erradas (máx 2 rodadas com controle de diversidade e formato),
+ * converte markdown em títulos/negrito e oculta a linha ERROS_BIBLICOS.
  */
 async function avaliarIdeiasComIA(ideiasTexto, tema, modelo) {
   const card = document.getElementById('card-avaliador-ideias');
   const conteudo = document.getElementById('conteudo-avaliador-ideias');
+  const outEl = document.getElementById('output-prompt-ideias');
   if (!card || !conteudo) return;
 
-  conteudo.textContent = 'Avaliando as 10 ideias com IA (Critérios Ponderados)...';
+  conteudo.innerHTML = '<div style="display: flex; align-items: center; gap: 8px;"><span class="spinner-sm" style="display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(199, 210, 254, 0.3); border-top-color: #c7d2fe; border-radius: 50%; animation: spin 0.8s linear infinite;"></span><span>Avaliando as 10 ideias com IA (Critérios Ponderados & Fidelidade Bíblica)...</span></div>';
   card.classList.remove('hidden');
 
   const modeloAvaliacao = modelo || OpenRouterAPI.getModelRoteiro();
+  window._ideiasComErroBiblico = new Set();
 
-  const promptAvaliador = `Act as a senior YouTube content strategist and biblical scholar for our biblical documentary YouTube channel.
+  let textoAtualIdeias = ideiasTexto;
+  let rodada = 0;
+  const MAX_RODADAS = 2;
+
+  while (rodada <= MAX_RODADAS) {
+    const promptAvaliador = `Act as a senior YouTube content strategist and biblical scholar for our biblical documentary YouTube channel.
 Carefully evaluate these 10 generated video ideas for the theme: "${tema}".
 
 IDEAS TO EVALUATE:
 """
-${ideiasTexto}
+${textoAtualIdeias}
 """
 
 EVALUATION CRITERIA & WEIGHTS (Score each idea from 0 to 10 on each criterion):
 1. Detalhe Concreto (Weight: 2): Presence of a tangible, physical detail, number, dimension, ancient object, or specific scene from the script.
-2. Fidelidade Bíblica (Weight: 2): Strict fidelity to canonical Scripture without unwritten speculations or extra-biblical additions.
+2. Fidelidade Bíblica (Weight: 2): Strict fidelity to canonical Scripture without unwritten speculations, extra-biblical additions, or attributing events/miracles to the wrong prophet/king/person.
 3. Momento Visual para Miniatura (Weight: 1): Strong thumbnail potential with high contrast, dramatic scale, and focal subject.
 4. Gancho do Título (Weight: 1): Curiosity-inducing title with high CTR structure without excessive clichés.
 5. Tema Seguro (Weight: 1): Solemn reverent tone, no justification of destruction, completely safe for monetization.
@@ -3489,21 +3820,144 @@ MANDATORY OUTPUT FORMAT (Write the response in Portuguese Brasil):
 
 ⚠️ QUAIS EVITAR:
 - Ideia nº [W]: [Motivo apontando falta de detalhe concreto, risco teológico, sensibilidade ou gancho fraco]
-(Apresente as 2 ou 3 ideias menos recomendadas)`;
+(Apresente as 2 ou 3 ideias menos recomendadas)
 
-  try {
-    const avaliacao = await OpenRouterAPI.generateContent(
-      promptAvaliador,
-      modeloAvaliacao
-    );
-    if (avaliacao && avaliacao.trim()) {
-      conteudo.textContent = avaliacao.trim();
-    } else {
-      conteudo.textContent = 'Não foi possível gerar a avaliação no momento.';
+MANDATORY LAST LINE FOR SYSTEM PARSER (EXACT FORMAT AT THE VERY END OF YOUR RESPONSE):
+ERROS_BIBLICOS: [comma-separated numbers of ideas that contain factual biblical fidelity errors, e.g. "ERROS_BIBLICOS: 6, 10", or "ERROS_BIBLICOS: nenhum" if all are biblically accurate]`;
+
+    try {
+      const avaliacao = await OpenRouterAPI.generateContent(
+        promptAvaliador,
+        modeloAvaliacao
+      );
+
+      if (!avaliacao || !avaliacao.trim()) {
+        conteudo.innerHTML = '<div>Não foi possível gerar a avaliação no momento.</div>';
+        break;
+      }
+
+      // Extrai linha de erros bíblicos (Ajuste a)
+      const matchErros = avaliacao.match(/ERROS_BIBLICOS:\s*([^\n\r]+)/i);
+      const linhaErros = matchErros ? matchErros[1].trim() : 'nenhum';
+
+      let numerosComErro = [];
+      if (linhaErros.toLowerCase() !== 'nenhum') {
+        const matchesNums = linhaErros.match(/\d+/g);
+        if (matchesNums) {
+          numerosComErro = [...new Set(matchesNums.map(Number))];
+        }
+      }
+
+      // Se não há erros bíblicos, ou se atingiu o limite de 2 rodadas:
+      if (numerosComErro.length === 0 || rodada === MAX_RODADAS) {
+        if (numerosComErro.length > 0 && rodada === MAX_RODADAS) {
+          numerosComErro.forEach(n => window._ideiasComErroBiblico.add(n));
+        } else {
+          window._ideiasComErroBiblico.clear();
+        }
+
+        // 3) Formata a resposta com HTML convertendo markdown e removendo ERROS_BIBLICOS e asteriscos soltos
+        conteudo.innerHTML = formatarAvaliacaoHtml(avaliacao);
+        break;
+      }
+
+      // Há erros bíblicos e ainda temos rodadas restantes:
+      rodada++;
+      // 5) Atualiza faixa de progresso
+      if (typeof window.atualizarProgressoIdeias === 'function') {
+        window.atualizarProgressoIdeias(3, `Substituindo ideias com erro — tentativa ${rodada} de 2... (3/3)`, 'info');
+        window.setBotoesIdeiasBloqueados(true);
+      }
+
+      conteudo.innerHTML = `<div style="display: flex; align-items: center; gap: 8px;"><span class="spinner-sm" style="display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(199, 210, 254, 0.3); border-top-color: #c7d2fe; border-radius: 50%; animation: spin 0.8s linear infinite;"></span><span>Identificada(s) ressalva(s) bíblica(s) na(s) ideia(s) #${numerosComErro.join(', #')}. Substituindo por novas ideias com checagem de diversidade e formato (Tentativa ${rodada}/${MAX_RODADAS})...</span></div>`;
+
+      const extrairFn = window.extrairIdeiasIndividuais || extrairIdeiasIndividuais;
+      const itens = extrairFn(textoAtualIdeias);
+
+      // Coleta lista e títulos das ideias já existentes para proibir repetição
+      const titulosExistentes = itens
+        .filter(it => !numerosComErro.includes(Number(it.numero)))
+        .map(it => it.texto.split(/\r?\n/)[0].replace(/^#?\d+[\.:\)\-]\s*/, '').replace(/\*{1,3}/g, '').trim());
+
+      const listaExistentesTexto = itens
+        .filter(it => !numerosComErro.includes(Number(it.numero)))
+        .map(it => {
+          const tit = it.texto.split(/\r?\n/)[0].replace(/^#?\d+[\.:\)\-]\s*/, '').replace(/\*{1,3}/g, '').trim();
+          return `- Ideia #${it.numero}: ${tit}`;
+        })
+        .join('\n');
+
+      // 2) Substitui cada ideia com erro bíblico exigindo lista das existentes e formato idêntico em 4 linhas
+      for (const num of numerosComErro) {
+        const promptSubstituta = `Act as a senior biblical scholar and YouTube content strategist for our biblical documentary channel.
+Generate exactly 1 replacement biblical video idea for idea #${num} on the theme: "${tema}".
+
+CRITICAL REQUIREMENT - DIVERSITY & NO DUPLICATION:
+The following ideas ALREADY EXIST in this video package:
+"""
+${listaExistentesTexto}
+"""
+You MUST create a completely DIFFERENT idea from all existing ones above:
+- Focus on a completely DIFFERENT miracle, event, character, or historical angle of the biblical account.
+- Do NOT repeat the same miracle, title phrasing, or hook premise of ANY existing idea above.
+- Strict canonical biblical fidelity. Zero mistakes in assigning miracles, prophets, kings, places, or events.
+
+MANDATORY OUTPUT FORMAT (EXACTLY 4 LINES in Portuguese Brasil, maximum 80 characters for the title line):
+[Título curto com no máximo 80 caracteres e no máximo 1 palavra em MAIÚSCULAS]
+- Referência Bíblica Principal: [Livro X:Y]
+- Detalhe Concreto Principal: [Número exato, medida, objeto físico ou cena visual específica]
+- Gancho / Premissa: [1 a 2 frases curtas instigantes]
+
+Output EXCLUSIVELY the 4 lines above, without numbering preamble, without quotes, without introductory text.`;
+
+        let substitutaAceita = null;
+        let tentativaSub = 0;
+        const MAX_TENTATIVAS_SUB = 2;
+
+        while (tentativaSub < MAX_TENTATIVAS_SUB && !substitutaAceita) {
+          tentativaSub++;
+          try {
+            const respSub = await OpenRouterAPI.generateContent(promptSubstituta, modeloAvaliacao);
+            if (respSub && respSub.trim()) {
+              const validacao = validarFormatoIdeiaSubstituta(respSub, titulosExistentes);
+              if (validacao.valido) {
+                substitutaAceita = validacao.textoFormatado;
+                // Registra o novo título para evitar duplicação em substituições subsequentes
+                const novoTit = substitutaAceita.split(/\r?\n/)[0].replace(/^#?\d+[\.:\)\-]\s*/, '').replace(/\*{1,3}/g, '').trim();
+                titulosExistentes.push(novoTit);
+              } else {
+                console.warn(`[Substituta #${num}] Tentativa ${tentativaSub} rejeitada:`, validacao.motivo);
+              }
+            }
+          } catch (subErr) {
+            console.warn(`Erro na tentativa ${tentativaSub} da substituta #${num}:`, subErr);
+          }
+        }
+
+        if (substitutaAceita) {
+          const idx = itens.findIndex(it => Number(it.numero) === num);
+          if (idx !== -1) {
+            itens[idx].texto = substitutaAceita;
+          }
+        }
+      }
+
+      // Reconstroi o texto consolidado
+      textoAtualIdeias = itens.map(it => `${it.numero}. ${it.texto}`).join('\n\n');
+      if (outEl) outEl.value = textoAtualIdeias;
+      AutoSave.save();
+
+      // Próxima iteração do while vai reavaliar as 10 ideias atualizadas!
+    } catch (err) {
+      console.warn('[Avaliador de Ideias] Erro:', err);
+      conteudo.innerHTML = `<div style="color: #f87171;">Erro ao avaliar ideias: ${escapeHtml(err.message)}</div>`;
+      break;
     }
-  } catch (err) {
-    console.warn('[Avaliador de Ideias] Erro:', err);
-    conteudo.textContent = 'Erro ao avaliar ideias: ' + err.message;
+  }
+
+  // Ao final, atualiza os cards de seleção de ideias
+  if (typeof window.renderizarBotoesSelecaoIdeias === 'function' && textoAtualIdeias) {
+    window.renderizarBotoesSelecaoIdeias(textoAtualIdeias);
   }
 }
 
@@ -6244,6 +6698,7 @@ MANDATORY RULES FOR SCENE DESCRIPTIONS:
 6. SCENE VARIETY & PACING:
    - Limit to a maximum of 2 similar landscapes across the entire video.
    - MAXIMUM OF 2 CONSECUTIVE SCENES OF THE SAME TYPE (e.g., at most two consecutive scenes of two people conversing). Constantly alternate with concrete close-up objects, physical details, and environments from the script.
+   - MAXIMUM OF 2 IMAGES OF THE SAME EVENT ACROSS THE ENTIRE VIDEO: Strictly limit depictions of the exact same event or action to at most 2 images in the entire video (e.g., at most 2 scenes of rain falling, at most 2 scenes of Elijah running). Use the remaining prompt slots for other chronological moments, physical objects, and specific narrative details from the script.
    - Strongly prioritize specific physical objects, characters, and concrete moments from the script over generic landscape vistas.
 7. BIBLICALLY COHERENT TIME OF DAY:
    - Lighting and time of day MUST be strictly coherent with the canonical biblical account (e.g. early morning dawn at the Sea of Galilee for John 21).
@@ -6257,9 +6712,9 @@ MANDATORY RULES FOR SCENE DESCRIPTIONS:
 11. CONCRETE & TANGIBLE DETAILS FROM THE SCRIPT:
    - Bring concrete, physical and visual details directly from the script: exact measurements, specific ancient materials (e.g., acacia wood, weathered bronze, rough limestone, beaten gold, woven linen), and exact quantities.
    - SCALE COMPARISON: Whenever something large or massive is depicted (giants, colossal walls, large structures, oversized objects), ALWAYS include a size comparison with a normal-sized human being standing nearby to clearly convey the scale. When a giant is depicted, show him side by side with normal-sized people at the same distance from the camera, about twice their height.
-12. ABSOLUTELY NO CORPSES OR DEAD BODIES:
+12. ABSOLUTELY NO CORPSES, DEAD BODIES, EXECUTIONS, ATTACKS, OR AGGRESSION:
    - NEVER depict fallen corpses, dead bodies, blood, or gore.
-   - In scenes depicting deaths or divine judgments (e.g. Ananias and Sapphira, executions, sudden judgments), depict EITHER the tense dramatic moment immediately before the event, OR the psychological reaction of onlookers (terrified faces, people recoiling in shock, hands raised in awe) — NEVER the fallen body.
+   - NEVER depict executions, physical attacks, assaults, or acts of aggression: in all such scenes, depict EITHER the tense moment immediately before the event, OR the emotional/psychological reaction of the people around (terrified faces, onlookers recoiling in shock, hands raised in awe) — NEVER the violent attack, execution, or fallen body itself.
    - Convey the aftermath of battles through abandoned ancient weapons stuck in the ground, ruined stone ramparts, charred debris, and distant smoke.
 13. NO MIDJOURNEY SYNTAX: Do NOT use '--ar 16:9'.
 14. MANDATORY FIXED VISUAL STYLE BLOCK AT THE END OF EVERY PROMPT:
@@ -7452,34 +7907,85 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   document.getElementById('btn-gerar-prompt-ideias').addEventListener('click', async () => {
-    const tema = UI.getValue('select-tema', 'input-tema-custom');
-    const idioma = UI.getValue('select-idioma', 'input-idioma-custom');
-    const promptText = PromptEngine.generateIdeasPrompt({ tema, idioma });
-    const modeloIdeias = OpenRouterAPI.getModelIdeas();
+    // 4) Quando clicar em "Gerar Ideias de Vídeo com IA", limpa o campo "Ideia de Vídeo Escolhida" e o destaque dourado
+    const inputIdeia = document.getElementById('input-ideia-escolhida');
+    if (inputIdeia) {
+      inputIdeia.value = '';
+      inputIdeia.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    window._numeroIdeiaEscolhida = null;
+    localStorage.removeItem('dark_studio_ideia_escolhida_num');
+    document.querySelectorAll('.ideia-card').forEach(c => {
+      c.classList.remove('ideia-card-escolhida', 'selecionada');
+      const selo = c.querySelector('.badge-ideia-escolhida');
+      if (selo) selo.remove();
+      const btn = c.querySelector('.btn-usar-esta-ideia');
+      if (btn) {
+        btn.className = 'btn btn-sm btn-secondary btn-usar-esta-ideia';
+        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px; vertical-align: -2px;"><polyline points="20 6 9 17 4 12"></polyline></svg>Usar esta ideia`;
+      }
+    });
 
-    const rawIdeias = await executeApiCall(
-      'btn-gerar-prompt-ideias',
-      promptText,
-      'output-prompt-ideias',
-      '10 Ideias geradas com sucesso!',
-      modeloIdeias
-    );
-
-    // Ordem estrita (Item 4): gerar 10 ideias -> checar títulos e regenerar com IA -> avaliador
-    let textoFinalIdeias = rawIdeias;
-    if (rawIdeias && typeof rawIdeias === 'string' && OpenRouterAPI.getApiKey()) {
-      const ideiasLimpas = await validarERegenerarTitulosIdeias(rawIdeias, tema, modeloIdeias);
-      const outEl = document.getElementById('output-prompt-ideias');
-      if (outEl) outEl.value = ideiasLimpas;
-      textoFinalIdeias = ideiasLimpas;
-      AutoSave.save();
-
-      // Avaliador de Ideias com IA usando o Modelo para Roteiro (Item 10)
-      await avaliarIdeiasComIA(ideiasLimpas, tema, OpenRouterAPI.getModelRoteiro());
+    // 5) Aviso de progresso: Etapa 1/3 e desativação dos botões
+    if (typeof window.atualizarProgressoIdeias === 'function') {
+      window.atualizarProgressoIdeias(1, 'Gerando ideias... (1/3)', 'info');
+      window.setBotoesIdeiasBloqueados(true);
     }
 
-    if (typeof renderizarBotoesSelecaoIdeias === 'function' && textoFinalIdeias) {
-      renderizarBotoesSelecaoIdeias(textoFinalIdeias);
+    try {
+      const tema = UI.getValue('select-tema', 'input-tema-custom');
+      const idioma = UI.getValue('select-idioma', 'input-idioma-custom');
+      const promptText = PromptEngine.generateIdeasPrompt({ tema, idioma });
+      // Item 2: Usa o modelo do campo "Modelo para Roteiro" também para gerar as ideias
+      const modeloIdeias = OpenRouterAPI.getModelRoteiro();
+
+      const rawIdeias = await executeApiCall(
+        'btn-gerar-prompt-ideias',
+        promptText,
+        'output-prompt-ideias',
+        '10 Ideias geradas com sucesso!',
+        modeloIdeias
+      );
+
+      // Ordem estrita (Item 4): gerar 10 ideias -> checar títulos e regenerar com IA -> avaliador
+      let textoFinalIdeias = rawIdeias;
+      if (rawIdeias && typeof rawIdeias === 'string' && OpenRouterAPI.getApiKey()) {
+        const ideiasLimpas = await validarERegenerarTitulosIdeias(rawIdeias, tema, modeloIdeias);
+        const outEl = document.getElementById('output-prompt-ideias');
+        if (outEl) outEl.value = ideiasLimpas;
+        textoFinalIdeias = ideiasLimpas;
+        AutoSave.save();
+
+        // 5) Etapa 2/3: Avaliando fidelidade bíblica...
+        if (typeof window.atualizarProgressoIdeias === 'function') {
+          window.atualizarProgressoIdeias(2, 'Avaliando fidelidade bíblica... (2/3)', 'info');
+          window.setBotoesIdeiasBloqueados(true);
+        }
+
+        // Avaliador de Ideias com IA usando o Modelo para Roteiro (Item 10 + Ajustes a, b, c)
+        await avaliarIdeiasComIA(ideiasLimpas, tema, OpenRouterAPI.getModelRoteiro());
+
+        // Pega o texto atualizado caso o avaliador tenha feito substituição automática
+        const outElAtualizado = document.getElementById('output-prompt-ideias');
+        if (outElAtualizado && outElAtualizado.value) {
+          textoFinalIdeias = outElAtualizado.value;
+        }
+      }
+
+      if (typeof renderizarBotoesSelecaoIdeias === 'function' && textoFinalIdeias) {
+        renderizarBotoesSelecaoIdeias(textoFinalIdeias);
+      }
+
+      // 5) Conclusão: faixa verde e desbloqueio dos botões
+      if (typeof window.atualizarProgressoIdeias === 'function') {
+        window.atualizarProgressoIdeias(null, 'Pronto! Ideias avaliadas e corrigidas — pode escolher', 'success');
+        window.setBotoesIdeiasBloqueados(false);
+      }
+    } catch (err) {
+      console.error('[Geração de Ideias] Erro:', err);
+      if (typeof window.setBotoesIdeiasBloqueados === 'function') {
+        window.setBotoesIdeiasBloqueados(false);
+      }
     }
   });
 
@@ -8334,6 +8840,13 @@ window.apararParaLimiteMaximo = apararParaLimiteMaximo;
 window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
 
   document.getElementById('btn-gerar-prompt-roteiro').addEventListener('click', async () => {
+    // 5) Limpa aviso de progresso anterior do roteiro
+    const bannerRoteiro = document.getElementById('banner-progresso-roteiro-status');
+    if (bannerRoteiro) {
+      bannerRoteiro.classList.add('hidden');
+      bannerRoteiro.innerHTML = '';
+    }
+
     // Requisito 11: Limpa as caixas de resultado das etapas 2 a 5 para não exibir dados do vídeo anterior
     limparResultadosEtapasPosteriores();
 
@@ -8384,6 +8897,15 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
 
         sincronizarRoteiroGeradoEmTodasAsCaixas(resultText, estiloRoteiro);
         UI.showToast('Roteiro do Catálogo gerado e sincronizado com sucesso!');
+
+        // 5) Exibe faixa verde de Roteiro pronto no Catálogo
+        if (bannerRoteiro) {
+          bannerRoteiro.classList.remove('hidden');
+          bannerRoteiro.style.background = 'rgba(16, 185, 129, 0.15)';
+          bannerRoteiro.style.borderColor = '#10b981';
+          bannerRoteiro.style.color = '#a7f3d0';
+          bannerRoteiro.innerHTML = `<span style="font-size: 1.15rem; margin-right: 6px;">✅</span> <strong>Roteiro pronto</strong>`;
+        }
       } catch (err) {
         UI.showToast(err.message, 'error');
         console.error('Erro na geração do Catálogo:', err);
@@ -8643,6 +9165,16 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
 
       atualizarSeloAba(1, true);
       AutoSave.save();
+
+      // 5) Ao final de todas as revisões, exibe faixa verde "Roteiro pronto"
+      const bannerRoteiroFinal = document.getElementById('banner-progresso-roteiro-status');
+      if (bannerRoteiroFinal) {
+        bannerRoteiroFinal.classList.remove('hidden');
+        bannerRoteiroFinal.style.background = 'rgba(16, 185, 129, 0.15)';
+        bannerRoteiroFinal.style.borderColor = '#10b981';
+        bannerRoteiroFinal.style.color = '#a7f3d0';
+        bannerRoteiroFinal.innerHTML = `<span style="font-size: 1.15rem; margin-right: 6px;">✅</span> <strong>Roteiro pronto</strong>`;
+      }
     }
   });
 
@@ -9471,6 +10003,7 @@ Desenvolvimento: A soberania divina cumpre cada detalhe profético anunciado pel
       return { numero: String(idx + 1), texto: semNum };
     }).filter(item => item.texto.length > 5);
   }
+  window.extrairIdeiasIndividuais = extrairIdeiasIndividuais;
 
   function renderizarBotoesSelecaoIdeias(textoIdeias) {
     const container = document.getElementById('container-selecao-ideias');
@@ -9486,44 +10019,128 @@ Desenvolvimento: A soberania divina cumpre cada detalhe profético anunciado pel
 
     const escapeAttr = (s) => String(s || '').replace(/"/g, '&quot;');
     const escapeHtml = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const inputIdeia = document.getElementById('input-ideia-escolhida');
+    const textoEscolhidoAtual = inputIdeia ? inputIdeia.value.trim() : '';
 
-    listaCards.innerHTML = itens.map(item => `
-      <div class="ideia-card">
-        <div style="flex: 1; font-size: 0.92rem; line-height: 1.5; color: #f1f5f9;">
-          <strong style="color: #6366f1; margin-right: 6px;">#${item.numero}</strong>
-          ${escapeHtml(item.texto)}
+    const numSalvo = localStorage.getItem('dark_studio_ideia_escolhida_num') || window._numeroIdeiaEscolhida;
+    const norm = (s) => String(s || '').toLowerCase().replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const textoEscolhidoNorm = norm(textoEscolhidoAtual);
+
+    const errosPersistentes = window._ideiasComErroBiblico || new Set();
+
+    listaCards.innerHTML = itens.map(item => {
+      const itemTextoNorm = norm(item.texto);
+      const primeiraLinhaItemNorm = norm(item.texto.split(/\r?\n/)[0].replace(/^#?\d+[\.:\)\-]\s*/, ''));
+
+      // 1) Destaque funciona por número salvo OU por correspondência do texto/título
+      const isEscolhido = Boolean(
+        (numSalvo && String(numSalvo) === String(item.numero)) ||
+        (textoEscolhidoNorm && (
+          textoEscolhidoNorm === itemTextoNorm ||
+          textoEscolhidoNorm.includes(itemTextoNorm) ||
+          itemTextoNorm.includes(textoEscolhidoNorm) ||
+          (primeiraLinhaItemNorm && (
+            textoEscolhidoNorm.includes(primeiraLinhaItemNorm) ||
+            primeiraLinhaItemNorm.includes(textoEscolhidoNorm)
+          ))
+        ))
+      );
+
+      const temErro = errosPersistentes.has ? (errosPersistentes.has(Number(item.numero)) || errosPersistentes.has(String(item.numero))) : false;
+
+      let cardClass = 'ideia-card';
+      if (isEscolhido) cardClass += ' ideia-card-escolhida selecionada';
+      if (temErro) cardClass += ' ideia-card-erro';
+
+      // Inline styles reforçados para nunca serem sobrescritos por nenhum CSS global
+      const cardInlineStyle = isEscolhido
+        ? 'border: 2px solid #d4af37 !important; box-shadow: 0 0 16px rgba(212, 175, 55, 0.45) !important; background: rgba(212, 175, 55, 0.12) !important;'
+        : (temErro ? 'border: 1px solid #ef4444 !important; background: rgba(239, 68, 68, 0.08) !important;' : '');
+
+      const seloHtml = isEscolhido 
+        ? `<span class="badge-ideia-escolhida" style="background: linear-gradient(135deg, #d4af37, #f59e0b); color: #0f172a; font-weight: 700; font-size: 0.74rem; padding: 2px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; vertical-align: middle;">✓ Ideia escolhida</span>`
+        : '';
+
+      const erroHtml = temErro
+        ? `<div class="aviso-erro-biblico" style="color: #f87171; font-size: 0.82rem; font-weight: 600; margin-top: 6px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <span>⚠ Possível erro bíblico — evite esta ideia</span>
+            <button type="button" class="btn btn-sm btn-regenerar-ideia" data-num="${item.numero}" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; font-size: 0.76rem; font-weight: 600; padding: 3px 8px; border-radius: 4px; cursor: pointer;">
+              ↻ Gerar outra no lugar
+            </button>
+           </div>`
+        : '';
+
+      return `
+        <div class="${cardClass}" data-numero="${item.numero}" style="${cardInlineStyle}">
+          <div style="flex: 1; font-size: 0.92rem; line-height: 1.5; color: #f1f5f9;">
+            <div style="display: flex; align-items: center; flex-wrap: wrap; margin-bottom: 4px;">
+              <strong style="color: #6366f1; margin-right: 2px;">#${item.numero}</strong>
+              ${seloHtml}
+            </div>
+            <div style="white-space: pre-line;">${escapeHtml(item.texto)}</div>
+            ${erroHtml}
+          </div>
+          <button type="button" class="btn btn-sm ${isEscolhido ? 'btn-accent' : 'btn-secondary'} btn-usar-esta-ideia" data-ideia="${escapeAttr(item.texto)}" data-numero="${item.numero}" style="white-space: nowrap; flex-shrink: 0; padding: 6px 12px; font-size: 0.8rem; font-weight: 600;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px; vertical-align: -2px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            ${isEscolhido ? '✓ Ideia escolhida' : 'Usar esta ideia'}
+          </button>
         </div>
-        <button type="button" class="btn btn-sm btn-secondary btn-usar-esta-ideia" data-ideia="${escapeAttr(item.texto)}" style="white-space: nowrap; flex-shrink: 0; padding: 6px 12px; font-size: 0.8rem; font-weight: 600;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px; vertical-align: -2px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
-          Usar esta ideia
-        </button>
-      </div>
-    `).join('');
+      `;
+    }).join('');
 
     container.classList.remove('hidden');
 
     listaCards.querySelectorAll('.btn-usar-esta-ideia').forEach(btn => {
       btn.addEventListener('click', () => {
         const ideia = btn.getAttribute('data-ideia');
+        const num = btn.getAttribute('data-numero');
         if (!ideia) return;
+
+        window._numeroIdeiaEscolhida = num;
+        if (num) {
+          localStorage.setItem('dark_studio_ideia_escolhida_num', String(num));
+        }
+
         const inputIdeia = document.getElementById('input-ideia-escolhida');
         if (inputIdeia) {
           inputIdeia.value = ideia;
           inputIdeia.dispatchEvent(new Event('input', { bubbles: true }));
           inputIdeia.scrollIntoView({ behavior: 'smooth', block: 'center' });
           inputIdeia.focus();
-          UI.showToast('Ideia selecionada! O campo permanece editável.', 'success');
+          UI.showToast(`Ideia #${num || ''} selecionada! O campo permanece editável.`, 'success');
           AutoSave.save();
+        }
+        // Atualiza destaque imediatamente para que o card receba a borda dourada e o selo
+        renderizarBotoesSelecaoIdeias(textoIdeias);
+      });
+    });
+
+    listaCards.querySelectorAll('.btn-regenerar-ideia').forEach(btnRegen => {
+      btnRegen.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const num = btnRegen.getAttribute('data-num');
+        btnRegen.disabled = true;
+        btnRegen.textContent = '↻ Gerando...';
+        if (typeof window.regenerarIdeiaUnicaComErro === 'function') {
+          await window.regenerarIdeiaUnicaComErro(num);
         }
       });
     });
   }
+  window.renderizarBotoesSelecaoIdeias = renderizarBotoesSelecaoIdeias;
 
-  // Monitora alterações manuais na caixa de ideias
-  const textareaIdeiasEl = document.getElementById('output-prompt-ideias');
-  if (textareaIdeiasEl) {
-    textareaIdeiasEl.addEventListener('input', () => {
-      renderizarBotoesSelecaoIdeias(textareaIdeiasEl.value);
+  // Monitora alterações manuais no campo "Ideia de Vídeo Escolhida" para sincronizar destaque
+  const inputIdeiaEl = document.getElementById('input-ideia-escolhida');
+  if (inputIdeiaEl) {
+    inputIdeiaEl.addEventListener('input', () => {
+      if (!inputIdeiaEl.value.trim()) {
+        window._numeroIdeiaEscolhida = null;
+        localStorage.removeItem('dark_studio_ideia_escolhida_num');
+      }
+      const outIdeiasEl = document.getElementById('output-prompt-ideias');
+      if (outIdeiasEl && outIdeiasEl.value) {
+        renderizarBotoesSelecaoIdeias(outIdeiasEl.value);
+      }
     });
   }
 
