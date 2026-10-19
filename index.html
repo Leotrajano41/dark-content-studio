@@ -3123,7 +3123,7 @@ POSTURA OBRIGATÓRIA DO NARRADOR:
 - A autoridade é a própria Escritura. Use 'as Escrituras registram', 'o texto bíblico afirma', citando livro, capítulo e versículo.
 - NUNCA chame a Bíblia de lenda, mito, fábula, alegoria, folclore ou tradição. NUNCA convide o espectador a duvidar ou a 'analisar criticamente'.
 - GANCHO DE IMPACTO DRAMÁTICO IMEDIATO: A primeiríssima frase do roteiro DEVE ser o momento mais dramático da história (ex: 'O fogo caiu do céu.', 'A pedra afundou na testa do gigante.', 'Com a queixada de um jumento, mil homens tombaram sem vida.'). É ESTRITAMENTE PROIBIDO abrir de forma cronológica lenta ou contextual (NUNCA abra com 'Após o dilúvio...', 'A planície de...', 'Nos dias de...', 'A história começa...', 'Durante o reinado de...', 'Nas terras de...'). Abra direto no ápice do acontecimento!
-- PROIBIÇÃO TOTAL DE EVIDÊNCIAS INVENTADAS E EXTERNAS: NUNCA cite 'registros', 'descobertas', 'historiadores', 'arqueologia', 'arqueólogos', 'escavações', 'estudiosos', 'inscrições', 'cuneiforme' ou 'achados'. NUNCA invente números, distâncias ou detalhes que não estejam explicitamente no texto bíblico (ex: proibir 'visível a dezenas de quilômetros', 'milhões de trabalhadores'). A única autoridade e fonte de dados é a própria Escritura canônica.
+- PROIBIÇÃO TOTAL DE NÚMEROS, DISTÂNCIAS, DATAS OU QUANTIDADES NÃO ESCRITAS NA BÍBLIA: É expressamente proibido inventar números, distâncias, datas, idades ou quantidades que não estejam escritos na passagem bíblica original (ex: proibir "guiado 16 quilômetros" em 2 Reis 6:19 quando a distância não está no texto bíblico; proibir inventar anos ou datas de calendário). Conversões de medidas que ESTÃO no texto bíblico continuam permitidas, sempre como aproximação (ex: "9 côvados, cerca de 4 metros"). NUNCA cite 'registros', 'descobertas', 'historiadores', 'arqueologia', 'arqueólogos', 'escavações', 'estudiosos', 'inscrições', 'cuneiforme' ou 'achados'. A única autoridade e fonte de dados é a própria Escritura canônica.
 - LIMITE ESTRITO DE FRASES DE DESCARTE DE CETICISMO: No máximo 1 vez em Shorts, Shorts Estendido e Médio, e no máximo 2 vezes no Longo. NUNCA repita a fórmula 'não foi X, foi Y' mais do que o limite permitido.
 - PROIBIÇÃO DE AUTODEFESA E JUSTIFICATIVAS: NUNCA use termos como 'fato histórico', 'fato real', 'realidade histórica', 'acontecimento real', 'relato histórico', 'história verdadeira', 'juízo real' ou 'evento real' para tentar justificar ou defender o relato bíblico. O narrador fala como quem crê e não precisa se defender. Narre os fatos bíblicos diretamente com solenidade, autoridade e sobriedade.
 - REGRA OBRIGATÓRIA DE CITAÇÕES E FALAS BÍBLICAS: Toda e qualquer citação bíblica direta ou fala de personagem bíblico colocada entre aspas DEVE obrigatoriamente ser acompanhada da sua referência bíblica imediatamente ao lado entre parênteses (ex: '...' (Livro C:V)). NUNCA deixe falas bíblicas entre aspas sem a respectiva referência.
@@ -3546,6 +3546,16 @@ function atualizarProgressoIdeias(etapa, texto, tipo = 'info') {
     return;
   }
   banner.classList.remove('hidden');
+
+  // Enquanto a faixa de progresso estiver ativa nas etapas (tipo === 'info'),
+  // reforça que a lista de cards e a avaliação permaneçam estritamente escondidas
+  if (tipo === 'info') {
+    const containerIdeias = document.getElementById('container-selecao-ideias');
+    if (containerIdeias) containerIdeias.classList.add('hidden');
+    const cardAvaliador = document.getElementById('card-avaliador-ideias');
+    if (cardAvaliador) cardAvaliador.classList.add('hidden');
+  }
+
   if (tipo === 'success') {
     banner.style.background = 'rgba(16, 185, 129, 0.15)';
     banner.style.borderColor = '#10b981';
@@ -3827,7 +3837,7 @@ async function avaliarIdeiasComIA(ideiasTexto, tema, modelo) {
   if (!card || !conteudo) return;
 
   conteudo.innerHTML = '<div style="display: flex; align-items: center; gap: 8px;"><span class="spinner-sm" style="display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(199, 210, 254, 0.3); border-top-color: #c7d2fe; border-radius: 50%; animation: spin 0.8s linear infinite;"></span><span>Avaliando as 10 ideias com IA (Critérios Ponderados & Fidelidade Bíblica)...</span></div>';
-  card.classList.remove('hidden');
+  card.classList.add('hidden');
 
   const modeloAvaliacao = modelo || OpenRouterAPI.getModelRoteiro();
   window._ideiasComErroBiblico = new Set();
@@ -4066,11 +4076,6 @@ Output EXCLUSIVELY the 4 lines above, without numbering preamble, without quotes
       break;
     }
   }
-
-  // Ao final, atualiza os cards de seleção de ideias
-  if (typeof window.renderizarBotoesSelecaoIdeias === 'function' && textoAtualIdeias) {
-    window.renderizarBotoesSelecaoIdeias(textoAtualIdeias);
-  }
 }
 
 /**
@@ -4112,9 +4117,13 @@ CRITICAL AUDIT & PROOF RULES (STRICTLY ENFORCED):
 2. WITHOUT DIRECT BIBLICAL VERSE PROOF CITATION, THE CLAIM IS DEEMED BIBLICALLY ACCURATE AND CANNOT BE CHANGED (output OK).
 3. IN CASE OF ANY DOUBT, OR IF SCRIPTURE SUPPORTS THE STATEMENT, MARK "OK" AND DO NOT CHANGE ANYTHING.
 4. STYLE ISSUES ARE NEVER FACTUAL ERRORS: Title length, dramatic tone, divided focus, or weak hooks are NEVER factual biblical errors. Only literal historical/geographical/numerical contradictions count.
-5. NUMBERS IN THE TITLE:
-   Carefully inspect numbers in titles against the declared scripture passage (Almeida). If a number belongs to something else in the text, cite the verse proof and issue a CORRECAO:
-   CORRECAO: [Idea Number] | [Verse Proof] | [Wrong Term in Title] | [Correct Term]
+5. NUMBERS IN THE TITLE & PROHIBITION OF UNWRITTEN NUMBERS/DISTANCES:
+   - Carefully inspect numbers in titles, details, and hooks against the declared scripture passage (Almeida).
+   - If a number belongs to something else in the text, cite the verse proof and issue a CORRECAO:
+     CORRECAO: [Idea Number] | [Verse Proof] | [Wrong Term] | [Correct Term]
+   - PROHIBITION OF UNWRITTEN NUMBERS: Strictly forbid numbers, distances, calendar dates, ages, or quantities that are NOT explicitly written in the biblical passage (e.g. "guiado 16 quilômetros" in 2 Kings 6:19, where no distance appears in the text).
+   - Conversions of measurements that ARE in the biblical text remain permitted, always as an approximation (e.g. "9 côvados, cerca de 4 metros").
+   - TREAT UNWRITTEN/INVENTED NUMBERS AS CORRECAO: Remove the invented number or rewrite the phrase smoothly without it, so the card displays the correction (e.g. "CORRECAO: 3 | 2 Reis 6:19 não cita distância | guiado 16 quilômetros | guiado até Samaria").
 
 MANDATORY PROTOCOL OUTPUT (Protocol lines at the very end of your response, strictly one per finding or per idea, NO PREAMBLE, NO HEADERS, NO MARKDOWN):
 CORRECAO: [Idea Number] | [Verse Proof] | [Exact Wrong Word/Phrase] | [Exact Correct Word/Phrase]
@@ -4495,8 +4504,9 @@ ${textoSeo}
 
 STRICT SAFETY AND FIDELITY RULES:
 1. ONLY mark CORRECAO when a title explicitly contains a factual biblical error (e.g. wrong geographical place like "Canaã" instead of "Basã", wrong prophet/king name, wrong numerical detail contradictory to the reference/script).
-2. IN CASE OF ANY DOUBT, or if the title is accurate, MARK "OK" AND DO NOT CHANGE ANYTHING.
-3. Keep the high CTR clickability and style of the title completely intact.
+2. PROHIBITION OF UNWRITTEN NUMBERS: If a title contains numbers, distances, calendar dates, ages, or quantities not explicitly written in the biblical passage (e.g. "16 quilômetros" or unwritten dates), treat it as a CORRECAO by removing the number or rewriting the phrase smoothly without it (conversions of measurements that ARE in the text remain permitted as approximations).
+3. IN CASE OF ANY DOUBT, or if the title is accurate, MARK "OK" AND DO NOT CHANGE ANYTHING.
+4. Keep the high CTR clickability and style of the title completely intact.
 
 MANDATORY OUTPUT FORMAT:
 If a title has a factual error:
@@ -6183,6 +6193,10 @@ CHECK ACROSS THE ENTIRE SCRIPT FOR EXACTLY THESE 9 CATEGORIES:
    e) Interpretations presented as undisputed fact (e.g. the identity of the "sons of God"): must be framed with scholarly restraint like "many understand...", never as undisputed biblical dogma.
    f) BORROWED GEOGRAPHICAL DESCRIPTIONS: NEVER attribute a biblical description of one location to another (e.g. applying "walls reaching toward heaven" to Bashan; that expression is from Deuteronomy regarding the cities of Canaan). Correct to the exact biblical description of that specific location, or remove.
    g) INVENTED BATTLE DETAILS: NEVER invent tactical or physical battle details as factual history (e.g. "blackened shells", "gates ripped from their hinges", "within a matter of days"). Narrate biblical conflicts strictly according to literal canonical Scripture with solemn restraint.
+   h) NÚMEROS, DISTÂNCIAS, DATAS OU QUANTIDADES NÃO ESCRITAS NA BÍBLIA:
+      - STRICT PROHIBITION: Rigorously check and correct any numbers, distances, calendar dates, ages, or quantities that are not explicitly written in the cited biblical passage (e.g. "guiado 16 quilômetros" in 2 Kings 6:19, where no distance appears in the text).
+      - Conversions of measurements that ARE in the biblical text remain permitted, always as approximations (e.g. "9 cubits, about 4 meters" or "9 côvados, cerca de 4 metros").
+      - CORRECTION: When an unwritten number, distance, or quantity is found, remove the invented number or rewrite the phrase smoothly without it, marked as "AFIRMAÇÃO ALÉM DO TEXTO".
 7. FRASE QUEBRADA / ASPAS: Sentences with missing words, ungrammatical phrasing, broken fragments, or mismatched quotation marks.
 8. REFERÊNCIA BÍBLICA CRUZADA AUSENTE: Citing or reciting a passage/verse from another biblical book without introducing its origin. Whenever a verse or account from another book is introduced (e.g. Numbers 21:9 regarding the bronze serpent within Jesus' conversation with Nicodemus in John 3), it MUST ALWAYS be introduced with its biblical origin (e.g. "referencing Moses in the wilderness in Numbers", "as written centuries earlier in Numbers"). Never paste an Old Testament quote into a dialogue without identifying its origin.
 9. INCONSISTÊNCIA DE CENÁRIO: The physical environment must remain strictly uniform and consistent throughout the scene. If the narrative establishes an enclosed private room ("room"), it CANNOT suddenly change to a "rooftop" or courtyard without an explicit scriptural movement. Any contradictory shift in physical location must be corrected to maintain uniform consistency.
@@ -6515,8 +6529,10 @@ CRITICAL MANDATORY GUIDELINES & EVALUATION PILLARS:
      a) Primary Canonical Scripture Reference (e.g. Livro, Capítulo e Versículos).
      b) Primary Concrete Tangible Detail (an exact number, measurement, specific ancient biblical object, artifact, or specific visual scene).
    - Ideas lacking the primary scripture reference or the concrete tangible detail are STRICTLY FORBIDDEN and must not appear.
-2. STRICT BIBLICAL FIDELITY:
-   - Every hook premise and title must be 100% faithful to what canonical Scripture actually states.
+2. STRICT BIBLICAL FIDELITY & PROHIBITION OF UNWRITTEN NUMBERS:
+   - Every hook premise, title, and detail must be 100% faithful to what canonical Scripture actually states.
+   - PROHIBITION OF UNWRITTEN NUMBERS/DISTANCES: In the title, concrete detail, and hook, NEVER include numbers, distances, calendar dates, ages, or quantities that are not explicitly written in the biblical passage (e.g. proibir "guiado 16 quilômetros" em 2 Reis 6:19 quando o texto não cita distância).
+   - Conversions of measurements that ARE in the biblical text remain permitted, always as approximations (e.g. "9 côvados, cerca de 4 metros").
    - NEVER state or invent claims that the biblical text does not make (e.g. NEVER use "as foretold" unless explicitly documented in canonical Scripture).
    - Restrict content strictly to the 66 canonical books of the Bible. Do NOT use extra-biblical theories, secular speculations, or apocryphal books.
 3. CONCRETE HOOK & THUMBNAIL VISUAL POTENTIAL:
@@ -7260,6 +7276,7 @@ MANDATORY OUTPUT GUIDELINES (ITEM 8):
 1. 3 HIGH-CTR TITLE OPTIONS:
    - Written 100% in ${lang.name}.
    - Strict biblical fidelity: do NOT state or invent claims unrecorded in canonical Scripture.
+   - PROHIBITION OF UNWRITTEN NUMBERS/DISTANCES: Strictly forbid numbers, distances, calendar dates, ages, or quantities that are not explicitly written in the biblical passage (e.g. proibir "16 quilômetros" ou datas inexistentes no texto). Conversions of measurements that ARE in the biblical text remain permitted, always as approximations (e.g. "9 côvados, cerca de 4 metros").
    - Gripping curiosity hook aligned with the chosen idea and thumbnail premise.
    - MAXIMUM OF 1 WORD IN CAPS LOCK per title (e.g. "${lang.titleHookSample}"). Never write an entire title in uppercase.
 2. FULL VIDEO DESCRIPTION (2-3 DENSE PARAGRAPHS IN ENGLISH):
@@ -8322,11 +8339,24 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   document.getElementById('btn-gerar-prompt-ideias').addEventListener('click', async () => {
+    // 1) Ativa trava estrita: impede qualquer recriação ou exibição de cards enquanto a geração estiver em andamento
+    window._gerandoIdeiasAtivo = true;
+
+    // 1) Limpa totalmente o HTML dos cards antigos e oculta container e avaliação
+    const listaCards = document.getElementById('lista-ideias-cards');
+    if (listaCards) listaCards.innerHTML = '';
+    const containerIdeias = document.getElementById('container-selecao-ideias');
+    if (containerIdeias) containerIdeias.classList.add('hidden');
+    const cardAvaliador = document.getElementById('card-avaliador-ideias');
+    if (cardAvaliador) cardAvaliador.classList.add('hidden');
+    const conteudoAvaliador = document.getElementById('conteudo-avaliador-ideias');
+    if (conteudoAvaliador) conteudoAvaliador.innerHTML = '';
+    window._ultimaAvaliacaoIdeias = null;
+
     // 4) Quando clicar em "Gerar Ideias de Vídeo com IA", limpa o campo "Ideia de Vídeo Escolhida", destaque e correções
     const inputIdeia = document.getElementById('input-ideia-escolhida');
     if (inputIdeia) {
       inputIdeia.value = '';
-      inputIdeia.dispatchEvent(new Event('input', { bubbles: true }));
     }
     window._numeroIdeiaEscolhida = null;
     window._ideiasCorrecoes = {};
@@ -8351,6 +8381,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let falhaRevisorFatos = false;
+    let textoFinalIdeias = '';
 
     try {
       const tema = UI.getValue('select-tema', 'input-tema-custom');
@@ -8368,7 +8399,7 @@ document.addEventListener('DOMContentLoaded', () => {
       );
 
       // Ordem estrita: gerar 10 ideias -> checar títulos e regenerar com IA -> avaliador -> revisor de fatos
-      let textoFinalIdeias = rawIdeias;
+      textoFinalIdeias = rawIdeias || document.getElementById('output-prompt-ideias')?.value || '';
       if (rawIdeias && typeof rawIdeias === 'string' && OpenRouterAPI.getApiKey()) {
         const ideiasLimpas = await validarERegenerarTitulosIdeias(rawIdeias, tema, modeloIdeias);
         const outEl = document.getElementById('output-prompt-ideias');
@@ -8414,8 +8445,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
+      // 1) Desativa a trava e só agora renderiza os novos cards e exibe a nova avaliação
+      window._gerandoIdeiasAtivo = false;
       if (typeof renderizarBotoesSelecaoIdeias === 'function' && textoFinalIdeias) {
         renderizarBotoesSelecaoIdeias(textoFinalIdeias);
+      }
+      const cardAvaliadorFinal = document.getElementById('card-avaliador-ideias');
+      if (cardAvaliadorFinal && window._ultimaAvaliacaoIdeias) {
+        cardAvaliadorFinal.classList.remove('hidden');
       }
 
       // 5 & 6) Conclusão: faixa verde (ou aviso de falha tolerada sem travar o usuário)
@@ -8425,10 +8462,29 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           window.atualizarProgressoIdeias(null, 'Pronto! Ideias avaliadas, conferidas e corrigidas — pode escolher', 'success');
         }
-        window.setBotoesIdeiasBloqueados(false);
       }
     } catch (err) {
       console.error('[Geração de Ideias] Erro:', err);
+      // Libera a trava antes de renderizar os cards que tiver
+      window._gerandoIdeiasAtivo = false;
+
+      // Mostra os cards que tiver (ou do textarea) e mensagem de erro na faixa
+      const textoDisponivel = textoFinalIdeias || document.getElementById('output-prompt-ideias')?.value || '';
+      if (typeof renderizarBotoesSelecaoIdeias === 'function' && textoDisponivel) {
+        renderizarBotoesSelecaoIdeias(textoDisponivel);
+      }
+      const cardAvaliadorFinal = document.getElementById('card-avaliador-ideias');
+      if (cardAvaliadorFinal && window._ultimaAvaliacaoIdeias) {
+        cardAvaliadorFinal.classList.remove('hidden');
+      }
+
+      // Mensagem clara de aviso/erro na faixa de progresso
+      if (typeof window.atualizarProgressoIdeias === 'function') {
+        window.atualizarProgressoIdeias(null, `⚠️ Erro no processamento: ${err.message || 'falha de conexão'} — ideias disponíveis para escolha`, 'warning');
+      }
+    } finally {
+      // GARANTIA ABSOLUTA: A trava é SEMPRE liberada e botões desbloqueados incondicionalmente
+      window._gerandoIdeiasAtivo = false;
       if (typeof window.setBotoesIdeiasBloqueados === 'function') {
         window.setBotoesIdeiasBloqueados(false);
       }
@@ -10462,6 +10518,13 @@ Desenvolvimento: A soberania divina cumpre cada detalhe profético anunciado pel
     const container = document.getElementById('container-selecao-ideias');
     const listaCards = document.getElementById('lista-ideias-cards');
     if (!container || !listaCards) return;
+
+    // Se a geração de ideias estiver ativa, não monta nem exibe cards
+    if (window._gerandoIdeiasAtivo) {
+      container.classList.add('hidden');
+      listaCards.innerHTML = '';
+      return;
+    }
 
     const itens = extrairIdeiasIndividuais(textoIdeias);
     if (itens.length === 0) {
