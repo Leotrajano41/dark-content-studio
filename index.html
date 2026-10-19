@@ -1374,8 +1374,8 @@ textarea.h-180 {
             <ol>
               <li><strong>Padrão do Canal:</strong> Clique no botão <em>"Preencher com o padrão do canal"</em> para carregar instantaneamente as opções ideais: Idioma = <code>Português (Brasil)</code>, Estilo = <code>YouTube Longo (18-20 minutos)</code>, Tom = <code>Dramático e Impactante</code>, Gancho = <code>Citação Impactante</code> e Tema = <code>-- Personalizável --</code>.</li>
               <li><strong>Tema do Vídeo:</strong> No campo "Tema Personalizado", digite o tema em português com as passagens bíblicas. <em>Exemplo pronto para copiar:</em> <code>Ogue, rei de Basã: o último dos gigantes (Números 21:33-35, Deuteronômio 3:1-11)</code>.</li>
-              <li><strong>Gerar e Avaliar Ideias:</strong> Ao clicar em <em>"Gerar Ideias de Vídeo com IA"</em>, a ideia anterior e o destaque são limpos automaticamente. Uma faixa de progresso mostra cada etapa em tempo real: <code>⏳ Gerando ideias... (1/3)</code>, <code>⏳ Avaliando fidelidade bíblica... (2/3)</code> e <code>⏳ Substituindo ideias com erro — tentativa X de 2... (3/3)</code>. Enquanto a ferramenta trabalha, os botões de escolha e de roteiro ficam desativados. Ao terminar, uma faixa verde confirma: <code>✅ Pronto! Ideias avaliadas e corrigidas — pode escolher</code>.</li>
-              <li><strong>Usar a Ideia:</strong> Clique em <em>"Usar esta ideia"</em> no card desejado. O card fica destacado com borda dourada e o selo <strong>✓ Ideia escolhida</strong> (permanecendo destacado mesmo após recarregar a página), e o texto é enviado para o campo <em>"Ideia de Vídeo Escolhida"</em> (que continua editável). Se alguma ideia apresentar o aviso vermelho <em>"⚠ Possível erro bíblico — evite esta ideia"</em>, você pode ignorá-la ou clicar em <strong>↻ Gerar outra no lugar</strong>.</li>
+              <li><strong>Gerar e Avaliar Ideias:</strong> Ao clicar em <em>"Gerar Ideias de Vídeo com IA"</em>, a ideia anterior e o destaque são limpos automaticamente. Uma faixa de progresso mostra cada etapa em tempo real: <code>⏳ Gerando ideias... (1/4)</code>, <code>⏳ Avaliando fidelidade bíblica... (2/4)</code>, <code>⏳ Conferindo fatos bíblicos... (3/4)</code> e <code>⏳ Substituindo ideias com erro grave... (4/4)</code> (se houver). Pequenos erros pontuais (como um nome ou localidade trocada) são ajustados sozinhos e exibem a etiqueta <strong>✏️ Corrigido: antes → depois</strong> no card. Enquanto a ferramenta trabalha, os botões de escolha e de roteiro ficam desativados. Ao terminar, uma faixa verde confirma: <code>✅ Pronto! Ideias avaliadas, conferidas e corrigidas — pode escolher</code>.</li>
+              <li><strong>Usar a Ideia:</strong> Clique em <em>"Usar esta ideia"</em> no card desejado. O card fica destacado com borda dourada e o selo <strong>✓ Ideia escolhida</strong> (permanecendo destacado mesmo após recarregar a página), e o texto é enviado para o campo <em>"Ideia de Vídeo Escolhida"</em> (que continua editável). As etiquetas azuis <strong>✏️ Corrigido: antes → depois</strong> mostram qualquer ajuste factual feito pela checagem bíblica (Almeida). Se alguma ideia apresentar o aviso vermelho <em>"⚠ Possível erro bíblico — evite esta ideia"</em>, você pode ignorá-la ou clicar em <strong>↻ Gerar outra no lugar</strong>.</li>
               <li><strong>Gerar Roteiro Completo:</strong> Clique em <em>"Gerar Roteiro Completo com IA"</em> e acompanhe a geração e as revisões automáticas. Ao final de todas as auditorias e revisões, uma faixa verde confirma <code>✅ Roteiro pronto</code>.</li>
             </ol>
             <div class="step-guide-alert">
@@ -2518,11 +2518,11 @@ textarea.h-180 {
               </div>
               <div class="guia-detalhe-item">
                 <span class="guia-tag-acao tag-oque">O que Escolher:</span>
-                <span>Ao clicar, a ideia anterior e o destaque são limpos automaticamente. Acompanhe a faixa de progresso no topo: <code>⏳ Gerando ideias... (1/3)</code>, <code>⏳ Avaliando fidelidade bíblica... (2/3)</code> e <code>⏳ Substituindo ideias com erro — tentativa X de 2... (3/3)</code>. Durante esse tempo, os botões ficam temporariamente desativados.</span>
+                <span>Ao clicar, a ideia anterior e o destaque são limpos automaticamente. Acompanhe a faixa de progresso no topo: <code>⏳ Gerando ideias... (1/4)</code>, <code>⏳ Avaliando fidelidade bíblica... (2/4)</code>, <code>⏳ Conferindo fatos bíblicos... (3/4)</code> e <code>⏳ Substituindo ideias com erro grave... (4/4)</code> (se houver). Durante esse tempo, os botões ficam temporariamente desativados.</span>
               </div>
               <div class="guia-detalhe-item">
                 <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
-                <span>Uma faixa verde <strong>✅ Pronto! Ideias avaliadas e corrigidas — pode escolher</strong> é exibida, com os cards das 10 ideias liberados e a <strong>Avaliação Estratégica da IA</strong> formatada com títulos e notas (sem códigos ou markdown).</span>
+                <span>Uma faixa verde <strong>✅ Pronto! Ideias avaliadas, conferidas e corrigidas — pode escolher</strong> é exibida, com os cards das 10 ideias liberados, a <strong>Avaliação Estratégica da IA</strong> formatada com títulos/notas e eventuais etiquetas azuis <strong>✏️ Corrigido: antes → depois</strong> destacando ajustes factuais automáticos.</span>
               </div>
             </div>
           </div>
@@ -2540,7 +2540,7 @@ textarea.h-180 {
               </div>
               <div class="guia-detalhe-item">
                 <span class="guia-tag-acao tag-oque">O que Escolher:</span>
-                <span>Clique para selecionar. O card da ideia fica destacado com borda dourada e o selo <strong>✓ Ideia escolhida</strong> (permanecendo destacado mesmo após recarregar a página). Se você escolher outra ideia, o destaque passa para a nova. Caso alguma ideia ainda apresente o aviso vermelho <em>"⚠ Possível erro bíblico — evite esta ideia"</em>, é só não usá-la ou clicar no botão <strong>↻ Gerar outra no lugar</strong>.</span>
+                <span>Clique para selecionar. O card da ideia fica destacado com borda dourada e o selo <strong>✓ Ideia escolhida</strong> (permanecendo destacado mesmo após recarregar a página). Se houver correções factuais pontuais, confira as etiquetas azuis <strong>✏️ Corrigido: antes → depois</strong>. Caso alguma ideia ainda apresente o aviso vermelho <em>"⚠ Possível erro bíblico — evite esta ideia"</em>, é só não usá-la ou clicar no botão <strong>↻ Gerar outra no lugar</strong>.</span>
               </div>
               <div class="guia-detalhe-item">
                 <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
@@ -3528,10 +3528,11 @@ function filtrarTermosProibidosNasIdeias(texto) {
  * Mostra na tela:
  * ⭐ Recomendada: nº X, porque…
 /**
- * Estado global de ideias com erro bíblico persistente e ideia escolhida
+ * Estado global de ideias com erro bíblico persistente, ideia escolhida e correções de fatos aplicadas
  */
 window._ideiasComErroBiblico = new Set();
 window._numeroIdeiaEscolhida = null;
+window._ideiasCorrecoes = {};
 
 /**
  * 5) Avisos de progresso e bloqueio dos botões
@@ -3550,6 +3551,11 @@ function atualizarProgressoIdeias(etapa, texto, tipo = 'info') {
     banner.style.borderColor = '#10b981';
     banner.style.color = '#a7f3d0';
     banner.innerHTML = `<span style="font-size: 1.15rem; margin-right: 6px;">✅</span> <strong>${texto}</strong>`;
+  } else if (tipo === 'warning') {
+    banner.style.background = 'rgba(245, 158, 11, 0.15)';
+    banner.style.borderColor = '#f59e0b';
+    banner.style.color = '#fde68a';
+    banner.innerHTML = `<span style="font-size: 1.15rem; margin-right: 6px;">⚠️</span> <strong>${texto}</strong>`;
   } else {
     banner.style.background = 'rgba(99, 102, 241, 0.15)';
     banner.style.borderColor = '#6366f1';
@@ -3585,16 +3591,25 @@ function setBotoesIdeiasBloqueados(bloqueado) {
 window.setBotoesIdeiasBloqueados = setBotoesIdeiasBloqueados;
 
 /**
- * 3) Converte Markdown da Avaliação Estratégica em HTML estilizado e remove ERROS_BIBLICOS e asteriscos soltos
+ * 3) Converte Markdown da Avaliação Estratégica em HTML estilizado, remove cabeçalhos internos e ERROS_BIBLICOS
  */
 function formatarAvaliacaoHtml(textoBruto) {
   if (!textoBruto) return '';
-  // Remove qualquer variação da linha ERROS_BIBLICOS e asteriscos ao redor
+  // 4) Esconde da tela o trecho "ANÁLISE FINAL OBRIGATÓRIA" e qualquer outra linha interna de controle ou protocolo
   let limpo = textoBruto
-    .replace(/(?:\*{1,3}|_{1,3})?\s*ERROS_BIBLICOS:\s*[^\n\r]*(?:\*{1,3}|_{1,3})?/gi, '')
+    // Remove qualquer linha de "ANÁLISE FINAL", "LINHAS DE CONTROLE", "INSTRUÇÕES DE SISTEMA", etc.
+    .replace(/^[#\*\s_]*AN[ÁA]LISE\s+FINAL[^\n\r]*/gim, '')
+    .replace(/^[#\*\s_]*LINHAS?\s+DE\s+CONTROLE[^\n\r]*/gim, '')
+    .replace(/^[#\*\s_]*INSTRU[ÇC][ÕO]ES?\s+DE\s+SISTEMA[^\n\r]*/gim, '')
+    .replace(/^[#\*\s_]*PAR[ÂA]METROS?\s+INTERNOS?[^\n\r]*/gim, '')
+    .replace(/^[#\*\s_]*PROTOCOLO\s+INTERNO[^\n\r]*/gim, '')
+    .replace(/(?:\*{1,3}|_{1,3})?\s*ERROS_BIBLICOS:\s*[^\n\r]*/gi, '')
+    .replace(/(?:\*{1,3}|_{1,3})?\s*IDEIAS_REPETIDAS:\s*[^\n\r]*/gi, '')
+    .replace(/^(?:CORRECAO|SUBSTITUIR|OK)\s*:[^\n\r]*/gim, '')
     .trim();
-  // Limpa asteriscos soltos no final do texto (ex: "**" solto)
-  limpo = limpo.replace(/[\s\*_]+$/g, '').trim();
+
+  // Limpa asteriscos, sublinhados e hashes soltos no final do texto
+  limpo = limpo.replace(/[\s\*_#]+$/g, '').trim();
 
   const escapeHtml = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -3603,18 +3618,33 @@ function formatarAvaliacaoHtml(textoBruto) {
     let l = linha.trim();
     if (!l) return '<div style="height: 6px;"></div>';
 
+    // Se for cabeçalho ou linha interna de controle residual, omite
+    if (
+      /an[áa]lise\s+final/i.test(l) ||
+      /linhas?\s+de\s+controle/i.test(l) ||
+      /instru[çc][õo]es?\s+de\s+sistema/i.test(l) ||
+      /erros_biblicos/i.test(l) ||
+      /ideias_repetidas/i.test(l) ||
+      /^(?:CORRECAO|SUBSTITUIR|OK)\s*:/i.test(l)
+    ) {
+      return '';
+    }
+
     // Remove asteriscos soltos no início ou fim da linha
     l = l.replace(/\s+\*{2,}$/, '').replace(/^\*{2,}\s+/, '');
 
-    // Headers Markdown: ### Título ou ## Título
-    if (/^###\s+/.test(l)) {
-      const conteudoH = l.replace(/^###\s+/, '').replace(/\*\*/g, '').trim();
-      return `<h4 style="color: #a5b4fc; font-size: 0.96rem; font-weight: 700; margin: 12px 0 6px 0; border-bottom: 1px solid rgba(165, 180, 252, 0.2); padding-bottom: 4px;">${escapeHtml(conteudoH)}</h4>`;
+    // 4) Trata headers Markdown de qualquer nível (#, ##, ###) e elimina o "#" solto
+    if (/^#{1,6}\s+/.test(l)) {
+      const conteudoH = l.replace(/^#{1,6}\s+/, '').replace(/\*\*/g, '').trim();
+      // Se for a linha que apenas repete "AVALIAÇÃO ESTRATÉGICA DAS 10 IDEIAS" ou se for "ANÁLISE FINAL...", omite
+      if (/avalia[çc][ãa]o\s+estrat[ée]gica/i.test(conteudoH) || /an[áa]lise\s+final/i.test(conteudoH)) {
+        return '';
+      }
+      return `<h4 style="color: #a5b4fc; font-size: 0.98rem; font-weight: 700; margin: 12px 0 6px 0; border-bottom: 1px solid rgba(165, 180, 252, 0.2); padding-bottom: 4px;">${escapeHtml(conteudoH)}</h4>`;
     }
-    if (/^##\s+/.test(l)) {
-      const conteudoH = l.replace(/^##\s+/, '').replace(/\*\*/g, '').trim();
-      return `<h3 style="color: #c7d2fe; font-size: 1.04rem; font-weight: 700; margin: 14px 0 6px 0;">${escapeHtml(conteudoH)}</h3>`;
-    }
+
+    // Remove qualquer caractere '#' residual solto no início da linha
+    l = l.replace(/^#+\s*/, '');
 
     // Seções de destaque: 🏆 TOP 3 ou ⚠️ QUAIS EVITAR
     if (l.includes('🏆') || /top\s*3/i.test(l)) {
@@ -3635,7 +3665,7 @@ function formatarAvaliacaoHtml(textoBruto) {
     return `<div style="margin-bottom: 4px; line-height: 1.5; color: #e2e8f0;">${formatada}</div>`;
   });
 
-  return linhasHtml.join('\n');
+  return linhasHtml.filter(Boolean).join('\n');
 }
 window.formatarAvaliacaoHtml = formatarAvaliacaoHtml;
 
@@ -3772,6 +3802,19 @@ Answer strictly with "OK" if it is biblically accurate, or "ERRO: [short explana
 window.regenerarIdeiaUnicaComErro = regenerarIdeiaUnicaComErro;
 
 /**
+ * Valida se um texto contém citação de versículo bíblico que serve como prova factual
+ */
+function validarSeTemProvaBiblica(texto) {
+  if (!texto || typeof texto !== 'string') return false;
+  // Livros bíblicos canônicos ou capítulos:versículos
+  const temLivroOuCap = /\b(?:G[êe]n(?:esis)?|[ÊE]x(?:odo)?|Lev(?:[íi]tico)?|N[úu]m(?:eros)?|Deut(?:eron[ôo]mio)?|Jos(?:u[ée])?|Ju[íi](?:zes)?|Rute|\d?\s*Sam(?:uel)?|\d?\s*Reis|\d?\s*Cr[ôo]n(?:icas)?|Esd(?:ras)?|Nee(?:mias)?|Est(?:er)?|J[óo]|Sal(?:mos)?|Prov(?:[ée]rbios)?|Ecl(?:esiastes)?|C[âa]nt(?:icos)?|Isa(?:[íi]as)?|Jer(?:emias)?|Lam(?:enta[çc][õo]es)?|Eze(?:quiel)?|Dan(?:iel)?|Os(?:[ée]ias)?|Joel|Am[óo]s|Obad(?:ias)?|Jon(?:as)?|Miq(?:ueias)?|Naum|Hab(?:acuque)?|Sof(?:onias)?|Ageu|Zac(?:arias)?|Mal(?:aquias)?|Mat(?:eus)?|Mar(?:cos)?|Luc(?:as)?|Jo[ãa]o|Atos|Rom(?:anos)?|\d?\s*Cor(?:[íi]ntios)?|G[áa]l(?:atas)?|Ef(?:[ée]sios)?|Fil(?:ipenses)?|Col(?:ossenses)?|\d?\s*Tes(?:salonicenses)?|\d?\s*Tim(?:[óo]teo)?|Tito|Filem(?:[on|om])?|Heb(?:reus)?|Tia(?:go)?|\d?\s*Ped(?:ro)?|\d?\s*Jo[ãa]o|Jud(?:as)?|Apoc(?:alipse)?)\b|\d+\s*:\s*\d+/i.test(texto);
+  // Citação de versículo / termo comprobatório / diz / afirma / lista / aspas
+  const temCitacao = /(?:diz|afirma|cita|declara|est[áa] em|segundo|conforme|lista|descreve|trinta|sessenta|contra|'|")/i.test(texto);
+  return temLivroOuCap && temCitacao;
+}
+window.validarSeTemProvaBiblica = validarSeTemProvaBiblica;
+
+/**
  * Avaliador de Ideias via IA (Item 4 + Itens a, b, c)
  * Avalia as 10 ideias, identifica erros bíblicos na linha fixa ERROS_BIBLICOS,
  * substitui automaticamente as ideias erradas (máx 2 rodadas com controle de diversidade e formato),
@@ -3788,6 +3831,7 @@ async function avaliarIdeiasComIA(ideiasTexto, tema, modelo) {
 
   const modeloAvaliacao = modelo || OpenRouterAPI.getModelRoteiro();
   window._ideiasComErroBiblico = new Set();
+  window._ideiasTop3 = new Set();
 
   let textoAtualIdeias = ideiasTexto;
   let rodada = 0;
@@ -3804,12 +3848,20 @@ ${textoAtualIdeias}
 
 EVALUATION CRITERIA & WEIGHTS (Score each idea from 0 to 10 on each criterion):
 1. Detalhe Concreto (Weight: 2): Presence of a tangible, physical detail, number, dimension, ancient object, or specific scene from the script.
-2. Fidelidade Bíblica (Weight: 2): Strict fidelity to canonical Scripture without unwritten speculations, extra-biblical additions, or attributing events/miracles to the wrong prophet/king/person.
+2. Fidelidade Bíblica (Weight: 2): Strict fidelity to canonical Scripture without unwritten speculations, extra-biblical additions, or attributing events/miracles/numbers to the wrong entity or person.
 3. Momento Visual para Miniatura (Weight: 1): Strong thumbnail potential with high contrast, dramatic scale, and focal subject.
 4. Gancho do Título (Weight: 1): Curiosity-inducing title with high CTR structure without excessive clichés.
 5. Tema Seguro (Weight: 1): Solemn reverent tone, no justification of destruction, completely safe for monetization.
 
-MANDATORY OUTPUT FORMAT (Write the response in Portuguese Brasil):
+CRITICAL FIDELITY AND PROOF RULES (STRICTLY ENFORCED):
+- REGRA DE PROVA OBRIGATÓRIA PARA ERROS BÍBLICOS: Você SÓ PODE apontar erro bíblico se citar na mesma linha o versículo bíblico (Almeida) com o texto/número que contradiz explicitamente a afirmação.
+  Exemplo de formato: "SUBSTITUIR: 8 | Josué 12:24 diz 'trinta e um reis' | título diz 60 reis"
+- SEM CITAÇÃO DE VERSÍCULO QUE CONTRADIZ, A AFIRMAÇÃO É CONSIDERADA BIBLICAMENTE CORRETA E NÃO PODE SER MARCADA COMO ERRO.
+- Em caso de dúvida, ou se o texto bíblico apoia a afirmação, ela é considerada CORRETA.
+- RESSALVAS DE ESTILO (título longo, foco dividido, gancho fraco, tom dramático, metáforas) NUNCA SÃO ERROS BÍBLICOS! Ficam APENAS na seção "⚠️ QUAIS EVITAR" e JAMAIS entram em ERROS_BIBLICOS.
+- Se houver duas ideias praticamente iguais ou com o mesmo milagre/ângulo, liste a mais fraca em "IDEIAS_REPETIDAS:" para substituição automática!
+
+MANDATORY OUTPUT FORMAT (Write the response in Portuguese Brasil, DO NOT ADD ANY "ANÁLISE FINAL" HEADER):
 🏆 TOP 3 MELHORES IDEIAS:
 1. Ideia nº [X] — Nota: [Média ponderada de 0 a 10]/10
    Motivo: [Explicação clara destacando o detalhe concreto, a fidelidade bíblica e o apelo visual para miniatura]
@@ -3819,11 +3871,11 @@ MANDATORY OUTPUT FORMAT (Write the response in Portuguese Brasil):
    Motivo: [Explicação]
 
 ⚠️ QUAIS EVITAR:
-- Ideia nº [W]: [Motivo apontando falta de detalhe concreto, risco teológico, sensibilidade ou gancho fraco]
+- Ideia nº [W]: [Motivo editorial/estratégico de estilo: título longo, foco dividido ou gancho fraco]
 (Apresente as 2 ou 3 ideias menos recomendadas)
 
-MANDATORY LAST LINE FOR SYSTEM PARSER (EXACT FORMAT AT THE VERY END OF YOUR RESPONSE):
-ERROS_BIBLICOS: [comma-separated numbers of ideas that contain factual biblical fidelity errors, e.g. "ERROS_BIBLICOS: 6, 10", or "ERROS_BIBLICOS: nenhum" if all are biblically accurate]`;
+ERROS_BIBLICOS: [Se houver erro real com prova bíblica citada: "Ideia [N] | [Versículo que contradiz] | [Erro na ideia]". Se não houver erro com prova bíblica, escreva EXATAMENTE: ERROS_BIBLICOS: nenhum]
+IDEIAS_REPETIDAS: [Números de ideias duplicadas que devem ser trocadas, ex: "IDEIAS_REPETIDAS: 5", ou "IDEIAS_REPETIDAS: nenhuma"]`;
 
     try {
       const avaliacao = await OpenRouterAPI.generateContent(
@@ -3836,32 +3888,92 @@ ERROS_BIBLICOS: [comma-separated numbers of ideas that contain factual biblical 
         break;
       }
 
-      // Extrai linha de erros bíblicos (Ajuste a)
-      const matchErros = avaliacao.match(/ERROS_BIBLICOS:\s*([^\n\r]+)/i);
-      const linhaErros = matchErros ? matchErros[1].trim() : 'nenhum';
+      // Salva a avaliação para fornecer contexto ao Revisor de Fatos
+      window._ultimaAvaliacaoIdeias = avaliacao;
+
+      // 3) Extrai números do TOP 3 para garantir coerência estrita
+      const extrairNumerosTop3 = (texto) => {
+        const top3Match = texto.match(/TOP\s*3[\s\S]*?(?=(?:⚠️|QUAIS\s+EVITAR|ERROS_BIBLICOS|IDEIAS_REPETIDAS|AN[ÁA]LISE|$))/i);
+        const nums = new Set();
+        if (top3Match) {
+          const matches = top3Match[0].match(/(?:Ideia|#)\s*(?:n[º°]|n\.)?\s*(\d+)/gi);
+          if (matches) {
+            matches.forEach(m => {
+              const n = m.match(/\d+/);
+              if (n) nums.add(Number(n[0]));
+            });
+          }
+        }
+        return nums;
+      };
+      const top3Set = extrairNumerosTop3(avaliacao);
+      window._ideiasTop3 = top3Set;
 
       let numerosComErro = [];
-      if (linhaErros.toLowerCase() !== 'nenhum') {
-        const matchesNums = linhaErros.match(/\d+/g);
-        if (matchesNums) {
-          numerosComErro = [...new Set(matchesNums.map(Number))];
+
+      // 1) Exigir prova na linha ERROS_BIBLICOS
+      const matchErros = avaliacao.match(/ERROS_BIBLICOS:\s*([^\n\r]+(?:\n\s*[-*]\s*[^\n\r]+)*)/i);
+      if (matchErros) {
+        const blocoErros = matchErros[1].trim();
+        if (!/^\s*nenhum\s*$/i.test(blocoErros)) {
+          const linhasErros = blocoErros.split(/\r?\n/);
+          for (const le of linhasErros) {
+            const numMatch = le.match(/(?:Ideia|#)\s*(?:nº|n°)?\s*(\d+)/i) || le.match(/(\d+)/);
+            if (numMatch) {
+              const nIdeia = Number(numMatch[1]);
+              // 1) Só aceita se houver prova bíblica com citação de versículo que contradiz
+              if (validarSeTemProvaBiblica(le)) {
+                // 3) Coerência com Top 3: se a ideia está no Top 3, sem citação cabal que contradiga diretamente o tema, descarta
+                if (!top3Set.has(nIdeia)) {
+                  if (!numerosComErro.includes(nIdeia)) {
+                    numerosComErro.push(nIdeia);
+                  }
+                } else {
+                  console.log(`[Avaliador] Ideia #${nIdeia} está no Top 3; mantida sem aviso vermelho de erro.`);
+                }
+              } else {
+                console.log(`[Avaliador] Menção a ideia #${nIdeia} em ERROS_BIBLICOS descartada por falta de citação de versículo/prova:`, le);
+              }
+            }
+          }
         }
       }
 
-      // Se não há erros bíblicos, ou se atingiu o limite de 2 rodadas:
+      // 3) Ideias repetidas: substitui a mais fraca automaticamente
+      const matchRepetidas = avaliacao.match(/IDEIAS_REPETIDAS:\s*([^\n\r]+)/i);
+      if (matchRepetidas && matchRepetidas[1].toLowerCase() !== 'nenhuma' && matchRepetidas[1].toLowerCase() !== 'nenhum') {
+        const matchesRep = matchRepetidas[1].match(/\d+/g);
+        if (matchesRep) {
+          matchesRep.map(Number).forEach(n => {
+            if (!numerosComErro.includes(n) && !top3Set.has(n)) {
+              console.log(`[Avaliador] Ideia repetida #${n} marcada para substituição automática.`);
+              numerosComErro.push(n);
+            }
+          });
+        }
+      }
+
+      // Se não há erros bíblicos nem ideias repetidas, ou se atingiu o limite de 2 rodadas:
       if (numerosComErro.length === 0 || rodada === MAX_RODADAS) {
         if (numerosComErro.length > 0 && rodada === MAX_RODADAS) {
-          numerosComErro.forEach(n => window._ideiasComErroBiblico.add(n));
+          numerosComErro.forEach(n => {
+            if (!top3Set.has(n)) {
+              window._ideiasComErroBiblico.add(n);
+            }
+          });
         } else {
           window._ideiasComErroBiblico.clear();
         }
 
-        // 3) Formata a resposta com HTML convertendo markdown e removendo ERROS_BIBLICOS e asteriscos soltos
+        // Garante que nenhuma ideia do Top 3 fique com aviso vermelho de erro
+        top3Set.forEach(n => window._ideiasComErroBiblico.delete(n));
+
+        // Formata a resposta com HTML convertendo markdown e removendo linhas internas
         conteudo.innerHTML = formatarAvaliacaoHtml(avaliacao);
         break;
       }
 
-      // Há erros bíblicos e ainda temos rodadas restantes:
+      // Há erros bíblicos/repetições e ainda temos rodadas restantes:
       rodada++;
       // 5) Atualiza faixa de progresso
       if (typeof window.atualizarProgressoIdeias === 'function') {
@@ -3960,6 +4072,221 @@ Output EXCLUSIVELY the 4 lines above, without numbering preamble, without quotes
     window.renderizarBotoesSelecaoIdeias(textoAtualIdeias);
   }
 }
+
+/**
+ * Revisor de Fatos Bíblicos das Ideias (Almeida)
+ * Analisa cada uma das 10 ideias, confere fatos com a referência bíblica (Almeida)
+ * Aplica correções cirúrgicas ("Canaã" -> "Basã") mantendo escopo estrito por ideia,
+ * substitui automaticamente se for erro grave e tolera falhas sem travar.
+ */
+async function revisarFatosBiblicosIdeiasComIA(ideiasTexto, tema, modelo, textoAvaliacaoAnterior) {
+  window._ideiasCorrecoes = window._ideiasCorrecoes || {};
+  const extrairFn = window.extrairIdeiasIndividuais || extrairIdeiasIndividuais;
+  const itens = extrairFn(ideiasTexto);
+  if (!itens || itens.length === 0) {
+    return { textoFinal: ideiasTexto, houveErro: false };
+  }
+
+  const avaliacaoContexto = textoAvaliacaoAnterior || window._ultimaAvaliacaoIdeias || '';
+  const escapeRegex = (s) => String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  const promptRevisor = `Act as an ultra-strict Biblical Fact-Checker and Scholar using the canonical biblical text in Portuguese (João Ferreira de Almeida translation - ARC/ARA).
+Fact-check all concrete historical, geographical, numerical, and biographical claims in these 10 biblical video ideas for the theme: "${tema}".
+
+IDEAS TO AUDIT:
+"""
+${ideiasTexto}
+"""
+${avaliacaoContexto ? `
+PREVIOUS SCHOLAR EVALUATION CRITIQUES TO RESOLVE:
+"""
+${avaliacaoContexto.slice(0, 1800)}
+"""
+CRITICAL DIRECTIVE: The evaluation above may have highlighted factual critiques. Address and correct every factual/numerical error cited in the evaluation that has textual biblical proof!
+` : ''}
+CRITICAL AUDIT & PROOF RULES (STRICTLY ENFORCED):
+1. MANDATORY BIBLICAL PROOF CITATION:
+   You are ONLY allowed to output CORRECAO or SUBSTITUIR if you cite, in the EXACT same protocol line, the biblical passage and verse text (Almeida) that DIRECTLY contradicts the claim in the idea.
+   Example of format:
+   SUBSTITUIR: 8 | Josué 12:24 diz 'trinta e um reis' | título diz 60 reis
+2. WITHOUT DIRECT BIBLICAL VERSE PROOF CITATION, THE CLAIM IS DEEMED BIBLICALLY ACCURATE AND CANNOT BE CHANGED (output OK).
+3. IN CASE OF ANY DOUBT, OR IF SCRIPTURE SUPPORTS THE STATEMENT, MARK "OK" AND DO NOT CHANGE ANYTHING.
+4. STYLE ISSUES ARE NEVER FACTUAL ERRORS: Title length, dramatic tone, divided focus, or weak hooks are NEVER factual biblical errors. Only literal historical/geographical/numerical contradictions count.
+5. NUMBERS IN THE TITLE:
+   Carefully inspect numbers in titles against the declared scripture passage (Almeida). If a number belongs to something else in the text, cite the verse proof and issue a CORRECAO:
+   CORRECAO: [Idea Number] | [Verse Proof] | [Wrong Term in Title] | [Correct Term]
+
+MANDATORY PROTOCOL OUTPUT (Protocol lines at the very end of your response, strictly one per finding or per idea, NO PREAMBLE, NO HEADERS, NO MARKDOWN):
+CORRECAO: [Idea Number] | [Verse Proof] | [Exact Wrong Word/Phrase] | [Exact Correct Word/Phrase]
+SUBSTITUIR: [Idea Number] | [Verse Proof] | [Reason of Major Error]
+OK: [Idea Number]`;
+
+  let respostaRaw = '';
+  try {
+    respostaRaw = await OpenRouterAPI.generateContent(
+      promptRevisor,
+      modelo || OpenRouterAPI.getModelRoteiro()
+    );
+  } catch (errApi) {
+    console.warn('[Revisor de Fatos] Erro na API:', errApi);
+    return { textoFinal: ideiasTexto, houveErro: true, motivo: errApi.message };
+  }
+
+  if (!respostaRaw || !respostaRaw.trim()) {
+    console.warn('[Revisor de Fatos] Resposta vazia da API.');
+    return { textoFinal: ideiasTexto, houveErro: true, motivo: 'Resposta vazia' };
+  }
+
+  const linhas = respostaRaw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const linhasProtocolo = linhas.filter(l => /^(?:CORRECAO|SUBSTITUIR|OK)\s*:/i.test(l));
+
+  if (linhasProtocolo.length === 0) {
+    console.warn('[Revisor de Fatos] Nenhuma linha de protocolo identificada na resposta.');
+    return { textoFinal: ideiasTexto, houveErro: true, motivo: 'Formato não reconhecido' };
+  }
+
+  const ideiasParaSubstituir = new Set();
+  const top3 = window._ideiasTop3 || new Set();
+
+  for (const linha of linhasProtocolo) {
+    if (/^CORRECAO\s*:/i.test(linha)) {
+      const partes = linha.replace(/^CORRECAO\s*:\s*/i, '').split('|').map(p => p.trim());
+      let num = '';
+      let prova = '';
+      let antes = '';
+      let depois = '';
+
+      if (partes.length >= 4) {
+        num = String(partes[0].replace(/\D/g, ''));
+        prova = partes[1];
+        antes = partes[2];
+        depois = partes[3];
+      } else if (partes.length === 3) {
+        num = String(partes[0].replace(/\D/g, ''));
+        antes = partes[1];
+        depois = partes[2];
+        prova = linha;
+      }
+
+      // 1) Exigir prova: só aceita se citar versículo que contradiz
+      const temProva = typeof validarSeTemProvaBiblica === 'function' ? validarSeTemProvaBiblica(prova || linha) : true;
+      if (!temProva) {
+        console.log(`[Revisor] CORRECAO ignorada para ideia #${num} por falta de citação de versículo comprobatório:`, linha);
+        continue;
+      }
+
+      if (num && antes && depois && antes.toLowerCase() !== depois.toLowerCase()) {
+        const idx = itens.findIndex(it => String(it.numero) === num);
+        if (idx !== -1) {
+          const textoAntes = itens[idx].texto;
+          let regexAntes = new RegExp(escapeRegex(antes), 'gi');
+          if (!regexAntes.test(textoAntes)) {
+            // Tenta match com espaços múltiplos flexíveis
+            const antesFlex = escapeRegex(antes).replace(/\s+/g, '\\s+');
+            regexAntes = new RegExp(antesFlex, 'gi');
+          }
+          if (regexAntes.test(textoAntes)) {
+            itens[idx].texto = textoAntes.replace(regexAntes, depois);
+            window._ideiasCorrecoes[num] = window._ideiasCorrecoes[num] || [];
+            const jaExiste = window._ideiasCorrecoes[num].some(c => c.antes.toLowerCase() === antes.toLowerCase() && c.depois.toLowerCase() === depois.toLowerCase());
+            if (!jaExiste) {
+              window._ideiasCorrecoes[num].push({ antes, depois });
+            }
+            // Se foi corrigida cirurgicamente, remove de _ideiasComErroBiblico
+            if (window._ideiasComErroBiblico) {
+              window._ideiasComErroBiblico.delete(Number(num));
+              window._ideiasComErroBiblico.delete(String(num));
+            }
+          }
+        }
+      }
+    } else if (/^SUBSTITUIR\s*:/i.test(linha)) {
+      const partes = linha.replace(/^SUBSTITUIR\s*:\s*/i, '').split('|').map(p => p.trim());
+      if (partes.length >= 1) {
+        const num = String(partes[0].replace(/\D/g, ''));
+        const prova = partes.length >= 2 ? partes[1] : '';
+
+        // 1) Exigir prova: só substitui se citar versículo que contradiz
+        const temProva = typeof validarSeTemProvaBiblica === 'function' ? validarSeTemProvaBiblica(prova || linha) : true;
+        if (!temProva) {
+          console.log(`[Revisor] SUBSTITUIR ignorado para ideia #${num} por falta de citação de versículo comprobatório:`, linha);
+          continue;
+        }
+
+        // 3) Coerência: se estiver no Top 3, sem prova cabal descarta
+        const isTop3 = top3.has(Number(num)) || top3.has(String(num));
+        if (isTop3 && !temProva) {
+          console.log(`[Revisor] Ideia #${num} está no Top 3; substituição sem prova descartada.`);
+          continue;
+        }
+
+        if (num) {
+          ideiasParaSubstituir.add(Number(num));
+        }
+      }
+    }
+  }
+
+  if (ideiasParaSubstituir.size > 0) {
+    if (typeof window.atualizarProgressoIdeias === 'function') {
+      window.atualizarProgressoIdeias(4, `Substituindo ${ideiasParaSubstituir.size} ideia(s) com erro bíblico grave... (4/4)`, 'info');
+      window.setBotoesIdeiasBloqueados(true);
+    }
+
+    const titulosExistentes = itens
+      .filter(it => !ideiasParaSubstituir.has(Number(it.numero)))
+      .map(it => it.texto.split(/\r?\n/)[0].replace(/^#?\d+[\.:\)\-]\s*/, '').replace(/\*{1,3}/g, '').trim());
+
+    const listaExistentesTexto = itens
+      .filter(it => !ideiasParaSubstituir.has(Number(it.numero)))
+      .map(it => `- Ideia #${it.numero}: ${it.texto.split(/\r?\n/)[0].replace(/^#?\d+[\.:\)\-]\s*/, '').replace(/\*{1,3}/g, '').trim()}`)
+      .join('\n');
+
+    for (const num of ideiasParaSubstituir) {
+      const promptSubstituta = `Act as a senior biblical scholar and YouTube content strategist for our biblical documentary channel.
+Generate exactly 1 replacement biblical video idea for idea #${num} on the theme: "${tema}".
+
+CRITICAL REQUIREMENT - DIVERSITY & NO DUPLICATION:
+The following ideas ALREADY EXIST in this video package:
+"""
+${listaExistentesTexto}
+"""
+You MUST create a completely DIFFERENT idea from all existing ones above:
+- Focus on a completely DIFFERENT miracle, event, character, or historical angle of the biblical account.
+- Do NOT repeat the same miracle, title phrasing, or hook premise of ANY existing idea above.
+- Strict canonical biblical fidelity (Almeida). Zero mistakes in assigning miracles, prophets, kings, places, or events.
+
+MANDATORY OUTPUT FORMAT (EXACTLY 4 LINES in Portuguese Brasil, maximum 80 characters for the title line):
+[Título curto com no máximo 80 caracteres e no máximo 1 palavra em MAIÚSCULAS]
+- Referência Bíblica Principal: [Livro X:Y]
+- Detalhe Concreto Principal: [Número exato, medida, objeto físico ou cena visual específica]
+- Gancho / Premissa: [1 a 2 frases curtas instigantes]
+
+Output EXCLUSIVELY the 4 lines above, without numbering preamble, without quotes, without introductory text.`;
+
+      try {
+        const respSub = await OpenRouterAPI.generateContent(promptSubstituta, modelo || OpenRouterAPI.getModelRoteiro());
+        if (respSub && respSub.trim()) {
+          const val = validarFormatoIdeiaSubstituta(respSub, titulosExistentes);
+          if (val.valido) {
+            const idx = itens.findIndex(it => Number(it.numero) === num);
+            if (idx !== -1) {
+              itens[idx].texto = val.textoFormatado;
+              delete window._ideiasCorrecoes[String(num)];
+              titulosExistentes.push(val.textoFormatado.split(/\r?\n/)[0].replace(/^#?\d+[\.:\)\-]\s*/, '').replace(/\*{1,3}/g, '').trim());
+            }
+          }
+        }
+      } catch (errSub) {
+        console.warn(`[Revisor de Fatos] Falha ao substituir ideia #${num}:`, errSub);
+      }
+    }
+  }
+
+  const textoFinal = itens.map(it => `${it.numero}. ${it.texto}`).join('\n\n');
+  return { textoFinal, houveErro: false };
+}
+window.revisarFatosBiblicosIdeiasComIA = revisarFatosBiblicosIdeiasComIA;
 
 /**
  * Avaliador de Thumbnails via IA (Item 7)
@@ -4137,6 +4464,94 @@ Output EXCLUSIVELY the line above.`;
     conteudo.textContent = 'Erro ao avaliar títulos SEO: ' + err.message;
   }
 }
+
+/**
+ * Revisor de Fatos nos Títulos de SEO (Etapa 4)
+ * Confere fatos usando a referência bíblica da ideia escolhida na etapa 1 (e o roteiro gerado)
+ * Aplica correções nos títulos ("Canaã" -> "Basã") mantendo formato de CTR alto e tolera falhas.
+ */
+async function revisarFatosTitulosSeoComIA(textoSeo, temaComReferencia, roteiroOuResumo, modelo) {
+  if (!textoSeo || typeof textoSeo !== 'string') return textoSeo;
+
+  const escapeRegex = (s) => String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  const promptRevisorTitulos = `Act as an ultra-strict Biblical Fact-Checker using the canonical biblical text in Portuguese (João Ferreira de Almeida translation - ARC/ARA).
+Fact-check the YouTube video titles generated in this SEO package against the chosen biblical theme reference and script:
+
+CHOSEN BIBLICAL THEME & PRIMARY SCRIPTURE REFERENCE:
+"""
+${temaComReferencia}
+"""
+
+SCRIPT SUMMARY / SCRIPT EXCERPT:
+"""
+${(roteiroOuResumo || '').slice(0, 1600)}
+"""
+
+SEO PACKAGE CONTAINING TITLES:
+"""
+${textoSeo}
+"""
+
+STRICT SAFETY AND FIDELITY RULES:
+1. ONLY mark CORRECAO when a title explicitly contains a factual biblical error (e.g. wrong geographical place like "Canaã" instead of "Basã", wrong prophet/king name, wrong numerical detail contradictory to the reference/script).
+2. IN CASE OF ANY DOUBT, or if the title is accurate, MARK "OK" AND DO NOT CHANGE ANYTHING.
+3. Keep the high CTR clickability and style of the title completely intact.
+
+MANDATORY OUTPUT FORMAT:
+If a title has a factual error:
+CORRECAO: [Exact Wrong Word/Phrase] | [Exact Correct Word/Phrase]
+If titles are accurate:
+OK
+
+Output EXCLUSIVELY the protocol lines above.`;
+
+  try {
+    const resp = await OpenRouterAPI.generateContent(
+      promptRevisorTitulos,
+      modelo || OpenRouterAPI.getModelRoteiro()
+    );
+
+    if (!resp || !resp.trim()) return textoSeo;
+
+    let seoAtualizado = textoSeo;
+    const linhas = resp.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const correcoesTitulos = [];
+
+    for (const linha of linhas) {
+      if (/^CORRECAO\s*:/i.test(linha)) {
+        const partes = linha.replace(/^CORRECAO\s*:\s*/i, '').split('|').map(p => p.trim());
+        if (partes.length >= 2) {
+          const antes = partes[0];
+          const depois = partes[1];
+          if (antes && depois && antes.toLowerCase() !== depois.toLowerCase()) {
+            const regex = new RegExp(escapeRegex(antes), 'gi');
+            if (regex.test(seoAtualizado)) {
+              seoAtualizado = seoAtualizado.replace(regex, depois);
+              correcoesTitulos.push({ antes, depois });
+            }
+          }
+        }
+      }
+    }
+
+    if (correcoesTitulos.length > 0) {
+      console.log('[SEO Fact-Check] Correções aplicadas nos títulos de SEO:', correcoesTitulos);
+      const cardSeo = document.getElementById('card-avaliador-seo');
+      const conteudoSeo = document.getElementById('conteudo-avaliador-seo');
+      if (cardSeo && conteudoSeo) {
+        const listaEtiquetas = correcoesTitulos.map(c => `✏️ Título corrigido: <span style="text-decoration: line-through; opacity: 0.75;">${c.antes}</span> → <strong>${c.depois}</strong>`).join(' | ');
+        conteudoSeo.innerHTML += `<div style="margin-top: 8px; font-size: 0.8rem; color: #93c5fd; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.35); padding: 4px 8px; border-radius: 4px;">${listaEtiquetas}</div>`;
+      }
+    }
+
+    return seoAtualizado;
+  } catch (errSeo) {
+    console.warn('[SEO Fact-Check] Erro tolerado na checagem dos títulos:', errSeo);
+    return textoSeo;
+  }
+}
+window.revisarFatosTitulosSeoComIA = revisarFatosTitulosSeoComIA;
 
 /**
  * Função de Varredura e Regeneração com Contexto Vizinho (Item 1, Bug 1 & Bug 2)
@@ -7907,18 +8322,21 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   document.getElementById('btn-gerar-prompt-ideias').addEventListener('click', async () => {
-    // 4) Quando clicar em "Gerar Ideias de Vídeo com IA", limpa o campo "Ideia de Vídeo Escolhida" e o destaque dourado
+    // 4) Quando clicar em "Gerar Ideias de Vídeo com IA", limpa o campo "Ideia de Vídeo Escolhida", destaque e correções
     const inputIdeia = document.getElementById('input-ideia-escolhida');
     if (inputIdeia) {
       inputIdeia.value = '';
       inputIdeia.dispatchEvent(new Event('input', { bubbles: true }));
     }
     window._numeroIdeiaEscolhida = null;
+    window._ideiasCorrecoes = {};
     localStorage.removeItem('dark_studio_ideia_escolhida_num');
     document.querySelectorAll('.ideia-card').forEach(c => {
       c.classList.remove('ideia-card-escolhida', 'selecionada');
       const selo = c.querySelector('.badge-ideia-escolhida');
       if (selo) selo.remove();
+      const tags = c.querySelectorAll('.tag-correcao-fato');
+      tags.forEach(t => t.remove());
       const btn = c.querySelector('.btn-usar-esta-ideia');
       if (btn) {
         btn.className = 'btn btn-sm btn-secondary btn-usar-esta-ideia';
@@ -7926,11 +8344,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // 5) Aviso de progresso: Etapa 1/3 e desativação dos botões
+    // 5) Aviso de progresso: Etapa 1/4 e desativação dos botões
     if (typeof window.atualizarProgressoIdeias === 'function') {
-      window.atualizarProgressoIdeias(1, 'Gerando ideias... (1/3)', 'info');
+      window.atualizarProgressoIdeias(1, 'Gerando ideias... (1/4)', 'info');
       window.setBotoesIdeiasBloqueados(true);
     }
+
+    let falhaRevisorFatos = false;
 
     try {
       const tema = UI.getValue('select-tema', 'input-tema-custom');
@@ -7947,7 +8367,7 @@ document.addEventListener('DOMContentLoaded', () => {
         modeloIdeias
       );
 
-      // Ordem estrita (Item 4): gerar 10 ideias -> checar títulos e regenerar com IA -> avaliador
+      // Ordem estrita: gerar 10 ideias -> checar títulos e regenerar com IA -> avaliador -> revisor de fatos
       let textoFinalIdeias = rawIdeias;
       if (rawIdeias && typeof rawIdeias === 'string' && OpenRouterAPI.getApiKey()) {
         const ideiasLimpas = await validarERegenerarTitulosIdeias(rawIdeias, tema, modeloIdeias);
@@ -7956,19 +8376,41 @@ document.addEventListener('DOMContentLoaded', () => {
         textoFinalIdeias = ideiasLimpas;
         AutoSave.save();
 
-        // 5) Etapa 2/3: Avaliando fidelidade bíblica...
+        // 5) Etapa 2/4: Avaliando fidelidade bíblica...
         if (typeof window.atualizarProgressoIdeias === 'function') {
-          window.atualizarProgressoIdeias(2, 'Avaliando fidelidade bíblica... (2/3)', 'info');
+          window.atualizarProgressoIdeias(2, 'Avaliando fidelidade bíblica... (2/4)', 'info');
           window.setBotoesIdeiasBloqueados(true);
         }
 
-        // Avaliador de Ideias com IA usando o Modelo para Roteiro (Item 10 + Ajustes a, b, c)
-        await avaliarIdeiasComIA(ideiasLimpas, tema, OpenRouterAPI.getModelRoteiro());
+        // Avaliador de Ideias com IA usando o Modelo para Roteiro
+        await avaliarIdeiasComIA(ideiasLimpas, tema, modeloIdeias);
 
-        // Pega o texto atualizado caso o avaliador tenha feito substituição automática
         const outElAtualizado = document.getElementById('output-prompt-ideias');
         if (outElAtualizado && outElAtualizado.value) {
           textoFinalIdeias = outElAtualizado.value;
+        }
+
+        // 5) Etapa 3/4: Revisor de Fatos Bíblicos (Almeida)
+        if (typeof window.atualizarProgressoIdeias === 'function') {
+          window.atualizarProgressoIdeias(3, 'Conferindo fatos bíblicos... (3/4)', 'info');
+          window.setBotoesIdeiasBloqueados(true);
+        }
+
+        try {
+          if (typeof window.revisarFatosBiblicosIdeiasComIA === 'function') {
+            const revRes = await window.revisarFatosBiblicosIdeiasComIA(textoFinalIdeias, tema, modeloIdeias, window._ultimaAvaliacaoIdeias);
+            if (revRes && revRes.textoFinal) {
+              textoFinalIdeias = revRes.textoFinal;
+              if (outEl) outEl.value = textoFinalIdeias;
+              AutoSave.save();
+            }
+            if (revRes && revRes.houveErro) {
+              falhaRevisorFatos = true;
+            }
+          }
+        } catch (eFatos) {
+          console.warn('[Revisor de Fatos] Falha durante conferência:', eFatos);
+          falhaRevisorFatos = true;
         }
       }
 
@@ -7976,9 +8418,13 @@ document.addEventListener('DOMContentLoaded', () => {
         renderizarBotoesSelecaoIdeias(textoFinalIdeias);
       }
 
-      // 5) Conclusão: faixa verde e desbloqueio dos botões
+      // 5 & 6) Conclusão: faixa verde (ou aviso de falha tolerada sem travar o usuário)
       if (typeof window.atualizarProgressoIdeias === 'function') {
-        window.atualizarProgressoIdeias(null, 'Pronto! Ideias avaliadas e corrigidas — pode escolher', 'success');
+        if (falhaRevisorFatos) {
+          window.atualizarProgressoIdeias(null, '⚠️ Não foi possível conferir os fatos desta vez — ideias avaliadas disponíveis para escolha', 'warning');
+        } else {
+          window.atualizarProgressoIdeias(null, 'Pronto! Ideias avaliadas, conferidas e corrigidas — pode escolher', 'success');
+        }
         window.setBotoesIdeiasBloqueados(false);
       }
     } catch (err) {
@@ -9409,7 +9855,14 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
 
     if (rawSeo && typeof rawSeo === 'string' && OpenRouterAPI.getApiKey()) {
       // Validação e regeneração de termos proibidos na descrição (Item 1 & Item 8)
-      const seoLimpo = await validarERegenerarDescricaoSeo(rawSeo, tema, modeloIdeias);
+      let seoLimpo = await validarERegenerarDescricaoSeo(rawSeo, tema, modeloIdeias);
+
+      // 5) Revisor de Fatos nos títulos de SEO usando a referência da ideia escolhida e o roteiro
+      const roteiroContexto = resumo || document.getElementById('textarea-roteiro-gerado')?.value || document.getElementById('output-prompt-roteiro')?.value || '';
+      if (typeof window.revisarFatosTitulosSeoComIA === 'function') {
+        seoLimpo = await window.revisarFatosTitulosSeoComIA(seoLimpo, tema, roteiroContexto, OpenRouterAPI.getModelRoteiro());
+      }
+
       const outEl = document.getElementById('output-prompt-seo');
       if (outEl) outEl.value = seoLimpo;
       AutoSave.save();
@@ -10046,7 +10499,18 @@ Desenvolvimento: A soberania divina cumpre cada detalhe profético anunciado pel
         ))
       );
 
-      const temErro = errosPersistentes.has ? (errosPersistentes.has(Number(item.numero)) || errosPersistentes.has(String(item.numero))) : false;
+      const isTop3 = window._ideiasTop3 && (window._ideiasTop3.has(Number(item.numero)) || window._ideiasTop3.has(String(item.numero)));
+      let temErro = errosPersistentes.has ? (errosPersistentes.has(Number(item.numero)) || errosPersistentes.has(String(item.numero))) : false;
+
+      // 3) Coerência: uma ideia não pode estar no Top 3 e com aviso vermelho ao mesmo tempo.
+      // Sem citação que comprove erro com versículo, tire o aviso vermelho.
+      if (isTop3 && temErro) {
+        temErro = false;
+        if (window._ideiasComErroBiblico) {
+          window._ideiasComErroBiblico.delete(Number(item.numero));
+          window._ideiasComErroBiblico.delete(String(item.numero));
+        }
+      }
 
       let cardClass = 'ideia-card';
       if (isEscolhido) cardClass += ' ideia-card-escolhida selecionada';
@@ -10070,6 +10534,18 @@ Desenvolvimento: A soberania divina cumpre cada detalhe profético anunciado pel
            </div>`
         : '';
 
+      // Ajuste 4: Múltiplas correções de fatos por ideia
+      const correcoesDestaIdeia = (window._ideiasCorrecoes && window._ideiasCorrecoes[String(item.numero)]) || [];
+      const correcoesHtml = correcoesDestaIdeia.length > 0
+        ? `<div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
+            ${correcoesDestaIdeia.map(c => `
+              <span class="tag-correcao-fato" style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.76rem; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); color: #93c5fd; padding: 2px 7px; border-radius: 4px; font-weight: 500;">
+                ✏️ Corrigido: <span style="text-decoration: line-through; opacity: 0.75; margin-right: 2px;">${escapeHtml(c.antes)}</span> → <strong style="color: #67e8f9;">${escapeHtml(c.depois)}</strong>
+              </span>
+            `).join('')}
+           </div>`
+        : '';
+
       return `
         <div class="${cardClass}" data-numero="${item.numero}" style="${cardInlineStyle}">
           <div style="flex: 1; font-size: 0.92rem; line-height: 1.5; color: #f1f5f9;">
@@ -10078,6 +10554,7 @@ Desenvolvimento: A soberania divina cumpre cada detalhe profético anunciado pel
               ${seloHtml}
             </div>
             <div style="white-space: pre-line;">${escapeHtml(item.texto)}</div>
+            ${correcoesHtml}
             ${erroHtml}
           </div>
           <button type="button" class="btn btn-sm ${isEscolhido ? 'btn-accent' : 'btn-secondary'} btn-usar-esta-ideia" data-ideia="${escapeAttr(item.texto)}" data-numero="${item.numero}" style="white-space: nowrap; flex-shrink: 0; padding: 6px 12px; font-size: 0.8rem; font-weight: 600;">
