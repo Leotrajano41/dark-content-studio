@@ -291,6 +291,26 @@ body {
   transform: translateX(-50%) translateY(0);
 }
 
+.header-actions .tooltip-wrapper {
+  margin-left: 6px;
+  cursor: help;
+  display: inline-flex;
+}
+
+.header-actions .tooltip-wrapper::after {
+  bottom: auto;
+  top: calc(100% + 10px);
+  transform: translateX(-50%) translateY(-4px);
+  z-index: 1000;
+  white-space: normal;
+  width: 250px;
+  text-align: left;
+}
+
+.header-actions .tooltip-wrapper:hover::after {
+  transform: translateX(-50%) translateY(0);
+}
+
 /* ==========================================================================
    Navegação por Abas (Tabs)
    ========================================================================== */
@@ -1221,35 +1241,39 @@ textarea.h-180 {
         </div>
       </div>
       <div class="header-actions">
-        <button id="btn-load-preset" class="btn btn-secondary">
+        <button id="btn-load-preset" class="btn btn-secondary" title="Carregar Exemplo: preenche um exemplo de demonstração (apaga o que está na tela).">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="1 4 1 10 7 10"></polyline>
             <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
           </svg>
           Carregar Exemplo
+          <span class="tooltip-wrapper" data-tooltip="Carregar Exemplo: preenche um exemplo de demonstração (apaga o que está na tela)." onclick="event.stopPropagation()">?</span>
         </button>
-        <button id="btn-download-package" class="btn btn-secondary" title="Baixar todo o conteúdo gerado em arquivo .txt">
+        <button id="btn-download-package" class="btn btn-secondary" title="Baixar Pacote (.txt): baixa um arquivo com todo o texto do vídeo (configurações, ideias, roteiro, narração limpa, prompts e SEO). Não inclui o áudio MP3 nem a legenda .srt.">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="7 10 12 15 17 10"></polyline>
             <line x1="12" y1="15" x2="12" y2="3"></line>
           </svg>
           Baixar Pacote (.txt)
+          <span class="tooltip-wrapper" data-tooltip="Baixar Pacote (.txt): baixa um arquivo com todo o texto do vídeo (configurações, ideias, roteiro, narração limpa e SEO). Não inclui o áudio MP3 nem a legenda .srt." onclick="event.stopPropagation()">?</span>
         </button>
-        <button id="btn-salvar-tema-atual" class="btn btn-primary" title="Salvar o estado completo do tema atual manualmente">
+        <button id="btn-salvar-tema-atual" class="btn btn-primary" title="Salvar Tema Atual: guarda tudo do vídeo atual neste navegador para continuar depois.">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
             <polyline points="17 21 17 13 7 13 7 21"></polyline>
             <polyline points="7 3 7 8 15 8"></polyline>
           </svg>
           Salvar Tema Atual
+          <span class="tooltip-wrapper" data-tooltip="Salvar Tema Atual: guarda tudo do vídeo atual neste navegador para continuar depois." onclick="event.stopPropagation()">?</span>
         </button>
-        <button id="btn-ver-temas-salvos" class="btn btn-secondary" title="Ver e restaurar temas salvos">
+        <button id="btn-ver-temas-salvos" class="btn btn-secondary" title="Temas Salvos: lista dos vídeos guardados; clique para reabrir.">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
             <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
           </svg>
           Temas Salvos (<span id="badge-total-temas-salvos">0</span>)
+          <span class="tooltip-wrapper" data-tooltip="Temas Salvos: lista dos vídeos guardados; clique para reabrir." onclick="event.stopPropagation()">?</span>
         </button>
         <button id="btn-abrir-guia" class="btn btn-secondary" title="Abrir Guia Passo a Passo do fluxo completo">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1258,12 +1282,13 @@ textarea.h-180 {
           </svg>
           📖 Guia Passo a Passo
         </button>
-        <button id="btn-clear-all" class="btn btn-ghost" title="Limpar todos os campos">
+        <button id="btn-clear-all" class="btn btn-ghost" title="Limpar: apaga o vídeo atual da tela (os temas salvos continuam guardados).">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="3 6 5 6 21 6"></polyline>
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
           </svg>
           Limpar
+          <span class="tooltip-wrapper" data-tooltip="Limpar: apaga o vídeo atual da tela (os temas salvos continuam guardados)." onclick="event.stopPropagation()">?</span>
         </button>
       </div>
     </header>
@@ -2181,8 +2206,17 @@ textarea.h-180 {
             <div class="step-guide-alert">
               <span>⚠️ <strong>Lembrete:</strong> Gere de novo antes de copiar, para não usar o resultado de outro vídeo.</span>
             </div>
+            <div class="step-guide-alert" style="margin-top: 8px; background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.4); color: #fca5a5;">
+              <span>⚠️ <strong>Atenção:</strong> O áudio não fica salvo no tema. Baixe o MP3 antes de sair ou gere de novo depois.</span>
+            </div>
           </div>
         </details>
+
+        <!-- Aviso em destaque: Áudio não é persistido no tema -->
+        <div class="step-guide-alert" style="margin-top: 14px; margin-bottom: 20px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: var(--radius-md); padding: 12px 16px; color: #fca5a5; display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 1.2rem;">⚠️</span>
+          <span><strong>Atenção:</strong> O áudio não fica salvo no tema. Baixe o MP3 antes de sair ou gere de novo depois.</span>
+        </div>
 
         <div class="form-grid">
           <!-- Dropdown: Narrador (Voz) -->
@@ -2824,7 +2858,7 @@ textarea.h-180 {
           <div class="guia-passo-card">
             <div class="guia-passo-header">
               <span class="guia-passo-numero">19</span>
-              <span class="guia-passo-titulo">Baixar o Pacote Completo do Vídeo</span>
+              <span class="guia-passo-titulo">Baixar o Pacote Completo do Vídeo (.txt)</span>
             </div>
             <div class="guia-passo-detalhes">
               <div class="guia-detalhe-item">
@@ -2833,11 +2867,11 @@ textarea.h-180 {
               </div>
               <div class="guia-detalhe-item">
                 <span class="guia-tag-acao tag-oque">O que Escolher:</span>
-                <span>Clique para salvar tudo em um único arquivo de texto de backup.</span>
+                <span>Clique para salvar todo o texto do vídeo em um único arquivo de backup. O arquivo <code>.txt</code> reúne configurações, 10 ideias, ideia escolhida, roteiro completo, narração limpa, prompts visuais, thumbnails e SEO. <em>Atenção:</em> o .txt não inclui o áudio MP3 nem a legenda .srt (que são baixados separadamente na Etapa 5).</span>
               </div>
               <div class="guia-detalhe-item">
                 <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
-                <span>Um arquivo `.txt` contendo roteiro completo, narração limpa, SEO, prompts visuais e metadados.</span>
+                <span>Um arquivo <code>.txt</code> com todo o texto do vídeo baixado diretamente na pasta de Downloads do seu computador.</span>
               </div>
             </div>
           </div>
@@ -2882,6 +2916,99 @@ textarea.h-180 {
               <div class="guia-detalhe-item">
                 <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
                 <span>O YouTube utilizará seu áudio original em português e o título em inglês para distribuir seu vídeo para espectadores do mundo todo!</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- COMO GUARDAR E ORGANIZAR VÁRIOS VÍDEOS -->
+        <div class="guia-secao-bloco">
+          <div class="guia-secao-badge" style="background: rgba(229, 184, 105, 0.2); border: 1px solid var(--accent-gold); color: var(--accent-gold);">Como guardar e organizar vários vídeos</div>
+
+          <!-- Passo 22: Salvar cada vídeo -->
+          <div class="guia-passo-card">
+            <div class="guia-passo-header">
+              <span class="guia-passo-numero">22</span>
+              <span class="guia-passo-titulo">Salvar Cada Vídeo no Navegador</span>
+            </div>
+            <div class="guia-passo-detalhes">
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-onde">Onde Clicar:</span>
+                <span>No botão <strong>Salvar Tema Atual</strong> no topo da página.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-oque">Como Fazer:</span>
+                <span>Sempre que terminar de produzir ou quiser pausar o trabalho de um vídeo, clique neste botão. Ele guarda tudo o que está na tela (tema, ideia escolhida, roteiro completo, prompts de imagem, thumbnails e SEO) neste navegador para você continuar depois.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
+                <span>Uma confirmação na tela e o contador no botão <strong>Temas Salvos</strong> será incrementado.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Passo 23: Reabrir pelos Temas Salvos -->
+          <div class="guia-passo-card">
+            <div class="guia-passo-header">
+              <span class="guia-passo-numero">23</span>
+              <span class="guia-passo-titulo">Reabrir Vídeos pelos Temas Salvos</span>
+            </div>
+            <div class="guia-passo-detalhes">
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-onde">Onde Clicar:</span>
+                <span>No botão <strong>Temas Salvos</strong> no topo da página.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-oque">Como Fazer:</span>
+                <span>Abre a lista de todos os seus vídeos guardados com data e hora. Basta clicar sobre qualquer vídeo para reabrir e continuar editando de onde parou. Você pode alternar entre vários projetos a qualquer momento.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
+                <span>O painel lateral de temas salvos com a lista dos vídeos e a opção de reabrir com 1 clique.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Passo 24: Baixar o pacote como backup -->
+          <div class="guia-passo-card">
+            <div class="guia-passo-header">
+              <span class="guia-passo-numero">24</span>
+              <span class="guia-passo-titulo">Baixar o Pacote (.txt) como Backup Permanente</span>
+            </div>
+            <div class="guia-passo-detalhes">
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-onde">Onde Clicar:</span>
+                <span>No botão <strong>Baixar Pacote (.txt)</strong> no topo da página.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-oque">Como Fazer:</span>
+                <span>Baixa um arquivo de texto completo com todo o texto do vídeo: configurações gerais, as 10 ideias geradas, ideia escolhida, roteiro completo, narração limpa para áudio, prompts de imagem, thumbnails e SEO completo. <em>Lembre-se:</em> o arquivo .txt não inclui o áudio MP3 nem a legenda .srt, que são gerados e baixados separadamente na Etapa 5. Use sempre este arquivo como backup no Mac ou para levar para outro aparelho.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
+                <span>O arquivo <code>.txt</code> baixado diretamente na sua pasta de Downloads.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Passo 25: Regras importantes de armazenamento -->
+          <div class="guia-passo-card" style="border-left: 3px solid #ef4444;">
+            <div class="guia-passo-header">
+              <span class="guia-passo-numero" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border-color: rgba(239, 68, 68, 0.4);">⚠️</span>
+              <span class="guia-passo-titulo">Onde os Temas Ficam Guardados (Avisos Cruciais)</span>
+            </div>
+            <div class="guia-passo-detalhes">
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-onde">No Navegador:</span>
+                <span>Os temas salvos ficam guardados exclusivamente na memória deste navegador específico (localStorage).</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-oque">Site vs. Arquivo Local:</span>
+                <span><strong>O site online e o arquivo local do Mac não compartilham os temas:</strong> se você salvar temas usando o arquivo local no seu Mac (ex: <code>file:///...</code>), eles NÃO aparecerão se você abrir pelo endereço web do site, e vice-versa. Escolha um local de uso e mantenha seus vídeos nele.</span>
+              </div>
+              <div class="guia-detalhe-item">
+                <span class="guia-tag-acao tag-aparece">Limpeza do Chrome:</span>
+                <span><strong>Atenção:</strong> Limpar os dados de navegação, cookies ou histórico do Google Chrome <strong>apaga todos os temas salvos</strong>. Por segurança, sempre baixe o <strong>Pacote (.txt)</strong> de cada vídeo finalizado para ter seu backup garantido no Mac!</span>
               </div>
             </div>
           </div>
@@ -5763,6 +5890,72 @@ async function gerarRoteiroCatalogo({
 
 window.gerarRoteiroCatalogo = gerarRoteiroCatalogo;
 
+function extrairResumoCurtoDoRoteiro(texto) {
+  if (!texto || typeof texto !== 'string') return '';
+  let limpo = texto;
+
+  // Se a função limparTextoParaNarracao estiver disponível, aproveita a limpeza profunda
+  if (typeof limparTextoParaNarracao === 'function') {
+    limpo = limparTextoParaNarracao(limpo);
+  } else {
+    // Limpeza de cabeçalhos e marcadores
+    limpo = limpo
+      .replace(/^\s*(?:#+|===+|---+|\*{2,})[^\n]*/gm, '')
+      .replace(/\*{0,2}\[[^\]]*\]\*{0,2}\s*:?/g, '')
+      .replace(/^\s*(?:HOOK|GANCHO|INTRODUÇÃO|PONTO\s*\d+|SEÇÃO\s*\d+|CONCLUSÃO)\b[^\n:]*:?\s*/gmi, '');
+  }
+
+  // Remove rótulos residuais como "Afirmação:", "Desenvolvimento:", etc.
+  limpo = limpo
+    .replace(/^\s*(?:Afirmação|Desenvolvimento|Evidência|Fechamento|Transição|Narrador|Locutor)\s*:\s*/gmi, '')
+    .trim();
+
+  if (!limpo) return '';
+
+  // Divide em parágrafos reais
+  const paragrafos = limpo
+    .split(/\n{2,}|\n(?=[A-ZÀ-Ú])/)
+    .map(p => p.replace(/\s+/g, ' ').trim())
+    .filter(p => p.length > 25);
+
+  const selecionados = [];
+  let contagemPalavras = 0;
+  const LIMITE_PALAVRAS = 150;
+  const MAX_PARAGRAFOS = 5;
+
+  for (const p of paragrafos) {
+    if (selecionados.length >= MAX_PARAGRAFOS) break;
+    const palavrasDoParagrafo = p.split(/\s+/).filter(Boolean);
+    if (palavrasDoParagrafo.length === 0) continue;
+
+    if (contagemPalavras + palavrasDoParagrafo.length <= LIMITE_PALAVRAS) {
+      selecionados.push(p);
+      contagemPalavras += palavrasDoParagrafo.length;
+    } else {
+      const restantes = LIMITE_PALAVRAS - contagemPalavras;
+      if (restantes >= 15) {
+        const trecho = palavrasDoParagrafo.slice(0, restantes).join(' ');
+        const posPonto = Math.max(trecho.lastIndexOf('.'), trecho.lastIndexOf('!'), trecho.lastIndexOf('?'));
+        if (posPonto > 30) {
+          selecionados.push(trecho.substring(0, posPonto + 1));
+        } else {
+          selecionados.push(trecho + '...');
+        }
+      }
+      break;
+    }
+  }
+
+  if (selecionados.length === 0) {
+    const palavrasGerais = limpo.split(/\s+/).filter(Boolean).slice(0, 150).join(' ');
+    return palavrasGerais ? (palavrasGerais + '...') : '';
+  }
+
+  return selecionados.join('\n\n');
+}
+
+window.extrairResumoCurtoDoRoteiro = extrairResumoCurtoDoRoteiro;
+
 function sincronizarRoteiroGeradoEmTodasAsCaixas(resultText, estiloRoteiro) {
   if (typeof document === 'undefined') return;
   const outputEl = document.getElementById('output-prompt-roteiro');
@@ -5786,7 +5979,7 @@ function sincronizarRoteiroGeradoEmTodasAsCaixas(resultText, estiloRoteiro) {
     if (textareaNarracaoLimpa.dataset) textareaNarracaoLimpa.dataset.autoSynced = 'true';
   }
   if (textareaResumoSeo && (!textareaResumoSeo.value.trim() || (textareaResumoSeo.dataset && textareaResumoSeo.dataset.autoSynced === 'true'))) {
-    textareaResumoSeo.value = resultText;
+    textareaResumoSeo.value = extrairResumoCurtoDoRoteiro(resultText);
     if (textareaResumoSeo.dataset) textareaResumoSeo.dataset.autoSynced = 'true';
   }
 
@@ -9649,10 +9842,10 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
         }, 1200);
       }
 
-      // ITEM 5: Puxa o roteiro automaticamente para a Etapa 4 (SEO)
+      // ITEM 5: Puxa o resumo curto do roteiro automaticamente para a Etapa 4 (SEO)
       const textareaResumoSeo = document.getElementById('textarea-resumo-seo');
       if (textareaResumoSeo && (!textareaResumoSeo.value.trim() || textareaResumoSeo.dataset.autoSynced === 'true')) {
-        textareaResumoSeo.value = resultText;
+        textareaResumoSeo.value = extrairResumoCurtoDoRoteiro(resultText);
         textareaResumoSeo.dataset.autoSynced = 'true';
       }
             // Validador de Estrutura do Catálogo (Item 8)
@@ -9695,7 +9888,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
     textareaRoteiroGerado.addEventListener('input', () => {
       const elSeo = document.getElementById('textarea-resumo-seo');
       if (elSeo && (!elSeo.value.trim() || elSeo.dataset.autoSynced === 'true')) {
-        elSeo.value = textareaRoteiroGerado.value;
+        elSeo.value = extrairResumoCurtoDoRoteiro(textareaRoteiroGerado.value);
         elSeo.dataset.autoSynced = 'true';
       }
       // Sincroniza versão limpa se o campo ainda não sofreu edição independente
@@ -10409,6 +10602,13 @@ Desenvolvimento: A soberania divina cumpre cada detalhe profético anunciado pel
   // === BAIXAR PACOTE .TXT ===
   document.getElementById('btn-download-package').addEventListener('click', () => {
     const tema = UI.getValue('select-tema', 'input-tema-custom') || 'sem-tema';
+    const idioma = UI.getValue('select-idioma', 'input-idioma-custom') || 'Português (Brasil)';
+    const estilo = document.getElementById('select-estilo-roteiro')?.value || 'YouTube Longo (18-20 minutos)';
+    const tom = UI.getValue('select-tom', 'input-tom-custom') || 'Solene e Profético';
+    const gancho = UI.getValue('select-gancho', 'input-gancho-custom') || 'Padrão';
+    const selVoz = document.getElementById('select-voz-audio');
+    const voz = selVoz ? (selVoz.options[selVoz.selectedIndex]?.text || selVoz.value) : 'Onyx';
+
     const now = new Date();
     const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const dataBr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
@@ -10426,15 +10626,48 @@ Desenvolvimento: A soberania divina cumpre cada detalhe profético anunciado pel
       return (el && el.value.trim()) ? el.value.trim() : '(não gerado)';
     };
 
+    const narracaoLimpa = (document.getElementById('textarea-narracao-limpa-audio')?.value || document.getElementById('output-roteiro-limpo')?.value || '').trim() || '(não gerado)';
+
+    const roteiroAtual = (document.getElementById('output-prompt-roteiro')?.value || document.getElementById('textarea-roteiro-gerado')?.value || '').trim();
+    const narracaoAtual = (document.getElementById('textarea-narracao-limpa-audio')?.value || document.getElementById('output-roteiro-limpo')?.value || '').trim();
+    const resumoBruto = (document.getElementById('textarea-resumo-seo')?.value || '').trim();
+
+    const normalizarEspacos = (txt) => (txt || '').replace(/\s+/g, ' ').trim();
+    const roteiroNorm = normalizarEspacos(roteiroAtual);
+    const narracaoNorm = normalizarEspacos(narracaoAtual);
+    const resumoNorm = normalizarEspacos(resumoBruto);
+
+    let resumoSeoParaTxt = resumoBruto || '(não gerado)';
+    if (resumoBruto && (
+      resumoNorm === roteiroNorm ||
+      resumoNorm === narracaoNorm ||
+      (roteiroNorm.length > 200 && resumoNorm.length > 200 && (roteiroNorm === resumoNorm || Math.abs(roteiroNorm.length - resumoNorm.length) < 40 && roteiroNorm.slice(0, 150) === resumoNorm.slice(0, 150)))
+    )) {
+      resumoSeoParaTxt = '(igual ao roteiro — não repetido)';
+    }
+
     const lines = [
       `=== ${tema.toUpperCase()} ===`,
       `Gerado em: ${dataBr}`,
+      '',
+      '--- CONFIGURAÇÕES ---',
+      `Idioma: ${idioma}`,
+      `Estilo/Duração: ${estilo}`,
+      `Tom: ${tom}`,
+      `Gancho: ${gancho}`,
+      `Voz Escolhida: ${voz}`,
+      '',
+      '--- 10 IDEIAS GERADAS ---',
+      getVal('output-prompt-ideias'),
       '',
       '--- IDEIA ESCOLHIDA ---',
       getVal('input-ideia-escolhida'),
       '',
       '--- ROTEIRO COMPLETO ---',
       getVal('output-prompt-roteiro'),
+      '',
+      '--- NARRAÇÃO LIMPA ---',
+      narracaoLimpa,
       '',
       '--- KEYWORDS DE MÍDIA ---',
       getVal('output-prompt-keywords'),
@@ -10451,15 +10684,16 @@ Desenvolvimento: A soberania divina cumpre cada detalhe profético anunciado pel
       '--- THUMBNAIL C ---',
       getVal('output-thumb-c'),
       '',
+      '--- RESUMO DO SEO ---',
+      resumoSeoParaTxt,
+      '',
       '--- SEO (Títulos, Tags e Hashtags) ---',
       getVal('output-prompt-seo'),
+      '',
+      '--- RECURSOS DE ÁUDIO & LEGENDAS (ETAPA 5) ---',
+      '⚠️ Este arquivo .txt reúne todo o texto do vídeo, mas NÃO inclui o áudio MP3 nem a legenda .srt.',
+      'Baixe o áudio MP3 e a legenda .srt diretamente pelos botões da Etapa 5 antes de sair da ferramenta.'
     ];
-
-    if (audioGeneratedInSession || srtGeneratedInSession) {
-      lines.push('');
-      lines.push('--- RECURSOS DE ÁUDIO & LEGENDAS (ETAPA 5) ---');
-      lines.push('🎙️ Narração e legenda geradas nesta sessão — lembre-se de baixá-las também nos botões da Etapa 5.');
-    }
 
     const content = lines.join('\n');
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
