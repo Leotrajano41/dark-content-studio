@@ -6157,31 +6157,45 @@ ${roteiro}
   },
 
   generateAiVisualPrompts({ roteiro }) {
-    // Bloco fixo único: Cinematográfico realista (Rembrandt removido conforme Item 6)
-    const fixedStyleBlock = ', cinematic lighting, chiaroscuro atmosphere, deep solemn shadows, historical biblical realism, 8k resolution, photorealistic cinematic composition, 16:9 widescreen, no text, no letters, no words';
+    // Bloco de estilo fixo: Ilustração em pergaminho estilo manuscrito iluminado
+    const fixedStyleBlock = 'Hand-drawn illustration in sepia ink linework with soft watercolor washes, painted on aged parchment paper with subtle stains and fibers. Warm palette of ochre, umber and parchment beige, with deep crimson red and burnished gold leaf as the only accent colors. Warm candlelight or golden divine light on the main subject. One clear focal subject, generous empty parchment around it, delicate thin gold corner ornaments. Clothing, armor and architecture accurate to the scene\'s biblical period: Bronze and Iron Age Near East for Old Testament scenes (no Roman or Greek armor), first-century Roman Judea for New Testament scenes; no medieval elements. No text, no letters, no words, no watermark, no logo. 16:9.';
 
-    return `Act as a master art director and AI prompt engineer for cinematic biblical documentaries following the dark visual aesthetic of 'Explicador Bíblico'.
+    return `Act as a master art director and AI prompt engineer for biblical documentaries following our own signature illuminated-manuscript visual style.
 Read the entire script below in strict chronological order and generate between 30 and 40 detailed visual prompts (numbered Prompt 1 to Prompt 35) covering the script from the very first opening hook to the final scene.
 
-MANDATORY RULES:
+MANDATORY RULES FOR SCENE DESCRIPTIONS:
 1. QUANTITY & CHRONOLOGICAL COVERAGE: Generate exactly 30 to 40 prompts, walking through the entire narrative progression of the script without skipping any section.
-2. NO ON-SCREEN TEXT, LETTERS OR INSCRIBED OBJECTS (STRICT):
+2. LANGUAGE: Every prompt description must be entirely in ENGLISH.
+3. HISTORICAL TERMINOLOGY (STRICT): Always use "Israelites" or "Israelite army". NEVER use "Israeli" or "Israeli army", which refers to the modern state.
+4. PROHIBITED OBJECTS & NO WRITTEN TEXT (STRICT):
+   - Absolutely FORBIDDEN to depict maps, stone tablets, plaques, signboards, opened scrolls, or any object bearing writing or inscriptions.
    - Absolutely NEVER request visible letters, words, titles, signs, banners, or typography in the image.
-   - NEVER request inscriptions or words carved on objects (e.g. STRICTLY FORBIDDEN: "stone tablet inscribed...", "stone inscribed with the words...", "words engraved on metal"). If depicting stones, monoliths, or tablets, describe only their ancient physical texture, weathered fractures, and mineral grain without legible text.
-3. NO BLOOD OR FALLEN CORPSES (AVOID CONTENT MODERATION REFUSAL):
+   - If depicting ancient stones, altars, or closed rolled scrolls, show only blank, weathered physical textures without any legible letters or carved writing.
+5. STRICT SCRIPT FIDELITY & NO FABRICATED SCENES:
+   - Every scene MUST originate strictly from something explicitly stated in the script. Do NOT invent feasts, celebrations, or scenes not described in the script.
+   - NEVER depict people worshiping, bowing before, or paying homage to physical objects.
+6. SCENE VARIETY & CONCRETE SUBJECTS:
+   - Limit to a maximum of 2 similar landscapes across the entire video.
+   - Strongly prioritize specific physical objects, characters, and concrete moments from the script over generic landscape vistas.
+7. ONE SINGLE FOCAL SUBJECT: Each description must have exactly ONE clear main subject/focal point. Keep generous empty parchment space around it; avoid crowded or cluttered compositions.
+8. CONCRETE & TANGIBLE DETAILS FROM THE SCRIPT:
+   - Bring concrete, physical and visual details directly from the script: exact measurements, specific ancient materials (e.g., acacia wood, weathered bronze, rough limestone, beaten gold, woven linen), and exact quantities.
+   - SCALE COMPARISON: Whenever something large or massive is depicted (giants, colossal walls, large structures, oversized objects), ALWAYS include a size comparison with a normal-sized human being standing nearby to clearly convey the scale. When a giant is depicted, show him side by side with normal-sized people at the same distance from the camera, about twice their height.
+9. NO BLOOD OR FALLEN CORPSES (AVOID SAFETY FILTER REFUSAL):
    - To prevent AI image generators from triggering safety filters, NEVER depict blood, gore, pools of blood, or fallen dead bodies.
-   - Convey the aftermath of battles through abandoned ancient weapons stuck in the ground, ruined stone ramparts, charred debris, and distant columns of smoke against the sky.
-4. NO MIDJOURNEY SYNTAX: Do NOT use '--ar 16:9'. The aspect ratio must be stated as '16:9 widescreen'.
-5. MANDATORY FIXED VISUAL STYLE BLOCK AT THE END OF EVERY PROMPT:
-   Every single prompt MUST end with this EXACT fixed visual style block:
-   "${fixedStyleBlock}"
-6. SCENE CONTENT: Each prompt must describe concrete subjects, camera angles (e.g. extreme close-up, dramatic low-angle, atmospheric wide shot), ancient costumes, dramatic lighting, and authentic historical biblical environments.
+   - Convey the aftermath of battles through abandoned ancient weapons stuck in the ground, ruined stone ramparts, charred debris, and distant smoke.
+10. NO MIDJOURNEY SYNTAX: Do NOT use '--ar 16:9'.
+11. MANDATORY FIXED VISUAL STYLE BLOCK AT THE END OF EVERY PROMPT:
+   Every single prompt MUST conclude with this EXACT fixed visual style block:
+   ", ${fixedStyleBlock}"
 
 SCRIPT:
 ${roteiro}
 
 OUTPUT FORMAT:
-Output the numbered prompts (Prompt 1 to Prompt 35) in English, each containing the scene description followed immediately by the mandatory fixed style block.`;
+Output ONLY the numbered prompts (Prompt 1 to Prompt 35) in English.
+Each item must follow this structure:
+Prompt [N]: [Concrete scene description in English with single focal subject, tangible script details/materials/measurements/scale comparison, no text], ${fixedStyleBlock}`;
   },
 
   generateThumbnailPrompts({ tema, estilo, cores, elementos, styleRef, estiloRoteiro, numItens = 9 }) {
@@ -8656,20 +8670,33 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
     UI.setButtonLoading(btn, true);
 
     try {
+      const fixedStyleSuffix = 'Hand-drawn illustration in sepia ink linework with soft watercolor washes, painted on aged parchment paper with subtle stains and fibers. Warm palette of ochre, umber and parchment beige, with deep crimson red and burnished gold leaf as the only accent colors. Warm candlelight or golden divine light on the main subject. One clear focal subject, generous empty parchment around it, delicate thin gold corner ornaments. Clothing, armor and architecture accurate to the scene\'s biblical period: Bronze and Iron Age Near East for Old Testament scenes (no Roman or Greek armor), first-century Roman Judea for New Testament scenes; no medieval elements. No text, no letters, no words, no watermark, no logo. 16:9.';
+
       if (hasKey) {
         const aiResponse = await OpenRouterAPI.generateContent(promptText, OpenRouterAPI.getModelIdeas());
-        if (outputEl) outputEl.value = aiResponse;
+        
+        // Processa linha por linha garantindo o bloco de estilo apenas nas linhas de Prompt
+        const finalResponse = aiResponse.split('\n').map(line => {
+          if (/^\s*(\*{1,2})?\s*Prompt\s+\d+/i.test(line)) {
+            if (!line.includes('Hand-drawn illustration in sepia ink linework')) {
+              const cleanLine = line.trimEnd().replace(/[,.]\s*$/, '');
+              return `${cleanLine}, ${fixedStyleSuffix}`;
+            }
+          }
+          return line;
+        }).join('\n');
+
+        if (outputEl) outputEl.value = finalResponse || aiResponse;
         atualizarSeloAba(2, true);
         UI.showToast('30-40 Prompts para IA visual gerados em ordem cronológica!');
         AutoSave.save();
       } else {
-        const fixedStyle = ', cinematic lighting, chiaroscuro atmosphere, deep solemn shadows, historical biblical realism, 8k resolution, photorealistic cinematic composition, 16:9 widescreen, no text, no letters, no words';
         const samplePrompts = [
-          `Prompt 1: Extreme close-up of an ancient bronze oil lamp flickering in a dark Jerusalem room, warm amber flame casting deep shadows against rough limestone walls${fixedStyle}`,
-          `Prompt 2: Low-angle medium shot of a cloaked Judean elder walking through narrow dark cobblestone alleyways of ancient Jerusalem under midnight moonlight${fixedStyle}`,
-          `Prompt 3: Atmospheric wide shot of ancient Jerusalem at dusk, olive trees on the Mount of Olives swaying gently, distant torchlights flickering on stone ramparts${fixedStyle}`,
-          `Prompt 4: Two men seated in secret night consultation across a rustic wooden table, illuminated solely by a single oil lamp, deep chiaroscuro contrasts${fixedStyle}`,
-          `Prompt 5: Dramatic historical wide shot of the Sinai desert wilderness, towering bronze serpent elevated on a wooden pole against a stormy twilight sky${fixedStyle}`
+          `Prompt 1: Extreme close-up of an ancient weathered bronze oil lamp resting on a rough limestone block, a single warm amber flame casting subtle golden light, generous empty aged parchment surrounding it, ${fixedStyleSuffix}`,
+          `Prompt 2: A massive iron bedstead measuring nine cubits in length, with a standard-sized man standing beside it for biblical scale comparison, rough dark iron texture, ${fixedStyleSuffix}`,
+          `Prompt 3: A single cloaked Judean traveler walking with a gnarled olive wood staff through an arid stony valley, warm golden light descending from above, ${fixedStyleSuffix}`,
+          `Prompt 4: An ancient cedarwood table holding five small silver shekels and a single clay jar, warm candlelight illumination, generous empty parchment background, ${fixedStyleSuffix}`,
+          `Prompt 5: Massive stone fortress ramparts towering forty cubits high, with a single watchman standing on the walkway for human scale comparison, ${fixedStyleSuffix}`
         ].join('\n\n');
 
         if (outputEl) outputEl.value = samplePrompts;
