@@ -9,6 +9,8 @@
 // o que equivale a aproximadamente 4-5 minutos de áudio em MP3.
 // Para roteiros completos (18-20 min), recomenda-se dividir em seções no frontend.
 
+const { verificarAcesso } = require('./_seguranca.js');
+
 const CHUNK_MAX_CHARS = 3500; // Margem de segurança abaixo do limite de 4096 da OpenAI TTS
 // ~660 palavras ≈ 4,4 min ≈ 4,2 MB a 128 kbps: abaixo do limite de resposta do Vercel (4,5 MB). O front envia partes de até 3.000.
 const MAX_CHARS_POR_REQUISICAO = 4000;
@@ -135,10 +137,8 @@ function splitBySentence(text, maxChars) {
 // ---------------------------------------------------------------------------
 
 module.exports = async function handler(req, res) {
-  // OPTIONS: preflight CORS já tratado pelo vercel.json; retornamos 204 aqui por segurança
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
-  }
+  // Controle de acesso (mesma origem, código opcional, limite por IP); OPTIONS não libera CORS
+  if (!verificarAcesso(req, res, { rota: 'narrar' })) return;
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido. Use POST.' });

@@ -1318,6 +1318,14 @@ textarea.h-180 {
         </div>
 
         <div class="form-group">
+          <label for="input-codigo-acesso">
+            Código de acesso (opcional)
+            <span class="tooltip-wrapper" data-tooltip="Só é necessário se a variável APP_ACCESS_TOKEN estiver configurada no Vercel. Protege a narração e as legendas (que usam as chaves do servidor). Fica salvo apenas neste navegador.">?</span>
+          </label>
+          <input type="password" id="input-codigo-acesso" class="form-control" placeholder="Deixe em branco se não configurou APP_ACCESS_TOKEN" autocomplete="off">
+        </div>
+
+        <div class="form-group">
           <label for="input-api-model-ideias">
             Modelo para Ideias/SEO
             <span class="tooltip-wrapper" data-tooltip="Usado em: Etapa 1 (10 Ideias Virais), Etapa 2 (Keywords de Mídia e Prompts Visuais), Etapa 3 (Prompts de Thumbnails A/B/C) e Etapa 4 (SEO Completo e Descrição). Padrão recomendado: openai/gpt-4o-mini.">?</span>
@@ -2310,7 +2318,7 @@ textarea.h-180 {
         <!-- Mensagem de progresso para Legendas AssemblyAI -->
         <div id="legendas-loading-notice" class="audio-notice hidden" style="margin-top: 16px; padding: 14px 18px; background: rgba(59, 130, 246, 0.1); border: 1px dashed #3b82f6; border-radius: var(--radius-md); font-size: 0.9rem; color: #93c5fd; display: flex; align-items: center; gap: 12px;">
           <span class="spinner" style="border-top-color: #3b82f6;"></span>
-          <span>Transcrevendo áudio e sincronizando timestamps via AssemblyAI... Aguarde alguns segundos.</span>
+          <span id="legendas-progresso-partes">Transcrevendo o áudio em partes e sincronizando os tempos via AssemblyAI... Aguarde.</span>
         </div>
 
         <!-- Output Legenda (.SRT) -->
@@ -5314,6 +5322,18 @@ ${REGRAS_DE_REESCRITA}
     termosRestantes,
     alertasEvidencia
   };
+}
+
+/** Cabeçalhos das chamadas a /api/narrar e /api/legendas: leva o código de acesso opcional (APP_ACCESS_TOKEN) */
+function cabecalhosApi(extras = {}) {
+  const h = { ...extras };
+  let codigo = '';
+  try {
+    const campo = document.getElementById('input-codigo-acesso');
+    codigo = (campo && campo.value.trim()) || localStorage.getItem('dark_studio_codigo_acesso') || '';
+  } catch (e) { /* sem armazenamento: segue sem o código */ }
+  if (codigo) h['x-acesso-token'] = codigo;
+  return h;
 }
 
 function escaparHtml(str) {
@@ -8694,6 +8714,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Estado de áudio e legendas da sessão atual
   let currentAudioBlob = null;
+  let currentAudioParts = []; // partes (Uint8Array) do MP3: as legendas são geradas parte a parte (cada uma < 4,4 MB)
   let currentAudioUrl = null;
   let currentSrtContent = '';
   let audioGeneratedInSession = false;
@@ -10915,7 +10936,7 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
           try {
             const resp = await fetch('/api/narrar', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: cabecalhosApi({ 'Content-Type': 'application/json' }),
               body: JSON.stringify({ texto: partes[indice], voz, tom })
             });
             if (resp.status === 404 || resp.status === 405) {
@@ -10948,6 +10969,7 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
 
       const audioBlob = new Blob([NarracaoModule.juntarMp3(buffers)], { type: 'audio/mpeg' });
       currentAudioBlob = audioBlob;
+      currentAudioParts = buffers.slice();
 
       if (currentAudioUrl) URL.revokeObjectURL(currentAudioUrl);
       currentAudioUrl = URL.createObjectURL(audioBlob);
@@ -11010,74 +11032,70 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
     if (legendasLoadingNotice) legendasLoadingNotice.classList.remove('hidden');
 
     try {
-      // 1. Obtém token da AssemblyAI do servidor para upload direto do navegador
-      let uploadToken = '';
-      try {
-        const tokenRes = await fetch('/api/legendas?action=token');
-        if (tokenRes.ok) {
-          const tokenData = await tokenRes.json();
-          uploadToken = tokenData?.token || '';
-        }
-      } catch (eToken) {
-        console.warn('[Legendas] Falha ao consultar endpoint de token:', eToken);
+      // ITEM 33: a chave da AssemblyAI NUNCA sai do servidor. O áudio vai em PARTES (as mesmas da narração, cada uma < 4,4 MB)
+      // para /api/legendas (2 por vez) e os SRT são juntados aqui, com os tempos deslocados pela duração das partes anteriores.
+      const partesAudio = currentAudioParts;
+      if (!partesAudio || partesAudio.length === 0) {
+        throw new Error('As partes do áudio não estão na memória. Gere a narração de novo e depois a legenda.');
       }
+      const resultados = new Array(partesAudio.length);
+      const progressoLegenda = document.getElementById('legendas-progresso-partes');
+      let concluidasLeg = 0;
+      const mostrarProgressoLeg = () => {
+        if (progressoLegenda) progressoLegenda.textContent = `Transcrevendo o áudio: parte ${concluidasLeg}/${partesAudio.length} concluída(s)... Aguarde.`;
+      };
+      mostrarProgressoLeg();
 
-      let srtText = '';
+      const duracaoDoMp3 = (bytes) => new Promise((resolve) => {
+        const url = URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
+        const a = new Audio();
+        const fim = (d) => { URL.revokeObjectURL(url); resolve(d); };
+        a.preload = 'metadata';
+        a.onloadedmetadata = () => fim(isFinite(a.duration) ? a.duration : 0);
+        a.onerror = () => fim(0);
+        a.src = url;
+      });
 
-      // 2. Se temos o token, faz upload direto do áudio via navegador para a AssemblyAI (sem passar pelo limite 4.5MB da Vercel)
-      if (uploadToken) {
-        console.log('[Legendas] Fazendo upload direto do navegador para AssemblyAI...');
-        const uploadRes = await fetch('https://api.assemblyai.com/v2/upload', {
-          method: 'POST',
-          headers: {
-            'Authorization': uploadToken,
-            'Content-Type': 'application/octet-stream'
-          },
-          body: currentAudioBlob
-        });
-
-        if (!uploadRes.ok) {
-          const errUpload = await uploadRes.json().catch(() => ({}));
-          throw new Error(`Falha no upload direto para AssemblyAI (HTTP ${uploadRes.status}): ${errUpload.error || 'sem detalhes'}`);
+      const transcreverParte = async (indice) => {
+        let ultimoErro = null;
+        for (let tentativa = 1; tentativa <= 2; tentativa++) {
+          try {
+            const resp = await fetch('/api/legendas', {
+              method: 'POST',
+              headers: cabecalhosApi({ 'Content-Type': 'audio/mpeg' }),
+              body: new Blob([partesAudio[indice]], { type: 'audio/mpeg' })
+            });
+            if (resp.status === 404 || resp.status === 405) {
+              throw new Error('Esta funcionalidade requer que a ferramenta esteja rodando via Vercel (dark-content-studio.vercel.app). Não está disponível na versão do GitHub Pages ou local estática.');
+            }
+            if (!resp.ok) {
+              const errJson = await resp.json().catch(() => ({}));
+              throw new Error(errJson.error || `Erro na transcrição de legendas (HTTP ${resp.status})`);
+            }
+            const srtParte = await resp.text();
+            const duracao = (await duracaoDoMp3(partesAudio[indice])) || (NarracaoModule.ultimoFimDoSrt(srtParte) + 0.3);
+            resultados[indice] = { srt: srtParte, duracaoSegundos: duracao };
+            concluidasLeg++;
+            mostrarProgressoLeg();
+            return;
+          } catch (e) {
+            ultimoErro = e;
+            if (/requer que a ferramenta|C[óo]digo de acesso|Acesso negado/.test(e.message)) break;
+          }
         }
+        throw new Error(`Falha na legenda da parte ${indice + 1} de ${partesAudio.length}: ${ultimoErro && ultimoErro.message}`);
+      };
 
-        const { upload_url } = await uploadRes.json();
-        if (!upload_url) throw new Error('AssemblyAI não retornou upload_url.');
-        console.log('[Legendas] Upload direto concluído com sucesso:', upload_url);
-
-        // 3. Envia apenas a URL de áudio para /api/legendas gerar e sincronizar o SRT
-        const transcribeRes = await fetch('/api/legendas', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ audio_url: upload_url })
-        });
-
-        if (!transcribeRes.ok) {
-          const errJson = await transcribeRes.json().catch(() => ({}));
-          throw new Error(errJson.error || `Erro na transcrição de legendas (HTTP ${transcribeRes.status})`);
+      let proximaParte = 0;
+      const trabalhadorLeg = async () => {
+        while (proximaParte < partesAudio.length) {
+          const i = proximaParte++;
+          await transcreverParte(i);
         }
+      };
+      await Promise.all(Array.from({ length: Math.min(2, partesAudio.length) }, trabalhadorLeg));
 
-        srtText = await transcribeRes.text();
-
-      } else {
-        // Fallback: envio pelo body para áudios curtos ou servidores locais
-        const response = await fetch('/api/legendas', {
-          method: 'POST',
-          headers: { 'Content-Type': 'audio/mpeg' },
-          body: currentAudioBlob
-        });
-
-        if (response.status === 404 || response.status === 405) {
-          throw new Error('Esta funcionalidade requer que a ferramenta esteja rodando via Vercel (dark-content-studio.vercel.app). Não está disponível na versão do GitHub Pages.');
-        }
-
-        if (!response.ok) {
-          const errJson = await response.json().catch(() => ({}));
-          throw new Error(errJson.error || `Erro na transcrição de legendas (HTTP ${response.status})`);
-        }
-
-        srtText = await response.text();
-      }
+      const srtText = NarracaoModule.juntarSrtDasPartes(resultados);
 
       currentSrtContent = srtText;
       srtGeneratedInSession = true;
@@ -11189,6 +11207,7 @@ Desenvolvimento: A soberania divina cumpre cada detalhe profético anunciado pel
       // Reseta estado de áudio e legendas
       if (currentAudioUrl) URL.revokeObjectURL(currentAudioUrl);
       currentAudioBlob = null;
+      currentAudioParts = [];
       currentAudioUrl = null;
       currentSrtContent = '';
       audioGeneratedInSession = false;

@@ -12,3 +12,9 @@
 - Tradução padrão = ARC (`pt_arc.json`). A JFA só entra se pedida (`traducao: 'jfa'`).
 - Conteúdo de expansão entra ANTES do fechamento (`inserirAntesDoFechamento`), nunca "nos 2 últimos parágrafos".
 - Todo pós-processador novo precisa de teste offline em `tests/pos-processadores.test.js`.
+
+## Segurança das rotas /api (item 33)
+- A chave da AssemblyAI nunca sai do servidor (o GET que a devolvia foi removido).
+- /api/narrar e /api/legendas: verificam mesma origem, limite por IP e, se a variável de ambiente `APP_ACCESS_TOKEN` estiver definida na Vercel, exigem o cabeçalho `x-acesso-token` (campo "Código de acesso" na interface).
+- Verificação de origem sozinha pode ser contornada por curl; para proteção real, defina `APP_ACCESS_TOKEN`.
+- /api/legendas só aceita áudio enviado (≤ 4,4 MB por parte); o front transcreve por partes e junta as legendas.

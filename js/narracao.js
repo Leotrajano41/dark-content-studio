@@ -61,5 +61,52 @@
     return saida;
   }
 
-  return { LIMITE_RESPOSTA_BYTES, PALAVRAS_POR_MINUTO, MAX_CHARS_POR_PARTE, estimarMp3, dividirTextoEmPartes, removerId3, juntarMp3 };
+  // ---- Legendas por partes (SRT) ----
+  const paraSegundos = (h, m, s, ms) => Number(h) * 3600 + Number(m) * 60 + Number(s) + Number(ms) / 1000;
+  function formatarTempoSrt(segundos) {
+    const totalMs = Math.max(0, Math.round(segundos * 1000));
+    const h = Math.floor(totalMs / 3600000);
+    const m = Math.floor((totalMs % 3600000) / 60000);
+    const s = Math.floor((totalMs % 60000) / 1000);
+    const ms = totalMs % 1000;
+    const p = (n, w = 2) => String(n).padStart(w, '0');
+    return `${p(h)}:${p(m)}:${p(s)},${p(ms, 3)}`;
+  }
+
+  /**
+   * Junta os SRT das partes do áudio: desloca os tempos pela duração acumulada das partes anteriores e renumera.
+   * @param {{srt:string, duracaoSegundos:number}[]} partes
+   */
+  function juntarSrtDasPartes(partes) {
+    let deslocamento = 0;
+    let numero = 1;
+    const blocosFinais = [];
+    for (const parte of partes) {
+      const blocos = String(parte.srt || '').trim().split(/\n\s*\n/).filter(Boolean);
+      for (const bloco of blocos) {
+        const linhas = bloco.split('\n').map(l => l.trim());
+        const idxTempo = linhas.findIndex(l => l.includes('-->'));
+        if (idxTempo === -1) continue;
+        const m = linhas[idxTempo].match(/(\d+):(\d+):(\d+)[,.](\d+)\s*-->\s*(\d+):(\d+):(\d+)[,.](\d+)/);
+        if (!m) continue;
+        const ini = paraSegundos(m[1], m[2], m[3], m[4]) + deslocamento;
+        const fim = paraSegundos(m[5], m[6], m[7], m[8]) + deslocamento;
+        const texto = linhas.slice(idxTempo + 1).join('\n');
+        blocosFinais.push(`${numero++}\n${formatarTempoSrt(ini)} --> ${formatarTempoSrt(fim)}\n${texto}`);
+      }
+      deslocamento += Number(parte.duracaoSegundos) || 0;
+    }
+    return blocosFinais.join('\n\n') + '\n';
+  }
+
+  /** Fim (em segundos) da última legenda de um SRT; usado se a duração do MP3 não puder ser lida. */
+  function ultimoFimDoSrt(srt) {
+    let ultimo = 0;
+    const re = /-->\s*(\d+):(\d+):(\d+)[,.](\d+)/g;
+    let m;
+    while ((m = re.exec(String(srt || ''))) !== null) ultimo = Math.max(ultimo, paraSegundos(m[1], m[2], m[3], m[4]));
+    return ultimo;
+  }
+
+  return { ultimoFimDoSrt, formatarTempoSrt, juntarSrtDasPartes, LIMITE_RESPOSTA_BYTES, PALAVRAS_POR_MINUTO, MAX_CHARS_POR_PARTE, estimarMp3, dividirTextoEmPartes, removerId3, juntarMp3 };
 });
