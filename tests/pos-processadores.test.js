@@ -40,7 +40,7 @@ function constante(nome, fim) {
 // IA simulada: devolve uma frase sem o problema (para testar a lógica de regeneração sem rede)
 const chamadas = [];
 const ctx = {
-  console, globalThis: null, PontuacaoModule: require('../js/pontuacao.js'),
+  console, globalThis: null, PontuacaoModule: require('../js/pontuacao.js'), RegrasModule: require('../js/regras-conteudo.js'), CronologiaModule: require('../js/cronologia.js'),
   window: {},
   SCRIPT_SYSTEM_PROMPT: 'sistema',
   OpenRouterAPI: {
@@ -62,7 +62,7 @@ run(constante('TERMOS_TOM_CETICISMO', '\n];'));
 run(constante('REGEX_PALAVRA_REPETIDA', ';'));
 run(constante('REGEX_INGLES_EM_PT', ';'));
 run(constante('REGEX_ESPANHOL_EM_PT', ';'));
-run(constante('MARCADORES_CONTEXTO', '\n];'));
+run(constante('MARCADORES_CONTEXTO', ';'));
 [
   'normalizarAspasEPontuacao', 'validarECorrigirAspas', 'garantirEspacamentoEPontuacaoCitacoes', 'limparPontuacaoDuplicada',
   'limparTextoParaNarracao', 'garantirCtaNoUltimoParagrafo', 'limitarTermosCanonicos', 'apararParaLimiteMaximo',

@@ -2285,6 +2285,10 @@ Subscribe to the channel for more Bible accounts explained from the text.`;
           motivo: 'O fecho do item tem moral/comentário. Troque por UM fato curto do texto (o que aconteceu em seguida ou a consequência registrada).'
         });
       }
+      // Regras de conteúdo em código (itens 26/27): atribuição indevida e absolutos históricos
+      const Regras = (typeof RegrasModule !== 'undefined') ? RegrasModule : require('./regras-conteudo.js');
+      Regras.detectarAtribuicaoIndevida(texto).forEach(a => problemas.push({ tipo: 'atribuicao_indevida', frase: a.frase, motivo: 'Costume ou interpretação atribuído às Escrituras ("as Escrituras registram", "o texto diz"). Reescreva a frase só com o que o texto declara ou use um marcador de contexto ("na época...", "muitos estudiosos explicam...").' }));
+      Regras.detectarAbsolutos(texto).forEach(a => problemas.push({ tipo: 'absoluto', frase: a.frase, motivo: 'Afirmação absoluta sem base no texto ("exclusivamente", "absoluto", "qualquer...", "nenhum..."). Reescreva a frase.' }));
       const cit = verificarCitacoesEmCodigo(texto, it.versiculosTexto);
       cit.citacoesInvalidas.forEach(c => {
         problemas.push({ tipo: 'citacao_incorreta', frase: c.citacao, truncada: c.truncada, completada: c.completada, motivo: c.motivo + ' Use só texto literal do versículo citado ou remova as aspas.' });

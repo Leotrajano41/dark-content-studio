@@ -5,6 +5,7 @@ const Catalogo = require('../js/catalogo.js');
 let total = 0;
 function assert(c, m) { total++; if (!c) { console.error(`  ❌ [FALHOU] ${m}`); process.exitCode = 1; } else console.log(`  ✅ [PASSOU] ${m}`); }
 
+const ctxFT = criarContexto({ constantes: [['FORBIDDEN_TERMS', '\n];']] });
 const ctxP = criarContexto({
   funcoes: ['normalizarAspasEPontuacao', 'validarECorrigirAspas', 'garantirEspacamentoEPontuacaoCitacoes', 'limparPontuacaoDuplicada', 'limparTextoParaNarracao', 'garantirCtaNoUltimoParagrafo', 'limitarTermosCanonicos', 'limitarDeclaracoesDeSilencioBiblico']
 });
@@ -154,6 +155,56 @@ assert(/PROIBIDO afirmar intervalos de tempo/.test(srcAll) && /\$\{LINHA_DO_TEMP
 assert(/PROIBIDO afirmar intervalos de tempo/.test(catSrc), 'Prompts do Catálogo trazem a regra de intervalos');
 assert(/LINHA DO TEMPO DE REFERÊNCIA/.test(html), 'A revisão automática recebe a linha do tempo (categoria CRONOLOGIA)');
 assert(/corrigirConflitosDeCronologia\(resultText/.test(html), 'O fluxo do roteiro reescreve a frase em conflito de cronologia');
+
+console.log('\n📋 27/26/25. Detectores em código: atribuição, costume sem marcador, absolutos, cenas, citação sem referência');
+const Regras = (() => { try { return require('../js/regras-conteudo.js'); } catch (e) { return null; } })();
+assert(Regras && typeof Regras.detectarCostumeSemMarcador === 'function', 'js/regras-conteudo.js existe');
+assert(Regras && Regras.marcadorDeContexto('Prostrar-se com o rosto ao chão era, naquele tempo, sinal de submissão.') === 'naquele tempo', 'Reconhece "naquele tempo" como marcador de contexto');
+assert(Regras && /^estudiosos/.test(Regras.marcadorDeContexto('Estudiosos do texto hebraico observam que a repetição indica ira.')), 'Reconhece "Estudiosos do texto hebraico observam" como marcador');
+const semMarc = Regras ? Regras.detectarCostumeSemMarcador(moisesTxt).map(x => x.frase) : [];
+assert(semMarc.some(f => /A vara representava a autoridade divina/.test(f)), 'Teste real do Moisés: "A vara representava a autoridade divina..." (interpretação sem marcador) é detectada');
+assert(!semMarc.some(f => /figos, vides e romãs/.test(f)) && !semMarc.some(f => /Prostrar-se/.test(f)), 'Frases COM marcador ("Na época...", "naquele tempo") não são acusadas');
+assert(Regras && Regras.detectarAtribuicaoIndevida('As Escrituras registram que, naquela cultura, o gesto era sinal de respeito.').length === 1, '"As Escrituras registram" antes de costume é detectado');
+assert(Regras && Regras.detectarAtribuicaoIndevida('As Escrituras registram: "E morreu Arão ali" (Números 20:28).').length === 0, '"As Escrituras registram" antes de citação literal é permitido');
+assert(Regras && Regras.detectarAtribuicaoIndevida('O texto diz que isso simbolizava a pureza do povo.').length === 1, '"O texto diz que ... simbolizava" é detectado');
+const absolutos = Regras ? Regras.detectarAbsolutos(moisesTxt).map(x => x.frase).join(' | ') : '';
+assert(/precisão absoluta|exatidão absoluta|obediência absoluta/.test(absolutos), 'Teste real do Moisés: "precisão/exatidão/obediência absoluta" são detectadas');
+assert(/qualquer líder/.test(absolutos), 'Teste real do Moisés: "a missão de qualquer líder" é detectada');
+assert(Regras && Regras.detectarAbsolutos('Para sempre será a tua misericórdia. Disse: "nunca mais" e saiu.').length === 0, '"para sempre" e palavras dentro de aspas não são acusadas');
+const bateFT = (t) => ctxFT.FORBIDDEN_TERMS.some(f => f.pattern.test(t));
+assert(bateFT('Ele agiu com precisão absoluta.') && !bateFT('Era um homem absolvido.'), '"absoluta" entrou na lista de palavras proibidas (frase é regenerada)');
+assert(Regras && Regras.detectarCenasInventadas('Seu coração disparou e o suor escorria pela testa.').length >= 1, 'Cena/emoção inventada ("coração disparou", "suor escorria") gera aviso');
+assert(Regras && Regras.detectarCenasInventadas('Moisés feriu a rocha duas vezes.').length === 0, 'Fato do texto não gera aviso de cena inventada');
+assert(Regras && Regras.detectarCitacoesSemReferencia('Moisés disse: "Ouvi agora, rebeldes, porventura tiraremos água desta rocha para vós?"').length === 1, 'Citação sem referência é detectada');
+assert(Regras && Regras.detectarCitacoesSemReferencia('Moisés disse: "Ouvi agora, rebeldes, porventura tiraremos água desta rocha para vós?" (Números 20:10)').length === 0, 'Citação com (Livro c:v) está ok');
+assert(/corrigirRegrasDeConteudo\(resultText/.test(html), 'O fluxo do roteiro corrige atribuição/absolutos/costume sem marcador (reescrevendo a frase)');
+assert(/auditarEstruturaFinal\(resultText, estiloRoteiro, globalThis\.__ancoraSecao7\)/.test(html), 'A auditoria final verifica a conclusão única usando a âncora da Seção 7');
+
+console.log('\n📋 27. Correção em fluxo (IA simulada, sem rede) e conclusão única');
+const promptsIA = [];
+const ctxFluxo = criarContexto({
+  funcoes: ['idiomaEhPortugues', 'reescreverFraseComIA', 'corrigirRegrasDeConteudo', 'auditarEstruturaFinal', 'indiceInicioFechamento'],
+  extras: {
+    SCRIPT_SYSTEM_PROMPT: 'sistema',
+    OpenRouterAPI: { async generateContent(prompt) { promptsIA.push(prompt); return /attribute this custom/.test(prompt) ? 'Segundo historiadores, o gesto era sinal de respeito.' : /Remove the absolute/.test(prompt) ? 'A entrada na Terra Prometida era a esperança de Moisés.' : 'Segundo estudiosos, a vara representava a autoridade delegada por Deus.'; } }
+  }
+});
+(async () => {
+  ctxFluxo.__avisosPosProcessamento = [];
+  const entrada = 'O povo bebeu a água.\n\nA vara representava a autoridade divina delegada ao líder de Israel. As Escrituras registram que o gesto era sinal de respeito. A entrada na Terra era o ápice da missão de qualquer líder.';
+  const saida = await ctxFluxo.corrigirRegrasDeConteudo(entrada, 'Português (Brasil)', 'modelo');
+  assert(saida.regeneradas === 3, `As 3 frases problemáticas foram reescritas pela IA (${saida.regeneradas})`);
+  assert(/Segundo estudiosos, a vara representava/.test(saida.texto) && /Segundo historiadores, o gesto/.test(saida.texto) && !/qualquer líder/.test(saida.texto), 'Cada frase foi trocada pela versão reescrita (a frase inteira)');
+  assert(saida.texto.startsWith('O povo bebeu a água.'), 'Frases sem problema ficam intactas');
+  assert(promptsIA.every(pr => /NEVER just swap one word for a synonym/.test(pr)), 'Todos os pedidos à IA proíbem troca de palavra por sinônimo');
+  const rot = ['P1.', 'P2.', 'Conclusão A do estudo bíblico narrado.', 'Conclusão B do estudo bíblico narrado.', 'Inscreva-se no canal.'].join('\n\n');
+  assert(ctxFluxo.auditarEstruturaFinal(rot, 'Longo', 'Conclusão A do estudo').some(a => a.tipo === 'mais_de_uma_conclusao'), 'Dois parágrafos de fechamento antes do CTA geram aviso');
+  const rotOk = ['P1.', 'P2.', 'Conclusão única do estudo bíblico narrado.', 'Inscreva-se no canal.'].join('\n\n');
+  assert(!ctxFluxo.auditarEstruturaFinal(rotOk, 'Longo', 'Conclusão única do estudo').some(a => a.tipo === 'mais_de_uma_conclusao'), 'Um só parágrafo de fechamento não gera aviso');
+  tail27();
+})();
+function tail27() {
 console.log(`\n${process.exitCode ? '❌ HÁ FALHAS' : '🎉'} ${total} verificações.\n`);
+}
 }
 }

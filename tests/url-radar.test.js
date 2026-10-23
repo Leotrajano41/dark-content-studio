@@ -144,7 +144,7 @@ function criarAmbienteTeste({ urlSearch = '', estadoLocalStorage = {}, mockConfi
 
   const context = vm.createContext(sandbox);
   // Módulos compartilhados que a página carrega por <script src>
-  for (const modulo of ['pontuacao.js', 'narracao.js', 'citacao.js', 'cronologia.js']) {
+  for (const modulo of ['pontuacao.js', 'narracao.js', 'citacao.js', 'cronologia.js', 'regras-conteudo.js']) {
     vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', modulo), 'utf8'), context);
   }
   vm.runInContext(scriptMatch[1], context);

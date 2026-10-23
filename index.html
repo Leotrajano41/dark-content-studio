@@ -3028,6 +3028,7 @@ textarea.h-180 {
   <script src="js/pontuacao.js"></script>
   <script src="js/citacao.js"></script>
   <script src="js/cronologia.js"></script>
+  <script src="js/regras-conteudo.js"></script>
   <script src="js/catalogo.js"></script>
   <script src="js/narracao.js"></script>
 
@@ -3444,6 +3445,7 @@ const FORBIDDEN_TERMS = [
   { term: 'desvendar', pattern: /\bdesvend(?:ar|ando|ado|ada|ados|adas|a|am|e|em|o|ou|aram|amos)\b/i },
   { term: 'profundidade', pattern: /\bprofundidades?\b/i },
   { term: 'Sermão da Montanha', pattern: /Serm[aã]o\s+(?:da|na|no)\s+(?:Montanha|Monte\s+das)|Discurso\s+da\s+Montanha/i },
+  { term: 'absoluto', pattern: /(?<![\p{L}])(?:absolut[oa]s?|absolutamente)(?![\p{L}])/iu },
   { term: 'exclusivamente', pattern: /(?<![\p{L}])exclusivamente(?![\p{L}])/iu },
   { term: 'qualquer judeu podia', pattern: /(?<![\p{L}])qualquer\s+(?:judeu|romano|homem|pessoa|cidad[aã]o|israelita|fariseu|soldado)\s+(?:podia|poderia|pode|era|tinha)(?![\p{L}])/iu },
   { term: 'todos os judeus faziam', pattern: /(?<![\p{L}])todos\s+os\s+(?:judeus|romanos|israelitas|fariseus|soldados)\s+(?:faziam|podiam|eram|tinham|costumavam)(?![\p{L}])/iu },
@@ -9289,20 +9291,10 @@ window.corrigirPalavrasEstrangeiras = corrigirPalavrasEstrangeiras;
  * VARIAR OS MARCADORES DE CONTEXTO ("na época", "historiadores observam"...): o mesmo marcador não pode se repetir
  * em sequência (até 8 frases de distância). A frase repetida é regenerada com outro marcador.
  */
-const MARCADORES_CONTEXTO = [
-  { id: 'na época', re: /(?<![\p{L}])na\s+[eé]poca(?![\p{L}])/iu },
-  { id: 'naquela cultura', re: /(?<![\p{L}])naquela\s+cultura(?![\p{L}])/iu },
-  { id: 'muitos estudiosos explicam', re: /(?<![\p{L}])muitos\s+estudiosos\s+(?:explicam|apontam|entendem|observam)(?![\p{L}])/iu },
-  { id: 'segundo historiadores', re: /(?<![\p{L}])segundo\s+(?:os\s+)?historiadores(?![\p{L}])/iu },
-  { id: 'historiadores observam', re: /(?<![\p{L}])historiadores\s+(?:observam|explicam|apontam)(?![\p{L}])/iu },
-  { id: 'segundo estudiosos', re: /(?<![\p{L}])segundo\s+(?:os\s+)?estudiosos(?![\p{L}])/iu },
-  { id: 'estudiosos explicam', re: /(?<![\p{L}])estudiosos\s+(?:explicam|apontam|observam)(?![\p{L}])/iu }
-];
+const MARCADORES_CONTEXTO = RegrasModule.MARCADORES; // lista única em js/regras-conteudo.js
 
 function marcadorDeContexto(frase) {
-  const fora = String(frase || '').replace(/["“«][^"”»]*["”»]/g, ' ');
-  for (const m of MARCADORES_CONTEXTO) if (m.re.test(fora)) return m.id;
-  return '';
+  return RegrasModule.marcadorDeContexto(frase);
 }
 window.marcadorDeContexto = marcadorDeContexto;
 
@@ -9350,6 +9342,59 @@ async function variarMarcadoresDeContexto(texto, idioma, modelo) {
   return { texto: paragrafos.join('\n\n'), regeneradas };
 }
 window.variarMarcadoresDeContexto = variarMarcadoresDeContexto;
+
+/**
+ * REGRAS DE CONTEÚDO EM CÓDIGO (itens 25, 26, 27): atribuição indevida ("as Escrituras registram" antes de costume),
+ * costume/interpretação sem marcador de contexto e absolutos históricos têm a FRASE reescrita pela IA (nunca troca de palavra).
+ * Cenas/emoções inventadas e citações sem referência viram aviso para revisão manual.
+ */
+async function corrigirRegrasDeConteudo(texto, idioma, modelo) {
+  if (!texto || typeof texto !== 'string' || !idiomaEhPortugues(idioma)) return { texto, regeneradas: 0 };
+  globalThis.__avisosPosProcessamento = globalThis.__avisosPosProcessamento || [];
+  const MAX_REESCRITAS = 14;
+  const marcadores = RegrasModule.MARCADORES.map(m => m.id).join('", "');
+  const alvos = [
+    ...RegrasModule.detectarAtribuicaoIndevida(texto).map(a => ({
+      ...a, tipo: 'atribuicao',
+      instrucao: 'Do NOT attribute this custom or interpretation to Scripture ("as Escrituras registram", "o texto diz"). Keep only what the biblical text literally states, or present the rest as an interpretation with a context marker (for example "' + marcadores + '").',
+      valido: (n) => RegrasModule.detectarAtribuicaoIndevida(n).length === 0
+    })),
+    ...RegrasModule.detectarCostumeSemMarcador(texto).map(a => ({
+      ...a, tipo: 'sem_marcador',
+      instrucao: 'This states a custom of the time or an interpretation. Add ONE context marker in Portuguese, chosen from: "' + marcadores + '". Do not present it as a fact stated by the text.',
+      valido: (n) => !!RegrasModule.marcadorDeContexto(n) || RegrasModule.detectarCostumeSemMarcador(n).length === 0
+    })),
+    ...RegrasModule.detectarAbsolutos(texto).map(a => ({
+      ...a, tipo: 'absoluto',
+      instrucao: 'Remove the absolute claim ("exclusivamente", "absoluto", "qualquer", "nenhum", "sempre foi"...). State only what the text says, or soften it with a context marker.',
+      valido: (n) => RegrasModule.detectarAbsolutos(n).length === 0
+    }))
+  ].slice(0, MAX_REESCRITAS);
+
+  let atual = texto;
+  let regeneradas = 0;
+  for (const alvo of alvos) {
+    if (!atual.includes(alvo.frase)) continue;
+    const nova = await reescreverFraseComIA({
+      frase: alvo.frase,
+      contexto: atual.split(/\n\s*\n/).find(p => p.includes(alvo.frase)) || '',
+      motivo: alvo.motivo,
+      instrucao: alvo.instrucao,
+      modelo,
+      valido: alvo.valido
+    });
+    if (nova) {
+      atual = atual.replace(alvo.frase, () => nova);
+      regeneradas++;
+    } else {
+      globalThis.__avisosPosProcessamento.push({ tipo: alvo.tipo, trecho: alvo.frase.slice(0, 90) });
+    }
+  }
+  RegrasModule.detectarCenasInventadas(atual).forEach(a => globalThis.__avisosPosProcessamento.push({ tipo: 'cena_inventada', trecho: a.frase.slice(0, 90) }));
+  RegrasModule.detectarCitacoesSemReferencia(atual).forEach(a => globalThis.__avisosPosProcessamento.push({ tipo: 'citacao_sem_referencia', trecho: a.frase.slice(0, 90) }));
+  return { texto: atual, regeneradas };
+}
+window.corrigirRegrasDeConteudo = corrigirRegrasDeConteudo;
 
 /**
  * CRONOLOGIA (ITEM 44): frase que afirma tempo passado ("anos depois") entre eventos do MESMO período da linha do tempo
@@ -9549,7 +9594,7 @@ window.ajustarExtensaoRoteiro = ajustarExtensaoRoteiro;
  * se ela não for encontrada (texto reescrito por validadores), usa os CTAs finais + 1 parágrafo de conclusão.
  * Evita o erro antigo de "pegar os 2 últimos parágrafos" e colocar conteúdo DEPOIS da conclusão.
  */
-function auditarEstruturaFinal(texto, estiloRoteiro = '') {
+function auditarEstruturaFinal(texto, estiloRoteiro = '', ancoraSecao7 = '') {
   const avisos = [];
   if (/Cat[aá]logo/i.test(String(estiloRoteiro))) return avisos; // o Catálogo tem CTA intermediário por desenho
   const paras = String(texto || '').split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
@@ -9558,6 +9603,12 @@ function auditarEstruturaFinal(texto, estiloRoteiro = '') {
   if (idxCtas.length > 1) avisos.push({ tipo: 'mais_de_um_cta', trecho: `${idxCtas.length} parágrafos de convite de inscrição` });
   if (idxCtas.length && idxCtas[idxCtas.length - 1] !== paras.length - 1) avisos.push({ tipo: 'conteudo_depois_do_cta', trecho: 'Há texto depois do convite de inscrição' });
   if (!idxCtas.length) avisos.push({ tipo: 'sem_cta', trecho: 'O roteiro não termina com convite de inscrição' });
+  // Conclusão única: entre o início da Seção 7 e o CTA só pode haver UM parágrafo de fechamento
+  if (ancoraSecao7) {
+    const inicio = indiceInicioFechamento(paras, ancoraSecao7);
+    const fechamento = paras.slice(inicio).filter(p => !ehCta(p));
+    if (fechamento.length > 1) avisos.push({ tipo: 'mais_de_uma_conclusao', trecho: `${fechamento.length} parágrafos de fechamento antes do convite de inscrição` });
+  }
   return avisos;
 }
 window.auditarEstruturaFinal = auditarEstruturaFinal;
@@ -9780,6 +9831,7 @@ async function gerarRoteiroEmSeteSecoes({
 
     if (i === 6) {
       ancoraSecao7 = (limpo.split(/\n\s*\n/)[0] || '').slice(0, 80);
+      globalThis.__ancoraSecao7 = ancoraSecao7;
     }
 
     secoesGeradas.push(limpo);
@@ -9952,6 +10004,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
     limparResultadosEtapasPosteriores();
     globalThis.__avisosPosProcessamento = [];
     globalThis.__frasesRemovidas = [];
+    globalThis.__ancoraSecao7 = '';
 
     const estiloRoteiro = document.getElementById('select-estilo-roteiro').value;
     const tomVoz = UI.getValue('select-tom', 'input-tom-custom');
@@ -10150,6 +10203,10 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       const estrangRes = await corrigirPalavrasEstrangeiras(resultText, idioma, modeloRoteiro);
       resultText = estrangRes.texto;
 
+      // 7.1b Atribuição indevida, costume sem marcador e absolutos: a frase é reescrita (nunca troca de palavra)
+      const conteudoRes = await corrigirRegrasDeConteudo(resultText, idioma, modeloRoteiro);
+      resultText = conteudoRes.texto;
+
       // 7.2 Marcadores de contexto ("na época", "historiadores observam"...) não podem se repetir em sequência
       const marcRes = await variarMarcadoresDeContexto(resultText, idioma, modeloRoteiro);
       resultText = marcRes.texto;
@@ -10302,7 +10359,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       }
 
       // Avisos do pós-processamento (aspas desbalanceadas, palavra estrangeira persistente, corte extremo, frases removidas...)
-      auditarEstruturaFinal(resultText, estiloRoteiro).forEach(a => globalThis.__avisosPosProcessamento.push(a));
+      auditarEstruturaFinal(resultText, estiloRoteiro, globalThis.__ancoraSecao7).forEach(a => globalThis.__avisosPosProcessamento.push(a));
       const avisosPos = globalThis.__avisosPosProcessamento || [];
       const removidasPos = globalThis.__frasesRemovidas || [];
       if (avisosPos.length > 0) {
