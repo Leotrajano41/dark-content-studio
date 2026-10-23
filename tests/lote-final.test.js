@@ -118,6 +118,26 @@ assert(!/pt_jfa/.test(semComentarios(valSrc)) && !/pt_jfa/.test(semComentarios(c
   tail41();
 })();
 function tail41() {
+
+console.log('\n📋 42. Maiúscula em "Deus/Senhor" só quando é o Deus de Israel');
+const cap = (t) => Catalogo.corrigirCapitalizacaoSacra(t);
+const mantem = (t) => cap(t) === t;
+assert(mantem('O deus Dagom caiu diante da arca.'), '"o deus Dagom" (deus pagão) fica minúsculo');
+assert(mantem('Os filisteus levaram a arca para o templo do seu deus.'), '"o seu deus" dos filisteus fica minúsculo');
+assert(mantem('Moabe adorava Camos, deus dos moabitas.'), '"deus dos moabitas" fica minúsculo');
+assert(mantem('Falso deus, outro deus, um deus qualquer.'), 'falso/outro/um deus continuam minúsculos');
+assert(cap('Foi deus quem abriu o mar.') === 'Foi Deus quem abriu o mar.', 'O Deus de Israel (sem contexto pagão) recebe maiúscula');
+assert(cap('Davi confiava em deus e clamou a deus.') === 'Davi confiava em Deus e clamou a Deus.', '"em deus" e "a deus" viram Deus');
+assert(mantem('O senhor da casa saiu cedo.'), '"o senhor da casa" (dono da casa) fica minúsculo');
+assert(mantem('Abner disse a Davi, meu senhor, o rei.'), '"meu senhor, o rei" (tratamento a um homem) fica minúsculo');
+assert(mantem('Os servos obedeceram ao senhor deles.') && mantem('O senhor dos escravos os castigou.'), 'Senhores humanos (dos escravos, deles) ficam minúsculos');
+assert(cap('Davi louvou o senhor.') === 'Davi louvou o Senhor.', '"louvou o senhor" vira Senhor (Deus)');
+assert(cap('A palavra do senhor veio a Samuel.') === 'A palavra do Senhor veio a Samuel.', '"palavra do senhor" vira Senhor');
+assert(cap('O anjo do senhor apareceu a Gideão.') === 'O anjo do Senhor apareceu a Gideão.', '"anjo do senhor" vira Senhor');
+assert(cap('O senhor Deus formou o homem.') === 'O Senhor Deus formou o homem.', '"o senhor Deus" vira Senhor Deus');
+assert(cap('Davi orou ao senhor.') === 'Davi orou ao Senhor.', '"orou ao senhor" vira Senhor');
+assert(cap('Nosso senhor Jesus Cristo é fiel.') === 'Nosso Senhor Jesus Cristo é fiel.', '"Nosso senhor Jesus" vira Senhor');
+assert(cap('Ele disse: "o senhor é meu pastor" e saiu.').includes('"o senhor é meu pastor"'), 'Dentro de aspas (citação) nada é alterado');
 console.log(`\n${process.exitCode ? '❌ HÁ FALHAS' : '🎉'} ${total} verificações.\n`);
 }
 }

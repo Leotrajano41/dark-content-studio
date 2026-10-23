@@ -305,12 +305,48 @@
    * Corrige a capitalização de termos sagrados (Deus, Bíblia, Senhor, Escrituras)
    * SOMENTE fora de aspas (citações literais não são alteradas).
    */
+  // Deuses de outros povos e povos pagãos: "deus" com estes nomes/contexto NÃO é o Deus de Israel (fica minúsculo)
+  const NOMES_DEUSES_FALSOS = 'Baal|Dagom|Moloque|Camos|Quemos|Astarote|Astarte|Milcom|Rimom|Nisroque|Bel|Merodaque|Berzebu|Zeus|Hermes|Ártemis|Diana|Osíris|Amom';
+  const POVOS_PAGAOS = /(?<![\p{L}])(?:filisteus|moabitas|amonitas|eg[ií]pcios|cananeus|babil[ôo]nios|ass[ií]rios|s[ií]rios|fen[ií]cios|edomitas|amorreus|heveus|hititas|id[óo]latras|pag[ãa]os?|pag[ãa]s|[ií]dolos?)(?![\p{L}])/iu;
+  const PRECEDE_OUTRO_DEUS = /(?:^|[^\p{L}])(?:um|uma|outro|outros|algum|alguns|nenhum|falso|falsos|novo|novos|qualquer|cada)\s+$/iu;
+  const PRECEDE_DONO_DEUS_PAGAO = /(?:^|[^\p{L}])(?:o|seu|seus|teu|vosso|dos?|das?|desse|daquele)\s+$/iu;
+
+  function janelaDaFrase(str, off, len) {
+    const ini = Math.max(str.lastIndexOf('.', off - 1), str.lastIndexOf('!', off - 1), str.lastIndexOf('?', off - 1), str.lastIndexOf('\n', off - 1)) + 1;
+    const cand = ['.', '!', '?', '\n'].map(ch => str.indexOf(ch, off + len)).filter(i => i >= 0);
+    const fim = cand.length ? Math.min(...cand) : str.length;
+    return str.slice(ini, fim);
+  }
+
+  /**
+   * Maiúscula em "Deus"/"Senhor" SÓ quando o texto fala do Deus de Israel.
+   * "o deus Dagom", "o seu deus" (de um povo pagão), "o senhor da casa", "meu senhor, o rei" ficam como estão.
+   */
   function corrigirCapitalizacaoSacra(texto) {
     if (!texto || typeof texto !== 'string') return '';
     return aplicarForaDeAspas(texto, parte => parte
-      .replace(/(?<!\bum\s)(?<!\boutro\s)(?<!\balgum\s)(?<!\bfalso\s)\bdeus\b/g, 'Deus')
+      .replace(/(?<![\p{L}])deus(?![\p{L}])/gu, (m, off, str) => {
+        const antes = str.slice(0, off);
+        const depois = str.slice(off + m.length);
+        if (PRECEDE_OUTRO_DEUS.test(antes)) return m;
+        if (new RegExp('^\\s+(?:d[aoe]s?\\s+)?(?:' + NOMES_DEUSES_FALSOS + ')(?![\\p{L}])', 'u').test(depois)) return m;
+        const janela = janelaDaFrase(str, off, m.length);
+        if (POVOS_PAGAOS.test(janela) && PRECEDE_DONO_DEUS_PAGAO.test(antes)) return m;
+        if (POVOS_PAGAOS.test(janela) && /^\s*,?\s*(?:dos?|das?)\s/.test(depois)) return m;
+        return 'Deus';
+      })
       .replace(/\bb[ií]blia\b/gi, 'Bíblia')
-      .replace(/\bsenhor\b/g, 'Senhor')
+      .replace(/(?<![\p{L}])senhor(?![\p{L}])/gu, (m, off, str) => {
+        const antes = str.slice(0, off);
+        const depois = str.slice(off + m.length);
+        // Senhor humano: dono, tratamento ("meu senhor, o rei"), senhor dos escravos/da casa/deles
+        if (/^\s+(?:d[aoe]s?\s+(?:casa|terra|vinha|campo|escravos?|servos?|cidade|povo|navio|na[cç][aã]o|reino|propriedade)|deles|delas|dele|dela)(?![\p{L}])/iu.test(depois)) return m;
+        if (/(?:^|[^\p{L}])(?:meu|teu|seu|vosso|nosso)\s+$/iu.test(antes) && !/^\s*,?\s*(?:e\s+(?:meu|nosso)\s+Deus|Deus|Jesus|Cristo)(?![\p{L}])/u.test(depois)) return m;
+        // Divino: "Senhor Deus/Jesus/Cristo/dos exércitos..." ou "o/ao/do/no/pelo/ó senhor", "palavra do senhor", "anjo do senhor"
+        if (/^\s+(?:Deus|Jesus|Cristo|Todo|Altíssimo|dos\s+ex[ée]rcitos)(?![\p{L}])/u.test(depois)) return 'Senhor';
+        if (/(?:^|[^\p{L}])(?:o|ao|do|no|pelo|ó|ante\s+o|perante\s+o|diante\s+do|nosso)\s+$/iu.test(antes)) return 'Senhor';
+        return m;
+      })
       .replace(/\bescrituras\b/gi, 'Escrituras')
       .replace(/\besp[ií]rito\s+santo\b/gi, 'Espírito Santo'));
   }
