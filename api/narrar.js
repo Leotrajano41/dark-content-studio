@@ -10,6 +10,8 @@
 // Para roteiros completos (18-20 min), recomenda-se dividir em seções no frontend.
 
 const CHUNK_MAX_CHARS = 3500; // Margem de segurança abaixo do limite de 4096 da OpenAI TTS
+// ~660 palavras ≈ 4,4 min ≈ 4,2 MB a 128 kbps: abaixo do limite de resposta do Vercel (4,5 MB). O front envia partes de até 3.000.
+const MAX_CHARS_POR_REQUISICAO = 4000;
 
 // Instruções de narração por tom — em inglês para melhor aderência da OpenAI TTS
 const TOM_INSTRUCTIONS = {
@@ -210,6 +212,14 @@ function limparTextoParaNarracao(texto) {
 
   // Limpeza de texto: remove artefatos de roteiro antes de narrar
   const textoHigienizado = limparTextoParaNarracao(texto);
+
+  // ITEM 47: o Vercel não devolve respostas acima de ~4,5 MB. O front envia o roteiro em partes; se vier texto maior que
+  // uma parte, recusa com mensagem clara em vez de falhar depois, no limite da plataforma.
+  if (textoHigienizado.length > MAX_CHARS_POR_REQUISICAO) {
+    return res.status(413).json({
+      error: `Texto grande demais para uma única narração (${textoHigienizado.length} caracteres; máximo ${MAX_CHARS_POR_REQUISICAO}). Envie o roteiro em partes (a ferramenta faz isso automaticamente; recarregue a página se vir esta mensagem).`,
+    });
+  }
 
   // Vozes válidas da OpenAI TTS
   const validVoices = ['alloy', 'ash', 'coral', 'echo', 'fable', 'nova', 'onyx', 'sage', 'shimmer'];

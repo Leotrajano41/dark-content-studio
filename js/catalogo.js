@@ -1428,17 +1428,11 @@ Responda APENAS com o texto narrativo corrigido em português, em um único par�
    */
   function padronizarAspasEPontuacao(texto) {
     if (!texto || typeof texto !== 'string') return '';
-    let t = texto.replace(/[“”]/g, '"');
-    t = t.replace(/"([^"]*)"/g, (m, inner, offset, str) => {
-      const antes = offset > 0 ? str[offset - 1] : '';
-      const depois = str[offset + m.length] || '';
-      const pre = antes && !/[\s(\[¿—\-\n]/.test(antes) ? ' ' : '';
-      const pos = depois && /[\p{L}\p{N}]/u.test(depois) ? ' ' : '';
-      return pre + '"' + inner.trim() + '"' + pos;
-    });
+    // Mesma implementação do roteiro e da Narração Limpa (js/pontuacao.js)
+    const Pont = (typeof PontuacaoModule !== 'undefined') ? PontuacaoModule : require('./pontuacao.js');
+    let t = Pont.normalizarAspasEPontuacao(texto.replace(/[“”]/g, '"'));
     t = t.replace(/[^\S\r\n]{2,}/g, ' ');
     t = t.replace(/[^\S\r\n]+([,.;:!?])/g, '$1');
-    t = t.replace(/"\.\.(?!\.)/g, '".');
     return t.trim();
   }
 

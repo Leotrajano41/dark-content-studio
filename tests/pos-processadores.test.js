@@ -40,7 +40,7 @@ function constante(nome, fim) {
 // IA simulada: devolve uma frase sem o problema (para testar a lógica de regeneração sem rede)
 const chamadas = [];
 const ctx = {
-  console, globalThis: null,
+  console, globalThis: null, PontuacaoModule: require('../js/pontuacao.js'),
   window: {},
   SCRIPT_SYSTEM_PROMPT: 'sistema',
   OpenRouterAPI: {

@@ -37,7 +37,7 @@ function extrairArray(nome) {
   return html.slice(ini, fim + 3);
 }
 
-const ctx = { window: {}, console };
+const ctx = { window: {}, console, PontuacaoModule: require('../js/pontuacao.js') };
 vm.createContext(ctx);
 vm.runInContext(extrairArray('FORBIDDEN_TERMS').replace('const FORBIDDEN_TERMS', 'var FORBIDDEN_TERMS'), ctx);
 ['normalizarAspasEPontuacao', 'validarECorrigirAspas', 'garantirEspacamentoEPontuacaoCitacoes',

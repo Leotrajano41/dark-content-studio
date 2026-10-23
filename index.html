@@ -2277,7 +2277,7 @@ textarea.h-180 {
         <!-- Mensagem de progresso para geração de áudio -->
         <div id="audio-loading-notice" class="audio-notice hidden" style="margin-top: 16px; padding: 14px 18px; background: rgba(229, 184, 105, 0.1); border: 1px dashed var(--accent-gold); border-radius: var(--radius-md); font-size: 0.9rem; color: #f1c40f; display: flex; align-items: center; gap: 12px;">
           <span class="spinner" style="border-top-color: var(--accent-gold);"></span>
-          <span>Gerando narração, isso pode levar até 1 minuto para roteiros longos... Aguarde!</span>
+          <span id="audio-progresso-partes">Gerando narração em partes; um roteiro longo leva de 1 a 3 minutos... Aguarde!</span>
         </div>
 
         <!-- Player de Áudio e Ação para Legendas -->
@@ -3026,7 +3026,9 @@ textarea.h-180 {
   <div id="toast-container" class="toast-container"></div>
 
   <!-- Módulo Independente de Catálogo em N Itens e Pacote de Publicação -->
+  <script src="js/pontuacao.js"></script>
   <script src="js/catalogo.js"></script>
+  <script src="js/narracao.js"></script>
 
   <!-- Scripts Incorporados para Máxima Compatibilidade no GitHub Pages -->
   <script>
@@ -5485,49 +5487,8 @@ window.limitarTermosCanonicos = limitarTermosCanonicos;
  * - ponto duplicado depois das aspas ('outra"..' vira 'outra".'); reticências '...' ficam intactas.
  */
 function normalizarAspasEPontuacao(texto) {
-  if (!texto || typeof texto !== 'string') return texto;
-  const linhas = texto.split('\n').map(linha => {
-    if (!/["“”«»]/.test(linha)) return linha;
-    const usarParidade = ((linha.match(/"/g) || []).length % 2) === 0;
-    const chars = Array.from(linha);
-    let out = '';
-    let abertas = false;
-    for (let i = 0; i < chars.length; i++) {
-      const c = chars[i];
-      let abre;
-      if (c === '“' || c === '«') {
-        abre = true;
-      } else if (c === '”' || c === '»') {
-        abre = false;
-      } else if (c === '"') {
-        if (usarParidade) {
-          abre = !abertas;
-        } else {
-          const ant = out.slice(-1);
-          abre = !ant || /[\s(\[¿—–:]/.test(ant);
-        }
-      } else {
-        out += c;
-        continue;
-      }
-      abertas = abre;
-      if (abre) {
-        if (out && !/[\s(\[¿—–]$/.test(out)) out += ' ';
-        out += c;
-        while (i + 1 < chars.length && /[^\S\r\n]/.test(chars[i + 1])) i++;
-      } else {
-        out = out.replace(/[^\S\r\n]+$/, '');
-        out += c;
-        const prox = chars[i + 1];
-        if (prox && /[\p{L}\p{N}(]/u.test(prox)) out += ' ';
-      }
-    }
-    return out;
-  });
-  return linhas.join('\n')
-    .replace(/(["”»])\.\.(?!\.)/g, '$1.')           // outra".. -> outra".
-    .replace(/(["”»][!?])\.(?!\.)/g, '$1')           // "!. -> "!
-    .replace(/(["”»][.!?;:,])(?=[\p{L}\p{N}])/gu, '$1 '); // ".Depois / ",e -> espaço depois da pontuação
+  // Implementação única em js/pontuacao.js (compartilhada com o Catálogo)
+  return PontuacaoModule.normalizarAspasEPontuacao(texto);
 }
 window.normalizarAspasEPontuacao = normalizarAspasEPontuacao;
 
@@ -10777,22 +10738,55 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
     if (audioLoadingNotice) audioLoadingNotice.classList.remove('hidden');
 
     try {
-      const response = await fetch('/api/narrar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ texto: roteiro, voz, tom })
-      });
+      // ITEM 47: o Vercel limita a resposta a ~4,5 MB e um roteiro Longo gera um MP3 de 8 a 20 MB.
+      // O áudio é pedido em PARTES (cada uma bem abaixo do limite), em paralelo (2 por vez), e juntado aqui.
+      const partes = NarracaoModule.dividirTextoEmPartes(roteiro, NarracaoModule.MAX_CHARS_POR_PARTE);
+      const buffers = new Array(partes.length);
+      const progressoEl = document.getElementById('audio-progresso-partes');
+      let concluidas = 0;
+      const mostrarProgresso = () => {
+        if (progressoEl) progressoEl.textContent = `Gerando narração: parte ${concluidas}/${partes.length} concluída(s)... Aguarde!`;
+      };
+      mostrarProgresso();
 
-      if (response.status === 404 || response.status === 405) {
-        throw new Error('Esta funcionalidade requer que a ferramenta esteja rodando via Vercel (dark-content-studio.vercel.app). Não está disponível na versão do GitHub Pages.');
-      }
+      const gerarParte = async (indice) => {
+        let ultimoErro = null;
+        for (let tentativa = 1; tentativa <= 2; tentativa++) {
+          try {
+            const resp = await fetch('/api/narrar', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ texto: partes[indice], voz, tom })
+            });
+            if (resp.status === 404 || resp.status === 405) {
+              throw new Error('Esta funcionalidade requer que a ferramenta esteja rodando via Vercel (dark-content-studio.vercel.app). Não está disponível na versão do GitHub Pages ou local estática.');
+            }
+            if (!resp.ok) {
+              const errJson = await resp.json().catch(() => ({}));
+              throw new Error(errJson.error || `Erro na geração de áudio (HTTP ${resp.status})`);
+            }
+            buffers[indice] = new Uint8Array(await resp.arrayBuffer());
+            concluidas++;
+            mostrarProgresso();
+            return;
+          } catch (e) {
+            ultimoErro = e;
+            if (/requer que a ferramenta/.test(e.message)) break;
+          }
+        }
+        throw new Error(`Falha na parte ${indice + 1} de ${partes.length} da narração: ${ultimoErro && ultimoErro.message}`);
+      };
 
-      if (!response.ok) {
-        const errJson = await response.json().catch(() => ({}));
-        throw new Error(errJson.error || `Erro na geração de áudio (HTTP ${response.status})`);
-      }
+      let proximo = 0;
+      const trabalhador = async () => {
+        while (proximo < partes.length) {
+          const i = proximo++;
+          await gerarParte(i);
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(2, partes.length) }, trabalhador));
 
-      const audioBlob = await response.blob();
+      const audioBlob = new Blob([NarracaoModule.juntarMp3(buffers)], { type: 'audio/mpeg' });
       currentAudioBlob = audioBlob;
 
       if (currentAudioUrl) URL.revokeObjectURL(currentAudioUrl);
