@@ -24,7 +24,7 @@
     totalMax8: 2200,
     fechamentoMin: 80,
     fechamentoMax: 120,
-    palavrasPorMinuto: 180, // áudio real: ~180 palavras por minuto
+    palavrasPorMinuto: 150, // mesma estimativa do resto da ferramenta (js/narracao.js); com o áudio real o pacote usa a duração medida
     contextoAntes: 8,       // até 8 versículos antes (para situar cenário e motivação)
     contextoDepois: 4       // até 4 versículos depois (consequência imediata registrada)
   });

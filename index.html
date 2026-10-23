@@ -3082,8 +3082,21 @@ const OpenRouterAPI = {
 
       if (keyEncontrada) {
         localStorage.setItem(this.KEY_STORAGE_KEY, keyEncontrada);
-        localStorage.setItem('openrouter_api_key', keyEncontrada);
       }
+
+      // A chave fica SÓ na chave canônica: apaga as cópias antigas e tira a chave das sessões salvas
+      ['openrouter_api_key', 'dark_studio_api_key', 'api_key', 'openrouter_key'].forEach(k => localStorage.removeItem(k));
+      ['dark_studio_session_v1', 'dark_studio_session'].forEach(sKey => {
+        const raw = localStorage.getItem(sKey);
+        if (!raw) return;
+        try {
+          const sess = JSON.parse(raw);
+          if (sess && typeof sess === 'object' && 'input-api-key' in sess) {
+            delete sess['input-api-key'];
+            localStorage.setItem(sKey, JSON.stringify(sess));
+          }
+        } catch (e) {}
+      });
 
       // 2. Migração de Modelo de Ideias
       const chavesIdeias = [
@@ -3151,7 +3164,6 @@ const OpenRouterAPI = {
     const cleanModelRoteiro = (modelRoteiro && modelRoteiro.trim()) ? modelRoteiro.trim() : this.DEFAULT_MODEL_ROTEIRO;
 
     localStorage.setItem(this.KEY_STORAGE_KEY, cleanKey);
-    localStorage.setItem('openrouter_api_key', cleanKey);
     localStorage.setItem(this.MODEL_IDEAS_STORAGE_KEY, cleanModelIdeas);
     localStorage.setItem(this.MODEL_ROTEIRO_STORAGE_KEY, cleanModelRoteiro);
     return { apiKey: cleanKey, modelIdeas: cleanModelIdeas, modelRoteiro: cleanModelRoteiro };
@@ -3177,6 +3189,13 @@ const OpenRouterAPI = {
       else if (activeModel.includes('sonnet')) activeModel = 'gpt-4o';
       else if (activeModel.includes('haiku') || activeModel.includes('claude')) activeModel = 'gpt-4o-mini';
       else if (activeModel.startsWith('openai/')) activeModel = activeModel.replace('openai/', '');
+    }
+
+    if (isDirectOpenAi && activeModel !== model) {
+      // Chave direta da OpenAI não roda modelos de outras empresas: a troca fica VISÍVEL (nunca silenciosa)
+      console.warn(`OpenRouterAPI: modelo "${model}" substituído por "${activeModel}" porque a chave é direta da OpenAI. Use uma chave OpenRouter (sk-or-...) para manter o modelo configurado.`);
+      globalThis.__avisosPosProcessamento = globalThis.__avisosPosProcessamento || [];
+      globalThis.__avisosPosProcessamento.push({ tipo: 'modelo_substituido', trecho: `${model} → ${activeModel}` });
     }
 
     const defaultSystemPrompt = 'You are an expert biblical documentary scriptwriter and YouTube channel strategist for our biblical documentary channel.\n\nCRITICAL MANDATORY RULES FOR ALL GENERATIONS:\n1. HISTORICAL & BIBLICAL TRUTH: Always treat the biblical narrative as literal truth and real history. STRICTLY FORBIDDEN: never use skepticism, never use terms or concepts like "myth", "legend", "debate", "were they real", "traditional theology may not reveal", or any translations/equivalents in Portuguese, Spanish, or any other language (e.g., "mito", "lenda", "debate", "se eram reais", "estudiosos sugerem", "a teologia tradicional oculta").\n2. STRICTLY CANONICAL TEXT: Strictly restrict all content to the 66 canonical books of the Bible. STRICTLY FORBIDDEN: never include extra-biblical theories, secular ancient civilizational hypotheses, human evolutionary ancestry theories, or apocryphal/pseudepigraphal books (such as the Book of Enoch / Livro de Enoque).\n3. EXACT SCRIPTURAL TRANSLATIONS: Direct Bible quotations must always be 100% literal from the authorized canonical translation for the target language:\n   - English: King James Version (KJV)\n   - Portuguese: Almeida Revista e Corrigida (ARC)\n   - Spanish: Reina-Valera 1909 (RVR1909)\n4. STRICT LANGUAGE COMPLIANCE: Always deliver 100% of the output in the requested language.';
@@ -3272,6 +3291,11 @@ const OpenRouterAPI = {
   }
 };
 window.OpenRouterAPI = OpenRouterAPI;
+
+/**
+ * Regras que TODA reescrita por IA precisa repetir no próprio pedido (antes só chegavam pelo prompt de sistema)
+ */
+const REGRAS_DE_REESCRITA = `REWRITE RULES (ALWAYS): 100% Brazilian Portuguese, with no English or Spanish words. Rewrite the WHOLE sentence; NEVER just swap a word for a synonym. Keep every context marker ("na época", "naquela cultura", "muitos estudiosos explicam", "segundo historiadores"); never attribute a custom or interpretation to Scripture ("as Escrituras registram", "o texto diz") and never turn an attributed interpretation into a flat fact. No absolute claims ("exclusivamente", "qualquer", "absoluto"), no invented actions, words, scenes or details, and no intervals of time the text does not state. Fixed name: "Sermão do Monte". Keep quotations 100% literal (ARC), ending at the end of a clause, with their reference.`;
 
 /**
  * Contenção factual (em inglês, para os prompts de ideias/esboço/SEO): afirmação sem base no texto não pode virar fato
@@ -4682,7 +4706,7 @@ ${textoSeo}
 """
 
 CRITERIA:
-1. Strict biblical fidelity (no false or unscriptural claims).
+1. Strict biblical fidelity (no false or unscriptural claims, and nothing presented as fact that the passage does not state: legal status, customs, historical superlatives).
 2. Gripping curiosity hook without cheap clickbait.
 3. Perfect alignment with the chosen theme and thumbnail premise.
 4. Formatting: maximum 1 word in ALL CAPS.
@@ -4695,7 +4719,9 @@ Output EXCLUSIVELY the line above.`;
   try {
     const avaliacao = await OpenRouterAPI.generateContent(
       promptAvaliador,
-      modelo || OpenRouterAPI.getModelIdeas()
+      modelo || OpenRouterAPI.getModelIdeas(),
+      null,
+      { temperature: 0.2 }
     );
     if (avaliacao && avaliacao.trim()) {
       conteudo.textContent = avaliacao.trim();
@@ -4741,6 +4767,7 @@ STRICT SAFETY AND FIDELITY RULES:
 2. PROHIBITION OF UNWRITTEN NUMBERS: If a title contains numbers, distances, calendar dates, ages, or quantities not explicitly written in the biblical passage (e.g. "16 quilômetros" or unwritten dates), treat it as a CORRECAO by removing the number or rewriting the phrase smoothly without it (conversions of measurements that ARE in the text remain permitted as approximations).
 3. IN CASE OF ANY DOUBT, or if the title is accurate, MARK "OK" AND DO NOT CHANGE ANYTHING.
 4. Keep the high CTR clickability and style of the title completely intact.
+5. UNSUPPORTED CLAIMS PRESENTED AS FACT (also a CORRECAO): if a title states as fact a legal status, custom, historical judgment or superlative that the passage does not state (e.g. "era ILEGAL", "o golpe mais humilhante do Império"), rewrite that phrase with a context marker in Portuguese ("segundo historiadores...") or remove the unsupported claim.
 
 MANDATORY OUTPUT FORMAT:
 If a title has a factual error:
@@ -4753,7 +4780,9 @@ Output EXCLUSIVELY the protocol lines above.`;
   try {
     const resp = await OpenRouterAPI.generateContent(
       promptRevisorTitulos,
-      modelo || OpenRouterAPI.getModelRoteiro()
+      modelo || OpenRouterAPI.getModelRoteiro(),
+      null,
+      { temperature: 0.2 }
     );
 
     if (!resp || !resp.trim()) return textoSeo;
@@ -4862,6 +4891,7 @@ MANDATORY RULES:
 5. BATTLES & SOLEMN RESTRAINT: Narrate battles strictly from biblical citation without evaluating or justifying the destruction of peoples. Never use "eliminated", "hunted down", "not an injustice", "populations were".
 6. NO DUPLICATION: Flow naturally from the previous paragraph into the next without repeating sentences from either.
 7. Keep the exact same historical narrative tone and language (${lang.name}). If a forbidden term is a wrong variant of a fixed name, write the fixed name: "Sermão do Monte". Do not just swap the word for a synonym: rewrite the whole sentence.
+${REGRAS_DE_REESCRITA}
 8. Output EXCLUSIVELY the rewritten paragraph text. Do NOT include commentary, quotes around the paragraph, or preamble.`;
 
         const novoParagrafo = await OpenRouterAPI.generateContent(
@@ -4904,6 +4934,7 @@ Forbidden terms: ${termosFrase.map(t => `"${t.term}"`).join(', ')}
 Rules:
 - Never use forbidden clichés, meta-language ("in the next section", "as we transition", "we will explore", "moving ahead", "annals"), or speculation.
 - Strictly adhere to canonical Scripture.
+${REGRAS_DE_REESCRITA}
 - Output EXCLUSIVELY the single rewritten sentence without quotes.`;
 
             const fraseNova = await OpenRouterAPI.generateContent(promptFrase, modelo, SCRIPT_SYSTEM_PROMPT);
@@ -5222,6 +5253,7 @@ RULES:
 1. Maintain language (${lang.name}).
 2. Completely eliminate the prohibited skeptical wording and rewrite in a strong, solemn, affirmative historical tone.
 3. NEVER write defensive declarations like 'é um relato histórico verídico' or 'this is factual history'. Narrate the biblical events directly!
+${REGRAS_DE_REESCRITA}
 4. Output EXCLUSIVELY the rewritten paragraph text, without quotes and without commentary.`;
 
         const novoTexto = await OpenRouterAPI.generateContent(
@@ -5284,6 +5316,10 @@ RULES:
   };
 }
 
+function escaparHtml(str) {
+  return String(str == null ? '' : str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 function atualizarRelatorioTomNaTela(tomRes) {
   const container = document.getElementById('relatorio-validador-tom');
   const badge = document.getElementById('badge-tom-status');
@@ -5318,9 +5354,9 @@ function atualizarRelatorioTomNaTela(tomRes) {
     </div>`;
     logs.forEach(l => {
       htmlCorrigidos += `<div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08); padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; font-size: 0.82rem;">
-        <div style="color: #f87171; margin-bottom: 3px;"><strong>Termo detectado:</strong> <code>${l.termoEncontrado}</code> (Parágrafo ${l.paragrafoIndex})</div>
-        <div style="color: #cbd5e1; margin-bottom: 4px;"><strong>Original:</strong> "${l.paragrafoOriginal}"</div>
-        <div style="color: #34d399;"><strong>Corrigido afirmativo:</strong> "${l.paragrafoCorrigido}"</div>
+        <div style="color: #f87171; margin-bottom: 3px;"><strong>Termo detectado:</strong> <code>${escaparHtml(l.termoEncontrado)}</code> (Parágrafo ${l.paragrafoIndex})</div>
+        <div style="color: #cbd5e1; margin-bottom: 4px;"><strong>Original:</strong> "${escaparHtml(l.paragrafoOriginal)}"</div>
+        <div style="color: #34d399;"><strong>Corrigido afirmativo:</strong> "${escaparHtml(l.paragrafoCorrigido)}"</div>
       </div>`;
     });
     htmlPartes.push(htmlCorrigidos);
@@ -5346,8 +5382,8 @@ function atualizarRelatorioTomNaTela(tomRes) {
       </div>`;
     alertasEvidencia.forEach(a => {
       htmlAlerta += `<div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(245, 158, 11, 0.3); padding: 6px 10px; border-radius: 4px; margin-bottom: 4px; font-size: 0.8rem;">
-        <span style="color: #f87171; font-weight: 600;">ALERTA_EVIDENCIA:</span> <strong style="color: #fde047;">"${a.termoEncontrado}"</strong> (Parágrafo ${a.paragrafoIndex})<br/>
-        <span style="color: #e2e8f0; font-style: italic;">"${a.trecho}"</span>
+        <span style="color: #f87171; font-weight: 600;">ALERTA_EVIDENCIA:</span> <strong style="color: #fde047;">"${escaparHtml(a.termoEncontrado)}"</strong> (Parágrafo ${a.paragrafoIndex})<br/>
+        <span style="color: #e2e8f0; font-style: italic;">"${escaparHtml(a.trecho)}"</span>
       </div>`;
     });
     htmlAlerta += `</div>`;
@@ -6222,6 +6258,7 @@ Rewrite ONLY this sentence so it conveys the same historical context naturally W
 Maintain seamless narrative connection with this surrounding paragraph:
 "${p}"
 
+${REGRAS_DE_REESCRITA}
 Output EXCLUSIVELY the rewritten sentence, without quotes or explanations.`;
 
             try {
@@ -6313,6 +6350,7 @@ ${p}
 """
 
 Task: Rewrite ONLY this paragraph, cleaning up quotation marks, fixing corrupted fragments, and ensuring complete, pristine grammatical sentences. Keep all biblical references and quotes accurate to the official translation.
+${REGRAS_DE_REESCRITA}
 Output EXCLUSIVELY the corrected paragraph, without markdown blocks or explanations.`;
 
       try {
@@ -6414,6 +6452,7 @@ MANDATORY EDITING RULES:
 2. Advance the narrative! Rephrase the paragraph to focus on the historical context, scene development, ancient atmosphere, or subsequent events without repeating the verbatim quote.
 3. Keep the exact same storytelling power, tension, historical fidelity, and language (${lang.name}).
 4. Eliminate any forbidden clichés or repetition.
+${REGRAS_DE_REESCRITA}
 5. Output EXCLUSIVELY the rewritten paragraph text. Do NOT include commentary, quotes around the paragraph, or preamble.`;
 
       try {
@@ -7789,7 +7828,11 @@ const UI = window.UI = {
       `;
     }
 
-    toast.innerHTML = `${iconSvg}<span>${message}</span>`;
+    // O texto da mensagem entra como TEXTO (nunca como HTML): mensagens podem trazer texto do modelo ou de erros de API
+    toast.innerHTML = iconSvg;
+    const span = document.createElement('span');
+    span.textContent = message;
+    toast.appendChild(span);
     container.appendChild(toast);
 
     setTimeout(() => {
@@ -7921,17 +7964,13 @@ const AutoSave = window.AutoSave = {
       if (el) session[id] = el.value;
     });
 
-    // Proteção: se o input-api-key no DOM estiver vazio, mas houver chave salva no storage,
-    // nunca apaga por acidente a chave existente!
-    const keyStorage = OpenRouterAPI.getApiKey();
-    if ((!session['input-api-key'] || !session['input-api-key'].trim()) && keyStorage) {
-      session['input-api-key'] = keyStorage;
-    }
+    // A chave NÃO vai dentro da sessão (fica só na chave canônica do OpenRouterAPI): uma cópia a menos em texto puro
+    delete session['input-api-key'];
 
     try {
       const serialized = JSON.stringify(session);
       localStorage.setItem(this.SESSION_KEY, serialized);
-      localStorage.setItem(this.LEGACY_SESSION_KEY, serialized);
+      localStorage.removeItem(this.LEGACY_SESSION_KEY); // antes eram gravadas duas cópias da sessão inteira
 
       // Sincroniza também nas chaves canônicas da OpenRouterAPI
       const domKey = document.getElementById('input-api-key');
@@ -7946,6 +7985,11 @@ const AutoSave = window.AutoSave = {
       }
     } catch (e) {
       console.warn('AutoSave: não foi possível salvar no localStorage.', e);
+      // Avisa UMA vez (armazenamento do navegador cheio): o usuário deve exportar/copiar o roteiro
+      if (!this._avisouCota && typeof UI !== 'undefined' && UI.showToast) {
+        this._avisouCota = true;
+        UI.showToast('AutoSave: armazenamento do navegador cheio. A sessão NÃO foi salva; copie o roteiro e os resultados importantes.', 'warning');
+      }
     }
   },
 
@@ -8592,7 +8636,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1. Grava direto no localStorage (sem passar pela migração) para garantia máxima
     if (key) {
       localStorage.setItem('dark_studio_openrouter_api_key', key);
-      localStorage.setItem('openrouter_api_key', key);
     }
     localStorage.setItem('dark_studio_openrouter_model_ideas', modelIdeias);
     localStorage.setItem('dark_studio_openrouter_model_roteiro', modelRoteiro);
@@ -9106,6 +9149,7 @@ CRITICAL RULES:
 - Keep ALL biblical facts, names, events, and scripture quotes 100% intact.
 - Eliminate redundant adjectives or wordy phrasing without losing any biblical detail.
 - Language: 100% in ${lang.name}.
+${REGRAS_DE_REESCRITA}
 - Output EXCLUSIVELY the condensed paragraph, without commentary.
 
 PARAGRAPH TO CONDENSE:
@@ -10340,7 +10384,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
 
       // ITEM 2: Validação de Duração (Contagem de palavras pós-limpeza de narração)
       const totalPalavras = (textoLimpo.trim().match(/\S+/g) || []).length;
-      const minutosEstimados = (totalPalavras / 150).toFixed(1);
+      const minutosEstimados = (totalPalavras / NarracaoModule.PALAVRAS_POR_MINUTO).toFixed(1);
 
       const configDuracao = SCRIPT_DURATION_CONFIGS[estiloRoteiro] ||
         (estiloRoteiro.includes('18-20') ? SCRIPT_DURATION_CONFIGS['YouTube Longo (18-20 minutos)'] :

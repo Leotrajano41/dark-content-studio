@@ -236,6 +236,45 @@ assert(rf && rf.removidas.some(x => /A desobediência não foi privada/.test(x))
 assert(rf && (rf.texto.match(/A desobediência não foi privada/g) || []).length === 1, 'Fica exatamente uma ocorrência');
 assert(Regras && Regras.removerFrasesRepetidas('Moisés orou ao Senhor no deserto de Cades. Depois o povo seguiu viagem para Edom. Inscreva-se no canal. Inscreva-se no canal.').removidas.length === 0, 'Frases curtas/CTA não são tratadas como explicação repetida');
 assert(/removerFrasesRepetidas\(/.test(html), 'O fluxo do roteiro remove frases repetidas');
+
+console.log('\n📋 37. Chave da OpenRouter guardada em um só lugar');
+const { constSrc } = require('./_extrator.js');
+const armazenamento = {};
+const fakeLS = { getItem: (k) => (k in armazenamento ? armazenamento[k] : null), setItem: (k, v) => { armazenamento[k] = String(v); }, removeItem: (k) => { delete armazenamento[k]; } };
+const ctxKey = criarContexto({ extras: { localStorage: fakeLS } });
+require('vm').runInContext(constSrc('OpenRouterAPI', '\n};'), ctxKey);
+Object.assign(armazenamento, {
+  openrouter_api_key: 'sk-or-v1-teste', dark_studio_api_key: 'sk-or-v1-teste', api_key: 'sk-or-v1-teste', openrouter_key: 'sk-or-v1-teste',
+  dark_studio_session_v1: JSON.stringify({ 'input-api-key': 'sk-or-v1-teste', 'input-tema-custom': 'Moisés' }),
+  dark_studio_session: JSON.stringify({ 'input-api-key': 'sk-or-v1-teste' })
+});
+ctxKey.OpenRouterAPI.migrarChavesLocalStorage();
+assert(armazenamento.dark_studio_openrouter_api_key === 'sk-or-v1-teste', 'A chave fica na chave canônica');
+assert(['openrouter_api_key', 'dark_studio_api_key', 'api_key', 'openrouter_key'].every(k => !(k in armazenamento)), 'As 4 cópias antigas da chave foram apagadas');
+assert(!JSON.stringify(armazenamento).includes('sk-or-v1-teste') || (JSON.stringify(armazenamento).match(/sk-or-v1-teste/g) || []).length === 1, 'A chave aparece uma única vez em todo o armazenamento (inclusive nas sessões salvas)');
+assert(JSON.parse(armazenamento.dark_studio_session_v1)['input-tema-custom'] === 'Moisés', 'O resto da sessão salva é preservado');
+ctxKey.OpenRouterAPI.saveConfig('sk-or-v1-outra', '', '');
+assert(!('openrouter_api_key' in armazenamento) && armazenamento.dark_studio_openrouter_api_key === 'sk-or-v1-outra', 'saveConfig grava só na chave canônica');
+assert(/delete session\['input-api-key'\]/.test(html), 'O AutoSave não grava mais a chave dentro da sessão');
+
+console.log('\n📋 48. AutoSave: uma cópia só e aviso quando não cabe');
+assert(!/localStorage\.setItem\(this\.LEGACY_SESSION_KEY, serialized\)/.test(html), 'O AutoSave não grava mais duas cópias da sessão');
+assert(/AutoSave: armazenamento cheio|armazenamento do navegador cheio/.test(html), 'Falha de gravação (cota) avisa o usuário uma vez');
+
+console.log('\n📋 49. Estimativa de duração: 150 palavras/min em todo lugar');
+assert(Catalogo.LIMITES.palavrasPorMinuto === require('../js/narracao.js').PALAVRAS_POR_MINUTO && Catalogo.LIMITES.palavrasPorMinuto === 150, 'O Catálogo usa as mesmas 150 palavras/min do resto da ferramenta');
+assert(/NarracaoModule\.PALAVRAS_POR_MINUTO/.test(html), 'index.html usa a constante única (sem "/ 150" solto)');
+
+console.log('\n📋 46. Texto do modelo não entra como HTML');
+assert(!/<span>\$\{message\}<\/span>/.test(html) && /span\.textContent = message/.test(html), 'Toasts usam textContent');
+const trecho = html.slice(html.indexOf('function atualizarRelatorioTomNaTela'), html.indexOf('function atualizarRelatorioTomNaTela') + 6000);
+assert(!/\$\{l\.paragrafoOriginal\}/.test(trecho) && !/\$\{a\.trecho\}/.test(trecho) && /escaparHtml\(l\.paragrafoOriginal\)/.test(trecho), 'Relatório do tom e alertas de evidência escapam o texto');
+
+console.log('\n📋 35. Troca de modelo nunca é silenciosa');
+assert(/modelo_substituido/.test(html), 'Se a chave direta da OpenAI obrigar a trocar de modelo, vira aviso (e fica no console)');
+
+console.log('\n📋 36. Suíte offline');
+assert(require('fs').existsSync(require('path').join(__dirname, 'rodar-todos.js')), 'tests/rodar-todos.js roda todos os testes offline de uma vez');
 console.log(`\n${process.exitCode ? '❌ HÁ FALHAS' : '🎉'} ${total} verificações.\n`);
 }
 }
