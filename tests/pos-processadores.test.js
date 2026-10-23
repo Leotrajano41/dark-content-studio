@@ -186,7 +186,7 @@ assert(E('marcadorDeContexto')('Historiadores observam que era assim.') === 'his
   const textoGn3 = 'Deus falou. "E disse Deus: Haja luz. E houve luz." (Gênesis 1:3)';
   const emArc = ValidarBiblia.validarRoteiroBiblico(textoGn3, 'Português (Brasil)', 'arc').textoCorrigido;
   const emJfa = ValidarBiblia.validarRoteiroBiblico(textoGn3, 'Português (Brasil)', 'jfa').textoCorrigido;
-  assert(emArc !== emJfa, 'O parâmetro de tradução é respeitado: ARC e JFA dão resultados diferentes'); 
+  assert(emArc === emJfa, 'A opção JFA foi desligada: pedir "jfa" dá o mesmo resultado da ARC'); 
   const sn = ValidarBiblia.validarRoteiroBiblico('Davi disse: "O Senhor é o meu pastor, nada me faltará." (Salmos 23:1)', 'Português (Brasil)', 'arc');
   assert(!/SENHOR/.test(sn.textoCorrigido), 'O validador não força "SENHOR" em maiúsculas');
   assert(!/João Ferreira de Almeida|JFA/.test(html), 'Prompts não citam mais JFA / João Ferreira');
