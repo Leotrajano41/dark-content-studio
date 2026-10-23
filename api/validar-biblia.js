@@ -18,7 +18,7 @@ function readJsonClean(filePath) {
 }
 
 // Cache em memória para Serverless singleton
-let bibles = { pt: null, ptJfa: null, en: null, es: null };
+let bibles = { pt: null, en: null, es: null };
 
 function loadBibles() {
   const possibleDirs = [
@@ -40,15 +40,12 @@ function loadBibles() {
     return bibles;
   }
 
-  // Português: o padrão do projeto é a Almeida Revista e Corrigida (ARC). A JFA só é usada se pedida explicitamente.
+  // Português: SOMENTE a Almeida Revista e Corrigida (ARC). A opção JFA/Atualizada foi desligada (pt_jfa.json não é lido).
   if (!bibles.pt) {
     const ptPath = path.join(actualDir, 'pt_arc.json');
     if (fs.existsSync(ptPath)) bibles.pt = readJsonClean(ptPath);
   }
-  if (!bibles.ptJfa) {
-    const jfaPath = path.join(actualDir, 'pt_jfa.json');
-    if (fs.existsSync(jfaPath)) bibles.ptJfa = readJsonClean(jfaPath);
-  }
+
   if (!bibles.en) {
     const enPath = path.join(actualDir, 'en_kjv.json');
     if (fs.existsSync(enPath)) bibles.en = readJsonClean(enPath);
@@ -357,8 +354,8 @@ function validarRoteiroBiblico(texto, idioma = 'pt', traducao = 'arc') {
   const langKey = (idioma.toLowerCase().includes('en') || idioma.toLowerCase().includes('ing')) ? 'en'
                 : (idioma.toLowerCase().includes('es') || idioma.toLowerCase().includes('esp')) ? 'es'
                 : 'pt';
-  const usaJfa = langKey === 'pt' && /^(?:aa|jfa)$/i.test(String(traducao || ''));
-  const currentBible = usaJfa ? (biblesLoaded.ptJfa || biblesLoaded.pt) : (biblesLoaded[langKey] || biblesLoaded.pt);
+  // `traducao` é aceito por compatibilidade, mas ignorado: a conferência é sempre pela ARC
+  const currentBible = biblesLoaded[langKey] || biblesLoaded.pt;
 
   // Se a Bíblia não pôde ser carregada no ambiente, retorna texto intacto com aviso
   if (!currentBible) {
@@ -653,7 +650,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { texto, idioma = 'pt', traducao = 'arc' } = req.body || {};
+    const { texto, idioma = 'pt', traducao = 'arc' } = req.body || {}; // traducao é ignorada (sempre ARC)
 
     if (!texto || typeof texto !== 'string') {
       return res.status(400).json({ error: 'Parâmetro obrigatório ausente: "texto".' });

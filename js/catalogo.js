@@ -651,8 +651,8 @@
     } else if (idioma === 'es') {
       nomeArquivo = 'es_rvr.json';
     } else {
-      // Português: 'arc' é o padrão (Almeida Revista e Corrigida); 'aa' ou 'jfa' é Almeida Atualizada
-      nomeArquivo = (vNorm === 'aa' || vNorm === 'ara' || vNorm === 'jfa') ? 'pt_jfa.json' : 'pt_arc.json';
+      // Português: SOMENTE a Almeida Revista e Corrigida (ARC). A opção 'aa'/'jfa' foi desligada (pt_jfa.json não é mais lido).
+      nomeArquivo = 'pt_arc.json';
     }
 
     if (_bibleCache[nomeArquivo]) {
@@ -979,7 +979,7 @@ ATENÇÃO: Os exemplos acima servem EXCLUSIVAMENTE para você aprender o TOM de 
 
   function blocoRegrasNarracao(referenciaFormatada, contextoExtra = '', traducao = 'arc') {
     const refCap = referenciaCapituloFalada(referenciaFormatada, contextoExtra);
-    const nomeTraducao = (traducao === 'aa' || traducao === 'jfa') ? 'Almeida Atualizada (ARA)' : 'Almeida Revista e Corrigida (ARC)';
+    const nomeTraducao = 'Almeida Revista e Corrigida (ARC)';
     return `REGRAS DA NARRAÇÃO:
 1. ABERTURA E FONTE:
    - A passagem é dita UMA ÚNICA VEZ por item, logo depois do marcador e nome do item: "Isso está em ${refCap}."
@@ -2469,7 +2469,7 @@ Subscribe to the channel for more Bible accounts explained from the text.`;
     // Se estiver no modo parcial de itens selecionados, devolve diretamente os itens e análises
     if (Array.isArray(itensSelecionados) && itensSelecionados.length > 0) {
       updateProgress('Itens selecionados concluídos com sucesso!', 100);
-      const traducaoUsada = (traducao === 'aa' || traducao === 'jfa') ? 'Almeida Atualizada (ARA/AA)' : 'Almeida Revista e Corrigida (ARC)';
+      const traducaoUsada = 'Almeida Revista e Corrigida (ARC)';
       return {
         modoParcial: true,
         roteiro: resultadosItens.map(r => r.texto).join('\n\n'),
@@ -2610,7 +2610,7 @@ Responda APENAS com o texto em um único parágrafo contínuo, sem tópicos e se
     updateProgress('Validando regras estruturais...', 96);
     const validacao = validarEstrutura(roteiroCompleto, n);
 
-    const traducaoUsada = (traducao === 'aa' || traducao === 'jfa') ? 'Almeida Atualizada (ARA/AA)' : 'Almeida Revista e Corrigida (ARC)';
+    const traducaoUsada = 'Almeida Revista e Corrigida (ARC)';
 
     // DADOS DE CONFERÊNCIA (notas do auditor ficam SÓ aqui)
     const dadosConferencia = {

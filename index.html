@@ -1516,9 +1516,8 @@ textarea.h-180 {
               <label for="select-traducao-biblica" style="font-size: 0.85rem; color: #a1a1aa; font-weight: 500; margin-top: 8px; display: block;">
                 Tradução Bíblica:
               </label>
-              <select id="select-traducao-biblica" class="form-control" style="margin-top: 4px;">
-                <option value="arc" selected>Almeida Revista e Corrigida (ARC - Padrão)</option>
-                <option value="aa">Almeida Atualizada (ARA/AA)</option>
+              <select id="select-traducao-biblica" class="form-control" style="margin-top: 4px;" disabled title="Em português a ferramenta usa somente a Almeida Revista e Corrigida (ARC)">
+                <option value="arc" selected>Almeida Revista e Corrigida (ARC)</option>
               </select>
             </div>
           </div>
@@ -5941,7 +5940,7 @@ async function gerarRoteiroCatalogo({
   }
 
   const traducaoEl = document.getElementById('select-traducao-biblica');
-  const traducaoEscolhida = traducao || (traducaoEl ? traducaoEl.value : 'arc');
+  const traducaoEscolhida = 'arc'; // português = somente ARC (a opção JFA/Atualizada foi desligada)
 
   const res = await modulo.executarFluxoCatalogo({
     ideia,
@@ -8311,9 +8310,8 @@ function limparTextoParaNarracao(texto, estiloRoteiro = '') {
 async function validarRoteiroComBiblia(roteiro, idioma = 'pt') {
   if (!roteiro || typeof roteiro !== 'string') return roteiro;
 
-  // A tradução escolhida na tela (ARC por padrão) vale também para o validador: ele não pode "corrigir" para outra versão
-  const traducaoEl = (typeof document !== 'undefined') ? document.getElementById('select-traducao-biblica') : null;
-  const traducao = traducaoEl ? traducaoEl.value : 'arc';
+  // O validador sempre confere pela ARC: ele não pode "corrigir" para outra versão
+  const traducao = 'arc'; // português = somente ARC
 
   try {
     const response = await fetch('/api/validar-biblia', {
@@ -9939,7 +9937,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       const numItensEl = document.getElementById('input-num-itens-catalogo');
       const numItensVal = numItensEl ? parseInt(numItensEl.value, 10) : 9;
       const traducaoEl = document.getElementById('select-traducao-biblica');
-      const traducaoVal = traducaoEl ? traducaoEl.value : 'arc';
+      const traducaoVal = 'arc'; // português = somente ARC
 
       try {
         resultText = await gerarRoteiroCatalogo({

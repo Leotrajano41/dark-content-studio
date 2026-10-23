@@ -95,5 +95,29 @@ const arcJson = JSON.parse(require('fs').readFileSync(require('path').join(__dir
   tail();
 })();
 function tail() {
+
+console.log('\n📋 41. Opção JFA desligada (português = só ARC)');
+assert(!/<option value="aa"/.test(html) && !/Almeida Atualizada/.test(html), 'A tela não oferece mais "Almeida Atualizada / JFA"');
+assert(/<select id="select-traducao-biblica"[^>]*disabled/.test(html) || !/select-traducao-biblica/.test(html), 'O seletor de tradução fica travado em ARC');
+const catSrc = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', 'catalogo.js'), 'utf-8');
+assert(!/Almeida Atualizada/.test(catSrc), 'js/catalogo.js não cita mais "Almeida Atualizada"');
+const valSrc = require('fs').readFileSync(require('path').join(__dirname, '..', 'api', 'validar-biblia.js'), 'utf-8');
+const semComentarios = (src) => src.replace(/\/\/.*$/gm, '');
+assert(!/pt_jfa/.test(semComentarios(valSrc)) && !/pt_jfa/.test(semComentarios(catSrc)), 'Nenhum código lê pt_jfa.json (o arquivo continua no repositório, sem uso)');
+(async () => {
+  for (const v of ['aa', 'jfa', 'ara', 'arc', undefined]) {
+    const b = await Catalogo.obterBibliaJson('pt', v);
+    const gn11 = b.find(x => x.abbrev === 'gn').chapters[0][0];
+    assert(gn11 === 'No princípio, criou Deus os céus e a terra.', `obterBibliaJson('pt', ${v}) devolve a ARC`);
+  }
+  const dados = await Catalogo.carregarVersiculos('Números 20:12', 'pt', { traducao: 'jfa' });
+  assert(/para me santificar diante/.test(dados.textoCompleto) && !/santificardes/.test(dados.textoCompleto), 'carregarVersiculos com traducao "jfa" usa o texto da ARC');
+  const a1 = Validar.validarRoteiroBiblico('Deus falou. "Haja luz. E houve luz." (Gênesis 1:3)', 'Português (Brasil)', 'arc');
+  const a2 = Validar.validarRoteiroBiblico('Deus falou. "Haja luz. E houve luz." (Gênesis 1:3)', 'Português (Brasil)', 'jfa');
+  assert(a1.textoCorrigido === a2.textoCorrigido, 'Validador bíblico ignora o pedido de JFA (sempre ARC)');
+  tail41();
+})();
+function tail41() {
 console.log(`\n${process.exitCode ? '❌ HÁ FALHAS' : '🎉'} ${total} verificações.\n`);
+}
 }
