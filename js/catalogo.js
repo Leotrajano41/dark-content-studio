@@ -371,7 +371,11 @@
     { rotulo: 'ímpios', re: reProibida('ímpios|impios') },
     { rotulo: 'profanação', re: reProibida('profana[çc][ãa]o') },
     { rotulo: 'tragédia', re: reProibida('trag[ée]dias?') },
-    { rotulo: 'trágico', re: reProibida('tr[áa]gic[oa]s?') }
+    { rotulo: 'trágico', re: reProibida('tr[áa]gic[oa]s?') },
+    { rotulo: 'desvendar', re: reProibida('desvend(?:ar|ando|ado|ada|ados|adas|a|am|e|em|o|ou|aram|amos)') },
+    { rotulo: 'profundidade', re: reProibida('profundidades?') },
+    { rotulo: 'precisão cirúrgica', re: reProibida('precis[ãa]o\\s+cir[úu]rgica') },
+    { rotulo: 'mergulhar fundo', re: reProibida('mergulh(?:ar|e|a|am|ando|ou|aram|amos|o)\\s+fundo') }
   ];
 
   // Jargões de "relatório" também vetados (fora de aspas)
@@ -955,7 +959,7 @@
   // ==========================================================================
   // PROMPTS
   // ==========================================================================
-  const LISTA_PROIBIDAS_PROMPT = 'fatal, devastadora, absoluto, pânico, gritos de desespero, soberbo, vaidoso, aduladora, fascinada, farsa, premeditado/premeditada, engano premeditado, agonia espantosa, poderoso rei, falso Deus, ímpios (fora de aspas), profanação (se não estiver nos versículos), tragédia, trágico';
+  const LISTA_PROIBIDAS_PROMPT = 'fatal, devastadora, absoluto, pânico, gritos de desespero, soberbo, vaidoso, aduladora, fascinada, farsa, premeditado/premeditada, engano premeditado, agonia espantosa, poderoso rei, falso Deus, ímpios (fora de aspas), profanação (se não estiver nos versículos), tragédia, trágico, desvendar/desvendando, profundidade, precisão cirúrgica, mergulhar fundo';
 
   const EXEMPLOS_REFERENCIA_PROMPT = `EXEMPLOS DE TOM E ESTRUTURA (aprenda a cadência e a estrutura narrativa; NÃO copie frases nem fatos):
 
@@ -999,7 +1003,14 @@ ATENÇÃO: Os exemplos acima servem EXCLUSIVAMENTE para você aprender o TOM de 
    - PROIBIDO usar (fora de aspas): ${LISTA_PROIBIDAS_PROMPT}. Proibido também jargões de relatório ("o texto sagrado", "o relato bíblico afirma/descreve/expõe", "a narrativa bíblica limita-se", "análise documental", "sem presumir", "reflexão sóbria").
    - SEM moral no fim do item (o fecho do item deve ser um FATO curto do texto).
 6. CONTRASTE: use "não foi X, foi Y" (ou "não era X, mas Y" / "X, e não Y") SOMENTE quando X e Y estiverem nos versículos, em pelo menos 2 itens do roteiro (no meio do texto, nunca como fecho de moral).
-7. CAPITALIZAÇÃO: Deus, Bíblia, Senhor, Escrituras sempre com inicial maiúscula.`;
+7. CAPITALIZAÇÃO: Deus, Bíblia, Senhor, Escrituras sempre com inicial maiúscula.
+8. ATRIBUIÇÃO, GENERALIZAÇÃO E CITAÇÃO:
+   - Todo costume da época, explicação cultural ou interpretação DEVE vir com marcador de contexto ("na época...", "naquela cultura...", "muitos estudiosos explicam...", "segundo historiadores...", "historiadores observam..."). VARIE os marcadores (nunca o mesmo duas vezes em sequência) e use-os SOMENTE quando houver de fato interpretação ou costume, nunca em fato que o texto declara.
+   - PROIBIDO escrever "as Escrituras registram" ou "o texto diz" antes de algo que não seja citação literal do versículo ou fato que o texto declara.
+   - PROIBIDO afirmação histórica absoluta sem base no texto ("qualquer judeu podia ser...", "o gesto tinha significado uniforme").
+   - A citação entre aspas deve corresponder à cena (quem fala ou age, onde, quando) e vir com a referência. Na dúvida sobre a redação exata, NÃO use aspas.
+   - Cada explicação ou episódio aparece uma única vez no roteiro inteiro.
+   - Se uma palavra proibida aparecer, reescreva a frase inteira de outro modo (nunca troque só a palavra por sinônimo).`;
   }
 
   /**
@@ -1097,14 +1108,14 @@ ${textoItem}
 
 REGRAS DE AUDITORIA:
 1. O nome do personagem do item (ex: Senaqueribe, Herodes, Arão) e os fatos do CONTEXTO PERMITIDO fazem parte da fonte: NÃO os sinalize como contexto externo.
-2. Sinalize APENAS: (a) invenção de psicologia/intenção/motivo sem respaldo nos versículos; (b) fato que contradiz os versículos; (c) citação entre aspas que não seja literal.
+2. Sinalize APENAS: (a) invenção de psicologia/intenção/motivo sem respaldo nos versículos; (b) fato que contradiz os versículos; (c) citação entre aspas que não seja literal ou que não corresponda à cena (quem fala/age, onde, quando); (d) costume, explicação cultural ou interpretação SEM marcador de contexto ("na época...", "muitos estudiosos explicam...", "segundo historiadores...") ou atribuída ao texto ("as Escrituras registram", "o texto diz") sem ser citação literal; (e) afirmação histórica absoluta/generalização sem base nos versículos.
 3. Liste em "referencias_fora_da_passagem" os versículos do CONTEXTO PERMITIDO, FORA da passagem central, dos quais o texto usou algum fato. Use o formato "Livro cap:versículo" ou intervalo "Livro cap:v1-v2" (ex.: "Atos 12:20", "Gênesis 18:20-33"). Se nenhum, devolva lista vazia.
 
 FORMATO DE RESPOSTA (JSON PURO):
 {
   "aprovado": true ou false,
   "frases_nao_sustentadas": [
-    { "frase": "frase exata do texto", "tipo": "motivo_inventado | citacao_incorreta | fato_contraditorio", "motivo": "explicação curta" }
+    { "frase": "frase exata do texto", "tipo": "motivo_inventado | citacao_incorreta | fato_contraditorio | atribuicao_indevida | generalizacao", "motivo": "explicação curta" }
   ],
   "referencias_fora_da_passagem": ["Livro cap:v"]
 }`;
@@ -1423,6 +1434,7 @@ Responda APENAS com o texto narrativo corrigido em português, em um único par�
     });
     t = t.replace(/[^\S\r\n]{2,}/g, ' ');
     t = t.replace(/[^\S\r\n]+([,.;:!?])/g, '$1');
+    t = t.replace(/"\.\.(?!\.)/g, '".');
     return t.trim();
   }
 

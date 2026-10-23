@@ -3241,16 +3241,32 @@ const OpenRouterAPI = {
 window.OpenRouterAPI = OpenRouterAPI;
 
 /**
+ * Regra de atribuição, generalizações, citação x cena e repetição (compartilhada pelos prompts de roteiro)
+ */
+const REGRA_ATRIBUICAO_PT = `REGRA DE ATRIBUIÇÃO (OBRIGATÓRIA, PRIORIDADE MÁXIMA):
+- Toda interpretação, costume da época ou explicação cultural DEVE vir com um marcador de contexto: 'na época...', 'naquela cultura...', 'muitos estudiosos explicam...', 'segundo historiadores...', 'historiadores observam...'.
+- PROIBIDO escrever 'as Escrituras registram', 'o texto diz', 'o texto bíblico afirma' ou equivalentes antes de algo que NÃO seja citação literal do versículo (ou fato que o texto declara de forma explícita). Costume, explicação e interpretação nunca podem ser atribuídos à Escritura.
+- VARIE os marcadores de contexto: NUNCA repita o mesmo marcador (ex.: 'muitos estudiosos explicam') em sequência; alterne entre 'na época', 'naquela cultura', 'historiadores observam', 'segundo estudiosos' etc. Não há limite fixo de marcadores.
+- Use o marcador SOMENTE quando houver de fato interpretação ou costume. Não use marcador de contexto em fato que o texto bíblico declara literalmente.
+- PROIBIDO GENERALIZAR: não faça afirmações históricas absolutas sem base no texto bíblico (ex.: 'qualquer judeu podia ser...', 'todos faziam...', 'o gesto tinha significado uniforme'). Se for costume, use marcador de contexto e linguagem não absoluta ('em muitos casos', 'costumava').
+- CITAÇÃO x CENA: toda citação bíblica deve corresponder à cena narrada (quem fala ou age, onde e quando) e vir com a referência. Na dúvida sobre a redação exata, NÃO use aspas: parafraseie e cite a referência.
+- SEM REPETIÇÃO: cada explicação ou episódio aparece uma única vez no roteiro. A conclusão tem um ÚNICO parágrafo de fechamento antes da chamada para inscrição (CTA).
+- PALAVRAS PROIBIDAS EM PORTUGUÊS: 'desvendar', 'desvendando', 'profundidade', 'precisão cirúrgica', 'mergulhar fundo'. Se uma frase usar uma delas, REESCREVA a frase inteira de outro modo (nunca apenas troque a palavra por sinônimo).`;
+
+/**
  * REGRAS DE CONTEÚDO E STORYTELLING BÍBLICO (Item 2 & Ajustes Finais) - System Prompt Exclusivo para Geração de Roteiro
  */
 const SCRIPT_SYSTEM_PROMPT = `You are a master biblical documentary storyteller and narrator for our biblical documentary channel.
 
 POSTURA OBRIGATÓRIA DO NARRADOR:
 - Trate todo relato bíblico como verdade sagrada afirmada diretamente: 'o fogo caiu', nunca 'o relato diz que o fogo teria caído'.
-- A autoridade é a própria Escritura. Use 'as Escrituras registram', 'o texto bíblico afirma', citando livro, capítulo e versículo.
+- A autoridade é a própria Escritura. Use 'as Escrituras registram' ou 'o texto bíblico afirma' SOMENTE antes de citação literal do versículo ou de fato que o texto declara explicitamente, citando livro, capítulo e versículo (veja REGRA DE ATRIBUIÇÃO).
 - NUNCA chame a Bíblia de lenda, mito, fábula, alegoria, folclore ou tradição. NUNCA convide o espectador a duvidar ou a 'analisar criticamente'.
 - GANCHO DE IMPACTO DRAMÁTICO IMEDIATO: A primeiríssima frase do roteiro DEVE ser o momento mais dramático da história (ex: 'O fogo caiu do céu.', 'A pedra afundou na testa do gigante.', 'Com a queixada de um jumento, mil homens tombaram sem vida.'). É ESTRITAMENTE PROIBIDO abrir de forma cronológica lenta ou contextual (NUNCA abra com 'Após o dilúvio...', 'A planície de...', 'Nos dias de...', 'A história começa...', 'Durante o reinado de...', 'Nas terras de...'). Abra direto no ápice do acontecimento!
-- PROIBIÇÃO TOTAL DE NÚMEROS, DISTÂNCIAS, DATAS OU QUANTIDADES NÃO ESCRITAS NA BÍBLIA: É expressamente proibido inventar números, distâncias, datas, idades ou quantidades que não estejam escritos na passagem bíblica original (ex: proibir "guiado 16 quilômetros" em 2 Reis 6:19 quando a distância não está no texto bíblico; proibir inventar anos ou datas de calendário). Conversões de medidas que ESTÃO no texto bíblico continuam permitidas, sempre como aproximação (ex: "9 côvados, cerca de 4 metros"). NUNCA cite 'registros', 'descobertas', 'historiadores', 'arqueologia', 'arqueólogos', 'escavações', 'estudiosos', 'inscrições', 'cuneiforme' ou 'achados'. A única autoridade e fonte de dados é a própria Escritura canônica.
+- PROIBIÇÃO TOTAL DE NÚMEROS, DISTÂNCIAS, DATAS OU QUANTIDADES NÃO ESCRITAS NA BÍBLIA: É expressamente proibido inventar números, distâncias, datas, idades ou quantidades que não estejam escritos na passagem bíblica original (ex: proibir "guiado 16 quilômetros" em 2 Reis 6:19 quando a distância não está no texto bíblico; proibir inventar anos ou datas de calendário). Conversões de medidas que ESTÃO no texto bíblico continuam permitidas, sempre como aproximação (ex: "9 côvados, cerca de 4 metros"). NUNCA invente 'registros', 'descobertas', 'arqueologia', 'arqueólogos', 'escavações', 'inscrições', 'cuneiforme' ou 'achados' para provar um fato. Os marcadores de contexto da REGRA DE ATRIBUIÇÃO ('segundo historiadores', 'muitos estudiosos explicam') servem só para sinalizar costume ou interpretação, nunca para fabricar evidência nem para atribuir números ou datas. A única autoridade e fonte de dados é a própria Escritura canônica.
+
+${REGRA_ATRIBUICAO_PT}
+
 - LIMITE ESTRITO DE FRASES DE DESCARTE DE CETICISMO: No máximo 1 vez em Shorts, Shorts Estendido e Médio, e no máximo 2 vezes no Longo. NUNCA repita a fórmula 'não foi X, foi Y' mais do que o limite permitido.
 - PROIBIÇÃO DE AUTODEFESA E JUSTIFICATIVAS: NUNCA use termos como 'fato histórico', 'fato real', 'realidade histórica', 'acontecimento real', 'relato histórico', 'história verdadeira', 'juízo real' ou 'evento real' para tentar justificar ou defender o relato bíblico. O narrador fala como quem crê e não precisa se defender. Narre os fatos bíblicos diretamente com solenidade, autoridade e sobriedade.
 - REGRA OBRIGATÓRIA DE CITAÇÕES E FALAS BÍBLICAS: Toda e qualquer citação bíblica direta ou fala de personagem bíblico colocada entre aspas DEVE obrigatoriamente ser acompanhada da sua referência bíblica imediatamente ao lado entre parênteses (ex: '...' (Livro C:V)). NUNCA deixe falas bíblicas entre aspas sem a respectiva referência.
@@ -3300,7 +3316,7 @@ ABSOLUTE CANONICAL & STORYTELLING RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
    - Formulas reinforcing biblical reality (e.g. "not legends or myths", "historical fact", "the Scripture treats this as") must appear at most TWICE in the ENTIRE script.
 7. FACT VS INTERPRETATION & STRICT CANONICAL TRUTH (ITEM 4 & ITEM 2):
    - State as sacred historical FACT ONLY what the literal canonical text explicitly declares, always backed by verbatim scripture quotes (KJV for English, João Ferreira de Almeida for Portuguese, Reina-Valera 1909 for Spanish).
-   - MAXIMUM OF 3 PHRASES of the type "many understand this passage as...", "interpreters view this as...", or "theological tradition notes..." in the ENTIRE script.
+   - Context markers for interpretations or customs ("many scholars explain...", "in that era...", "historians observe...") have NO fixed cap, but must be VARIED (never the same marker twice in a row) and used ONLY where a genuine interpretation or custom is stated (see REGRA DE ATRIBUIÇÃO).
    - STRICTLY FORBIDDEN to call the biblical account a "metaphor", "symbol", "symbolic", "cautionary tale", or "narrative device".
    - STRICTLY FORBIDDEN: Any language of genetic, biological, or racial purity/corruption ("genetic", "bloodline", "hybrid", "pure humans", "gene pool").
    - STRICTLY FORBIDDEN: Any content derived from apocryphal or pseudepigraphal books (Book of Enoch, Jasher, Jubilees, etc.).
@@ -3377,7 +3393,11 @@ const FORBIDDEN_TERMS = [
   { term: 'delve', pattern: /\bdelv(?:e|es|ing|ed)?\b/i },
   { term: 'dive deep', pattern: /\bdive\s+deep(?:er)?\b/i },
   { term: 'deep dive', pattern: /\bdeep\s+dive\b/i },
-  { term: 'mergulhe fundo', pattern: /\bmergulh(?:e|ar|ando)\s+fundo\b/i },
+  { term: 'mergulhe fundo', pattern: /\bmergulh(?:e|a|am|ar|ando|ou|aram|amos|o)\s+fundo\b/i },
+  { term: 'mergulhar fundo', pattern: /\bmergulhar\s+fundo\b/i },
+  { term: 'desvendar', pattern: /\bdesvend(?:ar|ando|ado|ada|ados|adas|a|am|e|em|o|ou|aram|amos)\b/i },
+  { term: 'profundidade', pattern: /\bprofundidades?\b/i },
+  { term: 'precisão cirúrgica', pattern: /\bprecis[ãa]o\s+cir[úu]rgica\b/i },
   { term: 'enigmatic', pattern: /\benigmatic\b/i },
   { term: 'enigmático', pattern: /\benigm[aá]tico\b/i },
   { term: 'the very fabric', pattern: /\bthe\s+very\s+fabric\b/i },
@@ -5087,7 +5107,7 @@ Treat the biblical record as literal historical fact witnessed and recorded by S
 
 POSTURA OBRIGATÓRIA DO NARRADOR:
 - Trate todo relato bíblico como fato histórico. Afirme diretamente: 'o fogo caiu', nunca 'o relato diz que o fogo teria caído'.
-- A autoridade é a própria Escritura. Use 'as Escrituras registram', 'o texto bíblico afirma', citando livro, capítulo e versículo.
+- A autoridade é a própria Escritura. Use 'as Escrituras registram' ou 'o texto bíblico afirma' SOMENTE antes de citação literal do versículo ou de fato que o texto declara explicitamente, citando livro, capítulo e versículo (veja REGRA DE ATRIBUIÇÃO).
 - NUNCA chame a Bíblia de lenda, mito, fábula, alegoria, folclore ou tradição. NUNCA convide o espectador a duvidar ou a 'analisar criticamente'.
 - Quando mencionar ceticismo, faça isso apenas para descartá-lo na mesma frase. Ex: 'Isso não foi folclore religioso. As Escrituras registram como fato testemunhado.'
 - Use detalhes concretos do texto bíblico (números, lugares, horários, nomes) para reforçar a realidade histórica.
@@ -5398,6 +5418,56 @@ window.limitarDeclaracoesDeSilencioBiblico = limitarDeclaracoesDeSilencioBiblico
 window.limitarTermosCanonicos = limitarTermosCanonicos;
 
 /**
+ * Normaliza aspas e a pontuação ao redor delas (Narração Limpa), distinguindo abertura de fechamento:
+ * - abertura: espaço antes (inclusive depois de dois-pontos) e NENHUM espaço depois;
+ * - fechamento: nenhum espaço antes e um espaço depois quando seguido de palavra;
+ * - ponto duplicado depois das aspas ('outra"..' vira 'outra".'); reticências '...' ficam intactas.
+ */
+function normalizarAspasEPontuacao(texto) {
+  if (!texto || typeof texto !== 'string') return texto;
+  const linhas = texto.split('\n').map(linha => {
+    if (!/["“”«»]/.test(linha)) return linha;
+    const usarParidade = ((linha.match(/"/g) || []).length % 2) === 0;
+    const chars = Array.from(linha);
+    let out = '';
+    let abertas = false;
+    for (let i = 0; i < chars.length; i++) {
+      const c = chars[i];
+      let abre;
+      if (c === '“' || c === '«') {
+        abre = true;
+      } else if (c === '”' || c === '»') {
+        abre = false;
+      } else if (c === '"') {
+        if (usarParidade) {
+          abre = !abertas;
+        } else {
+          const ant = out.slice(-1);
+          abre = !ant || /[\s(\[¿—–:]/.test(ant);
+        }
+      } else {
+        out += c;
+        continue;
+      }
+      abertas = abre;
+      if (abre) {
+        if (out && !/[\s(\[¿—–]$/.test(out)) out += ' ';
+        out += c;
+        while (i + 1 < chars.length && /[^\S\r\n]/.test(chars[i + 1])) i++;
+      } else {
+        out = out.replace(/[^\S\r\n]+$/, '');
+        out += c;
+        const prox = chars[i + 1];
+        if (prox && /[\p{L}\p{N}(]/u.test(prox)) out += ' ';
+      }
+    }
+    return out;
+  });
+  return linhas.join('\n').replace(/(["”»])\.\.(?!\.)/g, '$1.');
+}
+window.normalizarAspasEPontuacao = normalizarAspasEPontuacao;
+
+/**
  * AJUSTE: Validação e correção automática de aspas abertas/fechadas nas citações
  */
 function validarECorrigirAspas(texto) {
@@ -5411,10 +5481,8 @@ function validarECorrigirAspas(texto) {
     // Normaliza aspas curvas para retas
     limpo = limpo.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
 
-    // A1: Remove espaço após aspas de abertura (ex: " Porque só Ogue... -> "Porque só Ogue...)
-    limpo = limpo.replace(/"\s+([A-Za-z0-9À-ÖØ-öø-ÿ])/g, '"$1');
-    // Remove espaço antes de aspas de fechamento
-    limpo = limpo.replace(/([A-Za-z0-9À-ÖØ-öø-ÿ.,;:!?])\s+"/g, '$1"');
+    // A1: Sem espaço depois da aspa de abertura nem antes da de fechamento (distingue abertura de fechamento)
+    limpo = normalizarAspasEPontuacao(limpo);
 
     const totalAspas = (limpo.match(/"/g) || []).length;
     if (totalAspas % 2 === 0) return limpo;
@@ -5482,7 +5550,7 @@ function garantirCtaNoUltimoParagrafo(texto, idioma = 'pt', estiloRoteiro = '') 
     ? 'To continue discovering the historical depth and truth of the Holy Scriptures, subscribe to the channel and follow our upcoming studies.'
     : (id.includes('espanh') || id.includes('es'))
       ? 'Para continuar descubriendo la profundidad histórica e a verdade de las Sagradas Escrituras, suscríbete al canal y acompaña nuestros próximos estudios.'
-      : 'Para continuar desvendando a profundidade histórica e a verdade das Escrituras Sagradas, inscreva-se no canal e acompanhe nossos próximos estudos.';
+      : 'Para continuar estudando a história e a verdade das Escrituras Sagradas, inscreva-se no canal e acompanhe nossos próximos estudos.';
 
   const ctaPadrao = isShorts ? ctaCurto : ctaLongo;
 
@@ -6362,9 +6430,10 @@ MANDATORY EDITING RULES:
 const REVIEWER_SYSTEM_PROMPT = `You are a senior biblical documentary script editor, fact-checker, and canonical auditor for our biblical documentary channel.
 Your role is to rigorously inspect the provided complete 7-section documentary script across the ENTIRE text (comparing all sections, not just adjacent ones) and return a strictly structured JSON array of every genuine error, repetition, premature conclusion, or flaw found.
 
-CHECK ACROSS THE ENTIRE SCRIPT FOR EXACTLY THESE 9 CATEGORIES:
+CHECK ACROSS THE ENTIRE SCRIPT FOR EXACTLY THESE 13 CATEGORIES:
 1. EVENTO REPETIDO: The exact same biblical event, narrative episode, battle, or passage narrated or retold across more than one section (e.g. Numbers 13 retold multiple times, King Og's iron bed retold multiple times, the Genesis 7 Flood retold multiple times, Genesis 6:5 retold multiple times).
    - RULE: Any biblical event must remain ONLY in its designated home section.
+   - ALSO flag any EXPLANATION (cultural, historical, interpretive) or illustrative detail that is given more than once, even with different words: keep the first occurrence and delete or condense the later ones.
    - For any repeated occurrence in other sections, provide the exact duplicate sentence/phrase as "fraseOriginal" and set "fraseCorrigida" to either an empty string "" to delete it, or to a smooth transition sentence that does NOT re-narrate the event.
 2. CONCLUSÃO PREMATURA: Any premature conclusion, summary wrap-up, or final sign-off found in Sections 1 through 6.
    - RULE: A conclusion or summary of the history can ONLY exist in Section 7.
@@ -6394,13 +6463,24 @@ CHECK ACROSS THE ENTIRE SCRIPT FOR EXACTLY THESE 9 CATEGORIES:
 8. REFERÊNCIA BÍBLICA CRUZADA AUSENTE: Citing or reciting a passage/verse from another biblical book without introducing its origin. Whenever a verse or account from another book is introduced (e.g. Numbers 21:9 regarding the bronze serpent within Jesus' conversation with Nicodemus in John 3), it MUST ALWAYS be introduced with its biblical origin (e.g. "referencing Moses in the wilderness in Numbers", "as written centuries earlier in Numbers"). Never paste an Old Testament quote into a dialogue without identifying its origin.
 9. INCONSISTÊNCIA DE CENÁRIO: The physical environment must remain strictly uniform and consistent throughout the scene. If the narrative establishes an enclosed private room ("room"), it CANNOT suddenly change to a "rooftop" or courtyard without an explicit scriptural movement. Any contradictory shift in physical location must be corrected to maintain uniform consistency.
 
+10. ATRIBUIÇÃO INDEVIDA (PRIORIDADE MÁXIMA): Any interpretation, custom of the time, or cultural/historical explanation that is attributed to Scripture or stated without a context marker.
+   - It is WRONG to write "as Escrituras registram", "o texto diz", "o texto bíblico afirma", "a Bíblia diz" (or equivalents) before anything that is not a literal quotation of the verse or a fact the passage explicitly declares.
+   - CORRECTION: add a context marker to the sentence ("na época...", "naquela cultura...", "muitos estudiosos explicam...", "segundo historiadores...", "historiadores observam...") OR rewrite the sentence so it no longer attributes the claim to Scripture. VARY the markers (never the same marker twice in a row) and use a marker ONLY where there is a genuine interpretation or custom — never on a fact the text literally declares.
+   - Do NOT replace words with synonyms; rewrite the whole sentence when needed.
+11. GENERALIZAÇÃO: Absolute historical claims with no basis in the biblical text (e.g. "qualquer judeu podia ser...", "todos faziam...", "o gesto tinha significado uniforme", "sempre", "nunca" about customs).
+   - CORRECTION: rewrite with a context marker and non-absolute wording ("em muitos casos", "costumava"), or remove the claim.
+12. CITAÇÃO FORA DE CONTEXTO: For EVERY biblical quotation or paraphrase, check that it matches the scene being narrated: who speaks or acts, where, and when. A verse about one person, place or moment must not be used for another.
+   - Every quotation must carry its reference (Book chapter:verse). If the reference is missing, add it.
+   - If you are not certain of the exact wording, REMOVE the quotation marks and paraphrase, keeping the reference. If the verse does not fit the scene, rewrite the sentence without it.
+13. CONCLUSÃO DUPLICADA: Section 7 must have exactly ONE closing paragraph before the final subscription call. If there are two or more paragraphs wrapping up the story, merge them into one by deleting the redundant ones (never delete the subscription call).
+
 MANDATORY OUTPUT FORMAT:
 Respond EXCLUSIVELY with a valid JSON array of objects. Do NOT include markdown code blocks, do NOT write explanations before or after the JSON.
 Format:
 [
   {
     "fraseOriginal": "The exact verbatim sentence or phrase from the script to be replaced",
-    "tipo": "EVENTO REPETIDO" | "CONCLUSÃO PREMATURA" | "SILÊNCIO REPETIDO" | "CITAÇÃO BÍBLICA" | "CRONOLOGIA" | "AFIRMAÇÃO ALÉM DO TEXTO" | "FRASE QUEBRADA / ASPAS" | "REFERÊNCIA AUSENTE" | "INCONSISTÊNCIA DE CENÁRIO" | "DESCRICAO BORROWED" | "DETALHE BATALHA",
+    "tipo": "EVENTO REPETIDO" | "CONCLUSÃO PREMATURA" | "SILÊNCIO REPETIDO" | "CITAÇÃO BÍBLICA" | "CRONOLOGIA" | "AFIRMAÇÃO ALÉM DO TEXTO" | "FRASE QUEBRADA / ASPAS" | "REFERÊNCIA AUSENTE" | "INCONSISTÊNCIA DE CENÁRIO" | "DESCRICAO BORROWED" | "DETALHE BATALHA" | "ATRIBUIÇÃO INDEVIDA" | "GENERALIZAÇÃO" | "CITAÇÃO FORA DE CONTEXTO" | "CONCLUSÃO DUPLICADA",
     "fraseCorrigida": "The corrected sentence (or empty string \"\" if the sentence should be removed)"
   }
 ]
@@ -6415,7 +6495,7 @@ async function executarRevisaoAutomaticaRoteiro(roteiro, idioma, modelo) {
     ? PromptEngine.getLanguageConfig(idioma)
     : { name: 'English', bibleTranslation: 'King James Version (KJV)' };
 
-  const reviewerPrompt = `Act as an expert biblical script reviewer. Audit the complete 7-section documentary script below in ${lang.name} using the official biblical translation ${lang.bibleTranslation} across the 7 categories (EVENTO REPETIDO, CONCLUSÃO PREMATURA, SILÊNCIO REPETIDO, CITAÇÃO BÍBLICA, CRONOLOGIA, AFIRMAÇÃO ALÉM DO TEXTO, FRASE QUEBRADA / ASPAS):
+  const reviewerPrompt = `Act as an expert biblical script reviewer. Audit the complete 7-section documentary script below in ${lang.name} using the official biblical translation ${lang.bibleTranslation} across all the categories (EVENTO REPETIDO, CONCLUSÃO PREMATURA, SILÊNCIO REPETIDO, CITAÇÃO BÍBLICA, CRONOLOGIA, AFIRMAÇÃO ALÉM DO TEXTO, FRASE QUEBRADA / ASPAS, ATRIBUIÇÃO INDEVIDA, GENERALIZAÇÃO, CITAÇÃO FORA DE CONTEXTO, CONCLUSÃO DUPLICADA):
 
 SCRIPT TO AUDIT:
 """
@@ -6577,7 +6657,11 @@ function atualizarRelatorioRevisaoNaTela(revisaoRes) {
         'AFIRMAÇÃO ALÉM DO TEXTO': '#f43f5e',
         'FRASE QUEBRADA': '#fbbf24',
         'ASPAS': '#a78bfa',
-        'EVENTO REPETIDO': '#f97316'
+        'EVENTO REPETIDO': '#f97316',
+        'ATRIBUIÇÃO INDEVIDA': '#ef4444',
+        'GENERALIZAÇÃO': '#fb923c',
+        'CITAÇÃO FORA DE CONTEXTO': '#e879f9',
+        'CONCLUSÃO DUPLICADA': '#facc15'
       }[item.tipo] || '#818cf8';
 
       const tagTipo = `<span style="background: rgba(255,255,255,0.08); border: 1px solid ${tipoColor}; color: ${tipoColor}; padding: 1px 7px; border-radius: 4px; font-weight: 700; font-size: 0.75rem; letter-spacing: 0.04em;">${escapeHtml(item.tipo)}</span>`;
@@ -6828,7 +6912,10 @@ REQUIRED SCRIPT STRUCTURE:
 - Opening Hook (PRIMEIRÍSSIMA FRASE OBRIGATÓRIA: ÁPICE DRAMÁTICO):
   * The script MUST open on the single most dramatic, striking moment of the biblical account (in media res, ex: 'O fogo caiu do céu.', 'A pedra afundou na testa do gigante.', 'O anjo fechou a boca dos leões!').
   * STRICTLY FORBIDDEN: Slow chronological or geographical openings (NUNCA abra com 'Após o dilúvio...', 'A planície de Sinear...', 'Nos dias de...', 'A história começa...', 'Throughout history...', 'In the biblical narrative...'). Open directly at the height of dramatic tension!
-- PROIBIÇÃO TOTAL DE EVIDÊNCIAS INVENTADAS E EXTERNAS: NUNCA cite 'registros', 'descobertas', 'historiadores', 'arqueologia', 'arqueólogos', 'escavações', 'estudiosos', 'inscrições', 'cuneiforme' ou 'achados'. NUNCA invente números, distâncias ou detalhes que não estejam na Bíblia (ex: proibir 'visível a dezenas de quilômetros').
+- PROIBIÇÃO TOTAL DE EVIDÊNCIAS INVENTADAS E EXTERNAS: NUNCA invente 'registros', 'descobertas', 'arqueologia', 'arqueólogos', 'escavações', 'inscrições', 'cuneiforme' ou 'achados' para provar um fato. Os marcadores de contexto da REGRA DE ATRIBUIÇÃO ('segundo historiadores', 'muitos estudiosos explicam') servem só para sinalizar costume ou interpretação, nunca para fabricar evidência nem para atribuir números ou datas. NUNCA invente números, distâncias ou detalhes que não estejam na Bíblia (ex: proibir 'visível a dezenas de quilômetros').
+
+${REGRA_ATRIBUICAO_PT}
+
 - Immersive Introduction (~150 words): Establishes the solemn gravity of the historical events recorded in Scripture.
 - Body of Documentary (8 to 9 Major Story Points - 350 to 450 words each):
   * At least 80% of the entire script MUST focus directly on the specific subject promised in '${ideia}'.
@@ -6850,7 +6937,10 @@ DEPTH AND VOLUME DIRECTIVES:
 - Never summarize sections in a single sentence. Must reach at least 800 words of spoken narrative.
 - DO NOT OUTPUT MARKDOWN TITLE HEADERS OR BOLD TITLES (e.g. Do NOT output '**Title...**'). The very first characters of the script MUST be the spoken opening sentence.
 - GANCHO DE IMPACTO DRAMÁTICO IMEDIATO (PRIMEIRÍSSIMA FRASE OBRIGATÓRIA): A primeiríssima frase do roteiro DEVE ser o momento mais dramático da história (in media res, ex: 'O fogo caiu do céu.', 'A pedra afundou na testa do gigante.', 'Com as mãos cegas apoiadas nos pilares, Sansão empurrou as colunas de pedra e o templo inteiro ruiu sobre três mil filisteus.'). É ESTRITAMENTE PROIBIDO abrir de forma cronológica lenta ou contextual (NUNCA abra com 'Após o dilúvio...', 'A planície de...', 'Nos dias de...', 'A história começa...', 'Na região de...', 'Durante a juventude...'). Abra direto no clímax do conflito!
-- PROIBIÇÃO TOTAL DE EVIDÊNCIAS INVENTADAS E EXTERNAS: NUNCA cite 'registros', 'descobertas', 'historiadores', 'arqueologia', 'arqueólogos', 'escavações', 'estudiosos', 'inscrições', 'cuneiforme' ou 'achados'. NUNCA invente números, distâncias ou detalhes que não estejam na Bíblia (ex: proibir 'visível a dezenas de quilômetros').
+- PROIBIÇÃO TOTAL DE EVIDÊNCIAS INVENTADAS E EXTERNAS: NUNCA invente 'registros', 'descobertas', 'arqueologia', 'arqueólogos', 'escavações', 'inscrições', 'cuneiforme' ou 'achados' para provar um fato. Os marcadores de contexto da REGRA DE ATRIBUIÇÃO ('segundo historiadores', 'muitos estudiosos explicam') servem só para sinalizar costume ou interpretação, nunca para fabricar evidência nem para atribuir números ou datas. NUNCA invente números, distâncias ou detalhes que não estejam na Bíblia (ex: proibir 'visível a dezenas de quilômetros').
+
+${REGRA_ATRIBUICAO_PT}
+
 - 80%+ on title theme; no generic devotional application until conclusion.
 
 STRUCTURE:
@@ -6891,10 +6981,13 @@ Opening hook style: '${tipoGancho}'.
 
 POSTURA OBRIGATÓRIA DO NARRADOR:
 - Trate todo relato bíblico como verdade sagrada afirmada diretamente: 'o fogo caiu', nunca 'o relato diz que o fogo teria caído'.
-- A autoridade é a própria Escritura. Use 'as Escrituras registram', 'o texto bíblico afirma', citando livro, capítulo e versículo.
+- A autoridade é a própria Escritura. Use 'as Escrituras registram' ou 'o texto bíblico afirma' SOMENTE antes de citação literal do versículo ou de fato que o texto declara explicitamente, citando livro, capítulo e versículo (veja REGRA DE ATRIBUIÇÃO).
 - NUNCA chame a Bíblia de lenda, mito, fábula, alegoria, folclore ou tradição. NUNCA convide o espectador a duvidar ou a 'analisar criticamente'.
 - GANCHO DE IMPACTO DRAMÁTICO IMEDIATO: A primeiríssima frase do roteiro DEVE ser o momento mais dramático da história (ex: 'O fogo caiu do céu.', 'A pedra afundou na testa do gigante.'). É ESTRITAMENTE PROIBIDO abrir de forma cronológica lenta ou contextual (NUNCA abra com 'Após o dilúvio...', 'A planície de...', 'Nos dias de...', 'A história começa...', 'Durante o reinado de...', 'Nas terras de...'). Abra direto no ápice do acontecimento!
-- PROIBIÇÃO TOTAL DE EVIDÊNCIAS INVENTADAS E EXTERNAS: NUNCA cite 'registros', 'descobertas', 'historiadores', 'arqueologia', 'arqueólogos', 'escavações', 'estudiosos', 'inscrições', 'cuneiforme' ou 'achados'. NUNCA invente números, distâncias ou detalhes que não estejam explicitamente no texto bíblico (ex: proibir 'visível a dezenas de quilômetros', 'milhões de trabalhadores'). A única autoridade e fonte de dados é a própria Escritura canônica.
+- PROIBIÇÃO TOTAL DE EVIDÊNCIAS INVENTADAS E EXTERNAS: NUNCA invente 'registros', 'descobertas', 'arqueologia', 'arqueólogos', 'escavações', 'inscrições', 'cuneiforme' ou 'achados' para provar um fato. Os marcadores de contexto da REGRA DE ATRIBUIÇÃO ('segundo historiadores', 'muitos estudiosos explicam') servem só para sinalizar costume ou interpretação, nunca para fabricar evidência nem para atribuir números ou datas. NUNCA invente números, distâncias ou detalhes que não estejam explicitamente no texto bíblico (ex: proibir 'visível a dezenas de quilômetros', 'milhões de trabalhadores'). A única autoridade e fonte de dados é a própria Escritura canônica.
+
+${REGRA_ATRIBUICAO_PT}
+
 - LIMITE ESTRITO DE FRASES DE DESCARTE DE CETICISMO: No máximo 1 vez em Shorts, Shorts Estendido e Médio, e no máximo 2 vezes no Longo. NUNCA repita a fórmula 'não foi X, foi Y' mais do que o limite permitido.
 - PROIBIÇÃO DE AUTODEFESA E JUSTIFICATIVAS: NUNCA use termos como 'fato histórico', 'fato real', 'realidade histórica', 'acontecimento real', 'relato histórico', 'história verdadeira', 'juízo real' ou 'evento real' para tentar justificar ou defender o relato bíblico. O narrador fala como quem crê e não precisa se defender. Narre os fatos bíblicos diretamente com solenidade, autoridade e sobriedade.
 - REGRA OBRIGATÓRIA DE CITAÇÕES E FALAS BÍBLICAS (CAMADA 1): Toda e qualquer citação bíblica direta ou fala de personagem bíblico colocada entre aspas DEVE obrigatoriamente ser acompanhada da sua referência bíblica imediatamente ao lado entre parênteses (ex: '...' (Livro C:V)). NUNCA deixe falas bíblicas entre aspas sem a respectiva referência.
@@ -6929,7 +7022,7 @@ MANDATORY BIBLICAL AND CONTENT RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
    - Write as a dramatic chronological narrative with vivid ancient scenes, biblical geography, tension, and scriptural progression. Never write as an academic theological dissertation.
 5. STRICT INTERPRETATION LIMIT & NO METAPHOR LABELS (ITEM 4):
    - State as sacred fact ONLY what canonical Scripture literally declares, with literal quotes.
-   - MAXIMUM OF 3 PHRASES of the type "many understand this passage as...", "interpreters view this as...", or "theological tradition notes that..." in the entire script.
+   - Context markers for interpretations or customs ("many scholars explain...", "in that era...", "historians observe...") have NO fixed cap, but must be VARIED (never the same marker twice in a row) and used ONLY where a genuine interpretation or custom is stated (see REGRA DE ATRIBUIÇÃO).
    - STRICTLY FORBIDDEN to call the biblical account a "metaphor", "symbol", "cautionary tale", or "narrative device".
 6. STRICTLY FORBIDDEN THEMES & CONCEPTS (ITEM 2 & ITEM 6):
    - ZERO TOLERANCE: Never use any language of genetic purity, DNA, racial hierarchy, or biological corruption ("genetic", "bloodline", "hybrid", "pure humans", "gene pool").
@@ -7215,9 +7308,12 @@ LENGTH REQUIREMENT:
 
 POSTURA OBRIGATÓRIA DO NARRADOR:
 - Trate todo relato bíblico como verdade sagrada afirmada diretamente: 'o fogo caiu', nunca 'o relato diz que o fogo teria caído'.
-- A autoridade é a própria Escritura canônica. Use 'as Escrituras registram', 'o texto bíblico afirma', citando livro, capítulo e versículo.
+- A autoridade é a própria Escritura canônica. Use 'as Escrituras registram' ou 'o texto bíblico afirma' SOMENTE antes de citação literal do versículo ou de fato que o texto declara explicitamente, citando livro, capítulo e versículo (veja REGRA DE ATRIBUIÇÃO).
 - NUNCA chame a Bíblia de lenda, mito, fábula, alegoria, folclore ou tradição. NUNCA convide o espectador a duvidar ou a 'analisar criticamente'.
-- PROIBIÇÃO TOTAL DE EVIDÊNCIAS INVENTADAS E EXTERNAS: NUNCA cite 'registros', 'descobertas', 'historiadores', 'arqueologia', 'arqueólogos', 'escavações', 'estudiosos', 'inscrições', 'cuneiforme' ou 'achados'. NUNCA invente números, distâncias ou detalhes que não estejam no texto bíblico (ex: proibir 'visível a dezenas de quilômetros', 'milhões de trabalhadores'). A única autoridade e fonte de dados é a própria Escritura canônica.
+- PROIBIÇÃO TOTAL DE EVIDÊNCIAS INVENTADAS E EXTERNAS: NUNCA invente 'registros', 'descobertas', 'arqueologia', 'arqueólogos', 'escavações', 'inscrições', 'cuneiforme' ou 'achados' para provar um fato. Os marcadores de contexto da REGRA DE ATRIBUIÇÃO ('segundo historiadores', 'muitos estudiosos explicam') servem só para sinalizar costume ou interpretação, nunca para fabricar evidência nem para atribuir números ou datas. NUNCA invente números, distâncias ou detalhes que não estejam no texto bíblico (ex: proibir 'visível a dezenas de quilômetros', 'milhões de trabalhadores'). A única autoridade e fonte de dados é a própria Escritura canônica.
+
+${REGRA_ATRIBUICAO_PT}
+
 - LIMITE ESTRITO DE FRASES DE DESCARTE DE CETICISMO: No máximo 1 vez por seção, e no máximo 2 vezes no documentário inteiro. NUNCA repita a fórmula 'não foi X, foi Y' mais do que o limite permitido.
 - PROIBIÇÃO DE AUTODEFESA E JUSTIFICATIVAS: NUNCA use termos como 'fato histórico', 'fato real', 'realidade histórica', 'acontecimento real', 'relato histórico', 'história verdadeira', 'juízo real' ou 'evento real' para tentar justificar ou defender o relato bíblico. O narrador fala como quem crê e não precisa se defender. Narre os fatos bíblicos diretamente com solenidade, autoridade e sobriedade.
 - REGRA OBRIGATÓRIA DE CITAÇÕES E FALAS BÍBLICAS: Toda e qualquer citação bíblica direta ou fala de personagem bíblico colocada entre aspas DEVE obrigatoriamente ser acompanhada da sua referência bíblica imediatamente ao lado entre parênteses (ex: '...' (Livro C:V)). NUNCA deixe falas bíblicas entre aspas sem a respectiva referência.
@@ -7958,13 +8054,97 @@ const AutoSave = window.AutoSave = {
  */
 function garantirEspacamentoEPontuacaoCitacoes(texto) {
   if (!texto || typeof texto !== 'string') return '';
-  let res = texto;
-  res = res.replace(/([a-zA-Z0-9À-ÖØ-öø-ÿ])(["“«])/g, '$1 $2');
-  res = res.replace(/([,;:])(["“«])/g, '$1 $2');
-  res = res.replace(/(["”»])([a-zA-Z0-9À-ÖØ-öø-ÿ])/g, '$1 $2');
-  return res;
+  return normalizarAspasEPontuacao(texto);
 }
 window.garantirEspacamentoEPontuacaoCitacoes = garantirEspacamentoEPontuacaoCitacoes;
+
+/**
+ * ITEM 7: Revisão gramatical final da Narração Limpa (frases quebradas, palavras faltando).
+ * O modelo só devolve as frases genuinamente quebradas com a versão corrigida; cada correção é aplicada
+ * apenas se a frase original existir exatamente uma vez e se a nova frase não contiver termo proibido.
+ * NUNCA troca palavras por sinônimos e nunca mexe em citações entre aspas.
+ */
+function detectarSuspeitasGramaticais(texto) {
+  const suspeitas = [];
+  const sentencas = (texto || '').match(/[^.!?\n]+[.!?]+["”]?/g) || [];
+  const terminaemFuncao = /\b(?:de|da|do|das|dos|em|na|no|nas|nos|a|o|as|os|um|uma|e|ou|que|para|com|por|se|ao|à|pelo|pela)[.!?]+["”]?$/i;
+  const repeticao = /\b([A-Za-zÀ-ÖØ-öø-ÿ]{2,})\s+\1\b/i;
+  for (const bruta of sentencas) {
+    const sent = bruta.trim();
+    if (sent.length < 4) continue;
+    if (terminaemFuncao.test(sent) || repeticao.test(sent)) suspeitas.push(sent);
+  }
+  return suspeitas;
+}
+window.detectarSuspeitasGramaticais = detectarSuspeitasGramaticais;
+
+function aplicarCorrecoesGramaticais(texto, correcoes) {
+  let res = texto;
+  const aplicadas = [];
+  for (const c of (Array.isArray(correcoes) ? correcoes : [])) {
+    if (!c || !c.fraseOriginal || !c.fraseCorrigida) continue;
+    const original = String(c.fraseOriginal).trim();
+    const nova = String(c.fraseCorrigida).trim();
+    if (!original || !nova || original === nova) continue;
+    if (res.split(original).length !== 2) continue; // precisa existir exatamente uma vez
+    const aspasOrig = (original.match(/["“”][^"“”]*["“”]/g) || []).join('|');
+    const aspasNova = (nova.match(/["“”][^"“”]*["“”]/g) || []).join('|');
+    if (aspasOrig !== aspasNova) continue; // nunca altera citações entre aspas
+    const semCitacoes = nova.replace(/["“«][^"”»]*["”»]/g, '');
+    if (typeof FORBIDDEN_TERMS !== 'undefined' && FORBIDDEN_TERMS.some(f => f.pattern.test(semCitacoes))) continue;
+    res = res.replace(original, () => nova);
+    aplicadas.push({ original, corrigida: nova });
+  }
+  return { texto: res, aplicadas };
+}
+window.aplicarCorrecoesGramaticais = aplicarCorrecoesGramaticais;
+
+async function revisarGramaticaNarracaoLimpa(texto, idioma, modelo) {
+  if (!texto || typeof texto !== 'string') return { texto, aplicadas: [] };
+  const lang = (typeof PromptEngine !== 'undefined' && PromptEngine.getLanguageConfig)
+    ? PromptEngine.getLanguageConfig(idioma)
+    : { name: 'Português do Brasil' };
+  const suspeitas = detectarSuspeitasGramaticais(texto).slice(0, 40);
+
+  const prompt = `Você é um revisor gramatical rigoroso de roteiros narrados em ${lang.name}.
+Leia a Narração Limpa abaixo e localize SOMENTE frases genuinamente quebradas: palavras faltando, frase cortada, palavra repetida por erro, concordância ou regência quebrada, pontuação que impede a leitura.
+${suspeitas.length ? `\nTrechos suspeitos detectados automaticamente (confirme; podem ser falsos positivos):\n${suspeitas.map(x => `- ${x}`).join('\n')}\n` : ''}
+REGRAS:
+1. Para cada frase quebrada, devolva "fraseOriginal" (cópia EXATA, caractere por caractere) e "fraseCorrigida" (a mesma frase com o mínimo de ajuste para ficar gramatical).
+2. NÃO troque palavras por sinônimos, NÃO mude o estilo, NÃO acrescente fatos e NÃO altere nada dentro de aspas.
+3. Se a frase estiver correta, NÃO a inclua. Se tudo estiver correto, responda [].
+4. Não use as palavras: desvendar, desvendando, profundidade, precisão cirúrgica, mergulhar fundo.
+Responda EXCLUSIVAMENTE com um array JSON: [{"fraseOriginal":"...","fraseCorrigida":"..."}]
+
+NARRAÇÃO:
+"""
+${texto}
+"""`;
+
+  let bruto = '';
+  try {
+    bruto = await OpenRouterAPI.generateContent(prompt, modelo, 'Você é um revisor gramatical. Responda somente com JSON válido.');
+  } catch (err) {
+    console.warn('[Revisão Gramatical] Falha na chamada ao revisor:', err);
+    return { texto, aplicadas: [] };
+  }
+
+  let correcoes = [];
+  try {
+    let limpo = (bruto || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    const ini = limpo.indexOf('[');
+    const fim = limpo.lastIndexOf(']');
+    if (ini !== -1 && fim >= ini) limpo = limpo.substring(ini, fim + 1);
+    correcoes = JSON.parse(limpo);
+  } catch (eParse) {
+    console.warn('[Revisão Gramatical] Resposta fora do formato JSON; nada aplicado.', eParse);
+    return { texto, aplicadas: [] };
+  }
+
+  const resultado = aplicarCorrecoesGramaticais(texto, correcoes);
+  return { texto: normalizarAspasEPontuacao(resultado.texto), aplicadas: resultado.aplicadas };
+}
+window.revisarGramaticaNarracaoLimpa = revisarGramaticaNarracaoLimpa;
 
 function limparTextoParaNarracao(texto, estiloRoteiro = '') {
   if (!texto || typeof texto !== 'string') return '';
@@ -8948,21 +9128,15 @@ function limparPontuacaoDuplicada(texto) {
   const regexFalaAspas = new RegExp(`\\b(${verbosFala})((?:\\s+(?:ao|aos|à|às|a|para)\\s+[A-Za-zÀ-ÖØ-öø-ÿ]+)?)(\\s*[:;,]?\\s*)(["“])`, 'gi');
   res = res.replace(regexFalaAspas, '$1$2: $4');
 
-  // 3. Espaço antes de abrir aspas (nunca colado em palavra ou dois-pontos)
-  res = res.replace(/:\s*(["“])/g, ': $1');
-  res = res.replace(/([A-Za-zÀ-ÖØ-öø-ÿ0-9])(["“])/g, '$1 $2');
+  // 3. Espaço antes de abrir aspas (inclusive depois de dois-pontos) e nenhum espaço depois da abertura
+  res = normalizarAspasEPontuacao(res);
 
-  // 4. Sem '."' colado: em português e na norma editorial, converte '."' para '".'
-  res = res.replace(/\."/g, '".');
-  res = res.replace(/\.\s*"/g, '".');
-
-  // 5. Sem aspas de fechamento coladas sem espaço na próxima palavra ou pontuação (ex: feito."E -> feito." E ou feito".E -> feito". E)
-  res = res.replace(/([.!?]["”'])([A-Za-zÀ-ÖØ-öø-ÿ])/g, '$1 $2');
-  res = res.replace(/(["”'][.!?])([A-Za-zÀ-ÖØ-öø-ÿ])/g, '$1 $2');
-  res = res.replace(/(["”'])([A-Za-zÀ-ÖØ-öø-ÿ])/g, '$1 $2');
+  // 4. Sem '."' colado: em português e na norma editorial, converte '."' de FECHAMENTO para '".'
+  // (só quando a aspa é de fechamento; '. "Vem' com aspa de abertura não é alterado)
+  res = res.replace(/([^.])\.(["”])(?=\s|$|[,;:!?)])/g, '$1$2.');
 
   // 6. Limpeza de pontuação duplicada pós-substituição (ex: feito.”.” -> feito.”)
-  res = res.replace(/(["”'])\s*[.,;:]+(?=[.,;:]|\s*$|\s+[A-ZÀ-Ú])/g, '$1');
+  res = res.replace(/(["”'])\.\.(?!\.)/g, '$1.');
   res = res.replace(/([.!?]["”'])\s*[.,;:]+/g, '$1');
   res = res.replace(/([.!?])\s*\1+/g, '$1');
   res = res.replace(/([:;,])(["”'])/g, '.$2');
@@ -9423,7 +9597,9 @@ async function gerarRoteiroEmSeteSecoes({
     console.log(`[Geração em 7 Seções] Narração limpa em ${contagem} palavras. Complementando ${faltam} palavras para cumprir meta de 2.700...`);
     const promptExpansao = `Act as the same senior biblical documentary scriptwriter.
 The clean narration of the documentary on '${ideia}' is currently at ${contagem} words. The required documentary minimum is 2,700 words (strict range: 2,700 - 3,000 words).
-Without repeating any stories or verses already told, without speculating beyond the canonical text, without backstage phrases, without internal labels, and without forbidden clichés, write a dense and reverent 2-paragraph narrative expansion developing the canonical context, historical gravity, and eternal divine truth of '${ideia}'.
+Without repeating any stories, explanations or verses already told, without speculating beyond the canonical text, without backstage phrases, without internal labels, and without forbidden clichés, write a dense and reverent 2-paragraph narrative expansion developing the canonical context and historical gravity of '${ideia}'.
+This expansion goes in the MIDDLE of the script: it must NOT be a conclusion, summary, wrap-up or closing reflection (the script already has its single closing paragraph).
+Any custom of the time or interpretation MUST carry a varied context marker ("na época...", "naquela cultura...", "muitos estudiosos explicam...", "segundo historiadores..."); never attribute it to Scripture; no absolute generalizations. Do not use: desvendar, desvendando, profundidade, precisão cirúrgica, mergulhar fundo.
 Length: at least ${faltam + 50} words.
 Language: 100% in ${lang.name}. Literal quotes from ${lang.bibleTranslation}.
 Output EXCLUSIVELY the final 2 paragraphs.`;
@@ -9503,7 +9679,7 @@ Output EXCLUSIVELY the final 2 paragraphs.`;
       'A narrativa sagrada preservada através dos séculos atesta com autoridade infalível a soberania do Criador que governa os destinos das nações e dos homens.',
       'Cada juízo decretado e cada promessa proferida nas Escrituras cumpre com rigorosa fidelidade o propósito eterno estabelecido desde a fundação dos tempos.',
       'O testemunho canônico permanece inabalável, confrontando o silêncio dos impérios antigos e manifestando a justiça que atravessa as gerações.',
-      'Diante da magnitude dos feitos divinos relatados no texto bíblico, a reverência e o temor diante do Senhor revelam a profundidade do conselho altíssimo.',
+      'Diante da magnitude dos feitos divinos relatados no texto bíblico, a reverência e o temor diante do Senhor revelam a grandeza do conselho altíssimo.',
       'As palavras divinas não retornam vazias, mas executam com perfeição inalterável tudo quanto aprouve à vontade soberana de Deus manifestar ao seu povo.'
     ];
 
@@ -9535,6 +9711,22 @@ window.apararParaLimiteMaximo = apararParaLimiteMaximo;
 window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
 
   document.getElementById('btn-gerar-prompt-roteiro').addEventListener('click', async () => {
+    // Item 8: sem "Ideia de Vídeo Escolhida" não há geração (nada de fallback silencioso para o tema)
+    const ideia = inputIdeiaEscolhida.value.trim();
+    if (!ideia) {
+      UI.showToast('Escolha uma ideia de vídeo antes de gerar o roteiro: o campo "Ideia de Vídeo Escolhida" está vazio.', 'warning');
+      inputIdeiaEscolhida.classList.add('input-erro-ideia');
+      inputIdeiaEscolhida.style.outline = '2px solid #f59e0b';
+      inputIdeiaEscolhida.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      inputIdeiaEscolhida.focus();
+      const limparDestaque = () => {
+        inputIdeiaEscolhida.style.outline = '';
+        inputIdeiaEscolhida.classList.remove('input-erro-ideia');
+        inputIdeiaEscolhida.removeEventListener('input', limparDestaque);
+      };
+      inputIdeiaEscolhida.addEventListener('input', limparDestaque);
+      return;
+    }
     // 5) Limpa aviso de progresso anterior do roteiro
     const bannerRoteiro = document.getElementById('banner-progresso-roteiro-status');
     if (bannerRoteiro) {
@@ -9545,7 +9737,6 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
     // Requisito 11: Limpa as caixas de resultado das etapas 2 a 5 para não exibir dados do vídeo anterior
     limparResultadosEtapasPosteriores();
 
-    const ideia = inputIdeiaEscolhida.value.trim() || UI.getValue('select-tema', 'input-tema-custom');
     const estiloRoteiro = document.getElementById('select-estilo-roteiro').value;
     const tomVoz = UI.getValue('select-tom', 'input-tom-custom');
     const tipoGancho = UI.getValue('select-gancho', 'input-gancho-custom');
@@ -9777,6 +9968,12 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
         resultText = await executarChecagemFinalIntegridade(resultText, idioma, modeloRoteiro);
       }
 
+      // 10.1 A revisão pode ter reintroduzido palavra proibida: frase é regenerada (nunca trocada por sinônimo)
+      if (typeof aplicarFiltroTermosProibidos === 'function') {
+        const filtroPosRevisao = await aplicarFiltroTermosProibidos(resultText, idioma, modeloRoteiro);
+        resultText = filtroPosRevisao.texto;
+      }
+
       // 11. PONTO 2: Garante convite de inscrição no último parágrafo
       if (typeof garantirCtaNoUltimoParagrafo === 'function') {
         resultText = garantirCtaNoUltimoParagrafo(resultText, idioma, estiloRoteiro);
@@ -9809,9 +10006,22 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       }
 
       // ITEM 5 (Requisito Narração Limpa): Gera a versão limpa sem marcadores nem rótulos
-      const textoLimpo = typeof limparTextoParaNarracao === 'function'
+      let textoLimpo = typeof limparTextoParaNarracao === 'function'
         ? limparTextoParaNarracao(resultText)
         : resultText;
+
+      // ITEM 7: revisão gramatical final da Narração Limpa (só corrige frases quebradas; sem troca de sinônimos)
+      if (hasApiKey && typeof revisarGramaticaNarracaoLimpa === 'function') {
+        try {
+          const gramRes = await revisarGramaticaNarracaoLimpa(textoLimpo, idioma, modeloRoteiro);
+          textoLimpo = gramRes.texto;
+          if (gramRes.aplicadas.length > 0) {
+            UI.showToast(`Revisão gramatical: ${gramRes.aplicadas.length} frase(s) quebrada(s) corrigida(s) na Narração Limpa.`);
+          }
+        } catch (eGram) {
+          console.warn('[Revisão Gramatical] Falha ao revisar a Narração Limpa:', eGram);
+        }
+      }
 
       const outputRoteiroLimpoEl = document.getElementById('output-roteiro-limpo');
       if (outputRoteiroLimpoEl) {
