@@ -1077,7 +1077,7 @@ ${contextoCapituloTexto || versiculosTexto}
 
 ${blocoRegrasNarracao(referenciaFormatada, contextoExtra, traducao)}
 
-EXTENSÃO: escreva de ${LIMITES.itemAlvoMin} a ${LIMITES.itemAlvoMax} palavras (limite absoluto: ${LIMITES.itemMin} a ${LIMITES.itemMax}). Para preencher a extensão, narre os fatos bíblicos que prepararam o evento e a sua consequência imediata registrada, com frases curtas e diretas. NUNCA use adjetivos ou moral. Conte as palavras antes de entregar e termine em frase completa.
+EXTENSÃO: escreva de ${LIMITES.itemAlvoMin} a ${LIMITES.itemAlvoMax} palavras (limite máximo: ${LIMITES.itemMin} a ${LIMITES.itemMax}). Para preencher a extensão, narre os fatos bíblicos que prepararam o evento e a sua consequência imediata registrada, com frases curtas e diretas. NUNCA use adjetivos ou moral. Conte as palavras antes de entregar e termine em frase completa.
 
 FORMATO: apenas o texto narrativo em português, em UM único parágrafo contínuo, começando com "${numeroFalado}, ${nomeItem}."`;
   }
@@ -1108,7 +1108,7 @@ ${textoItem}
 
 REGRAS DE AUDITORIA:
 1. O nome do personagem do item (ex: Senaqueribe, Herodes, Arão) e os fatos do CONTEXTO PERMITIDO fazem parte da fonte: NÃO os sinalize como contexto externo.
-2. Sinalize APENAS: (a) invenção de psicologia/intenção/motivo sem respaldo nos versículos; (b) fato que contradiz os versículos; (c) citação entre aspas que não seja literal ou que não corresponda à cena (quem fala/age, onde, quando); (d) costume, explicação cultural ou interpretação SEM marcador de contexto ("na época...", "muitos estudiosos explicam...", "segundo historiadores...") ou atribuída ao texto ("as Escrituras registram", "o texto diz") sem ser citação literal; (e) afirmação histórica absoluta/generalização sem base nos versículos.
+2. Sinalize APENAS: (a) invenção de psicologia/intenção/motivo sem respaldo nos versículos; (b) fato que contradiz os versículos; (c) citação entre aspas que não seja literal ou que não corresponda à cena (quem fala/age, onde, quando); (d) costume, explicação cultural ou interpretação SEM marcador de contexto ("na época...", "muitos estudiosos explicam...", "segundo historiadores...") ou atribuída ao texto ("as Escrituras registram", "o texto diz") sem ser citação literal; (e) afirmação histórica categórica/generalização sem base nos versículos.
 3. Liste em "referencias_fora_da_passagem" os versículos do CONTEXTO PERMITIDO, FORA da passagem central, dos quais o texto usou algum fato. Use o formato "Livro cap:versículo" ou intervalo "Livro cap:v1-v2" (ex.: "Atos 12:20", "Gênesis 18:20-33"). Se nenhum, devolva lista vazia.
 
 FORMATO DE RESPOSTA (JSON PURO):
@@ -1176,7 +1176,7 @@ ${antiRepeticaoTxt}
 
 ${blocoRegrasNarracao(referenciaFormatada, contextoExtra, traducao)}${omitir}
 
-EXTENSÃO: de ${LIMITES.itemAlvoMin} a ${LIMITES.itemAlvoMax} palavras (limite absoluto: ${LIMITES.itemMin} a ${LIMITES.itemMax}). Narre os fatos preparatórios e o desfecho imediato registrado. Termine em frase completa.
+EXTENSÃO: de ${LIMITES.itemAlvoMin} a ${LIMITES.itemAlvoMax} palavras (limite máximo: ${LIMITES.itemMin} a ${LIMITES.itemMax}). Narre os fatos preparatórios e o desfecho imediato registrado. Termine em frase completa.
 
 Responda APENAS com o texto narrativo corrigido em português, em um único parágrafo, começando por "${numeroFalado}, ${nomeItem}."`;
   }
@@ -2506,7 +2506,7 @@ Subscribe to the channel for more Bible accounts explained from the text.`;
         updateProgress(`Ajustando extensão do Item ${r.it.numero} (${atual} -> ~${alvo} palavras)...`, 78);
         const problemasExp = [{
           tipo: 'expansao_total',
-          motivo: `O roteiro precisa de mais fatos para atingir a meta total. Reescreva o item com ${alvo - 5} a ${alvo} palavras (limite absoluto ${LIMITES.itemMax}), acrescentando SOMENTE fatos bíblicos do contexto com frases diretas; sem adjetivos, moral ou comentário.`
+          motivo: `O roteiro precisa de mais fatos para atingir a meta total. Reescreva o item com ${alvo - 5} a ${alvo} palavras (limite máximo ${LIMITES.itemMax}), acrescentando SOMENTE fatos bíblicos do contexto com frases diretas; sem adjetivos, moral ou comentário.`
         }];
         const novo = await regenerarItem(r.it, r.texto, problemasExp, resumosAnteriores);
         const an = await analisarItem(r.it, novo);

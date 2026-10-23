@@ -111,4 +111,22 @@ assert(trecho.includes('const ideia = inputIdeiaEscolhida.value.trim();'), 'Idei
 assert(/if \(!ideia\) \{[\s\S]*UI\.showToast[\s\S]*return;/.test(trecho), 'Campo vazio mostra aviso e interrompe a geração');
 assert(trecho.indexOf('if (!ideia)') < trecho.indexOf('limparResultadosEtapasPosteriores()'), 'A checagem acontece antes de limpar as etapas posteriores');
 
+console.log('\n📋 Frases fixas do código (CTA, reservas, fallbacks) sem termos proibidos');
+function stringsDe(inicio, fim) {
+  const a = html.indexOf(inicio);
+  const b = html.indexOf(fim, a);
+  return (html.slice(a, b).match(/'((?:[^'\\\n]|\\.)*)'/g) || []).map(x => x.slice(1, -1)).filter(x => x.length > 25);
+}
+const fixas = [
+  ...stringsDe('const complementos = [', '];'),
+  ...stringsDe('const frasesComplemento = [', '];'),
+  ...stringsDe('const ctaCurto =', 'const ctaPadrao')
+];
+assert(fixas.length >= 8, `Encontrou ${fixas.length} frases fixas para conferir`);
+fixas.forEach(f => {
+  const hit = run(`FORBIDDEN_TERMS.filter(t => t.pattern.test(${JSON.stringify(f)})).map(t => t.term)`);
+  assert(hit.length === 0 && Catalogo.detectarProibidas(f).length === 0, `Frase fixa limpa: "${f.slice(0, 55)}..."`);
+});
+assert(!/\bcan[oô]nic/i.test(stringsDe('const frasesComplemento = [', '];').join(' ')), 'Frases de reserva não usam "canônico"');
+
 console.log(`\n🎉 ${total} verificações passaram.\n`);

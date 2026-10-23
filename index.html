@@ -1498,7 +1498,7 @@ textarea.h-180 {
           <div class="form-group">
             <label for="select-estilo-roteiro">
               Estilo de Roteiro
-              <span class="tooltip-wrapper" data-tooltip="Defina a duração aproximada do roteiro para adaptar a profundidade do conteúdo.">?</span>
+              <span class="tooltip-wrapper" data-tooltip="Defina a duração aproximada do roteiro para adaptar o nível de detalhe do conteúdo.">?</span>
             </label>
             <p class="field-hint">Defina o formato e a duração do vídeo, como YouTube Longo (18-20 min), Médio ou Shorts.</p>
             <select id="select-estilo-roteiro" class="form-control">
@@ -5106,15 +5106,15 @@ Rewrite the following target paragraph to strictly enforce an ABSOLUTE AFFIRMATI
 Treat the biblical record as literal historical fact witnessed and recorded by Scripture. Eliminate every trace of skepticism, uncertainty, hesitation, or critical questioning.
 
 POSTURA OBRIGATÓRIA DO NARRADOR:
-- Trate todo relato bíblico como fato histórico. Afirme diretamente: 'o fogo caiu', nunca 'o relato diz que o fogo teria caído'.
+- Trate todo relato bíblico como verdade sagrada afirmada diretamente: 'o fogo caiu', nunca 'o relato diz que o fogo teria caído'.
 - A autoridade é a própria Escritura. Use 'as Escrituras registram' ou 'o texto bíblico afirma' SOMENTE antes de citação literal do versículo ou de fato que o texto declara explicitamente, citando livro, capítulo e versículo (veja REGRA DE ATRIBUIÇÃO).
 - NUNCA chame a Bíblia de lenda, mito, fábula, alegoria, folclore ou tradição. NUNCA convide o espectador a duvidar ou a 'analisar criticamente'.
 - Quando mencionar ceticismo, faça isso apenas para descartá-lo na mesma frase. Ex: 'Isso não foi folclore religioso. As Escrituras registram como fato testemunhado.'
-- Use detalhes concretos do texto bíblico (números, lugares, horários, nomes) para reforçar a realidade histórica.
+- Use detalhes concretos do texto bíblico (números, lugares, horários, nomes) para reforçar a realidade concreta dos fatos.
 - NÃO invente evidências externas (descobertas arqueológicas, datações, estatísticas, citações de especialistas). Na dúvida, apoie-se apenas na Escritura.
 
 EXEMPLOS DO TOM CORRETO:
-- 'O fogo caiu do céu. Isso não foi folclore religioso nem expressão poética. As Escrituras registram como fato histórico, testemunhado por milhares de pessoas.'
+- 'O fogo caiu do céu. Isso não foi folclore religioso nem expressão poética. As Escrituras registram o ocorrido, testemunhado por milhares de pessoas.'
 - 'Não eram camponeses ingênuos aceitando o truque de um mágico. Eram cidadãos do Reino do Norte, que passaram o dia inteiro vendo os profetas de Baal fracassarem.'
 - 'A seca não foi um desastre natural. Foi a resposta divina a um crime nacional.'
 - 'O fogo que caiu no Monte Carmelo não foi uma parábola. Foi um evento testemunhado.'
@@ -9258,9 +9258,9 @@ function garantirExtensaoShorts(texto, idioma = 'pt') {
   // Salvaguarda matemática estrita para atingir no mínimo 130 palavras
   if (contar(resTexto) < 130) {
     const complementos = [
-      'As Escrituras Sagradas testificam com poder que a fidelidade divina permanece viva e inabalável.',
-      'O relato sagrado revela com clareza infalível que a palavra de Deus triunfa sobre todo império.',
-      'A soberania do Senhor permanece inabalável através de todas as gerações.'
+      'As Escrituras mostram que a fidelidade de Deus permanece firme.',
+      'A palavra de Deus se cumpre, e nenhum império consegue detê-la.',
+      'A soberania do Senhor permanece firme por todas as gerações.'
     ];
     for (const comp of complementos) {
       if (contar(resTexto) >= 130) break;
@@ -9442,7 +9442,7 @@ async function gerarRoteiroEmSeteSecoes({
   }
 
   const fallbackSecoes = [
-    { numero: 1, papel: "Hook + Core Fact", titulo: "Opening Hook & Core Event", resumo: `The foundational canonical account and dramatic opening event of ${ideia}.`, eventos: `Foundational opening fact of ${ideia}`, versiculos: "" },
+    { numero: 1, papel: "Hook + Core Fact", titulo: "Dramatic Opening & Core Event", resumo: `The foundational biblical account and dramatic opening event of ${ideia}.`, eventos: `Foundational opening fact of ${ideia}`, versiculos: "" },
     { numero: 2, papel: "Context / Setting", titulo: "Historical Setting & Context", resumo: `The ancient setting, historical background, and origin of circumstances of ${ideia}.`, eventos: `Ancient historical setting and background of ${ideia}`, versiculos: "" },
     { numero: 3, papel: "Development", titulo: "Development of Biblical Account", resumo: `The progressive development of events and circumstances in ${ideia}.`, eventos: `Initial progression and accounts of ${ideia}`, versiculos: "" },
     { numero: 4, papel: "Turning Point / Conflict", titulo: "The Decisive Crisis & Divine Decree", resumo: `The central biblical confrontation, divine decree, or critical turning point in ${ideia}.`, eventos: `The decisive confrontation and decree regarding ${ideia}`, versiculos: "" },
@@ -9676,17 +9676,17 @@ Output EXCLUSIVELY the final 2 paragraphs.`;
     
     // Constrói complemento solene e reverente
     const frasesComplemento = [
-      'A narrativa sagrada preservada através dos séculos atesta com autoridade infalível a soberania do Criador que governa os destinos das nações e dos homens.',
-      'Cada juízo decretado e cada promessa proferida nas Escrituras cumpre com rigorosa fidelidade o propósito eterno estabelecido desde a fundação dos tempos.',
-      'O testemunho canônico permanece inabalável, confrontando o silêncio dos impérios antigos e manifestando a justiça que atravessa as gerações.',
+      'A história que as Escrituras preservaram ao longo dos séculos mostra a soberania do Criador sobre o destino das nações e dos homens.',
+      'Cada juízo decretado e cada promessa feita nas Escrituras cumpre, com fidelidade, o propósito que Deus estabeleceu desde o princípio.',
+      'O registro bíblico permanece firme diante do silêncio dos impérios antigos e mostra a justiça de Deus atravessando as gerações.',
       'Diante da magnitude dos feitos divinos relatados no texto bíblico, a reverência e o temor diante do Senhor revelam a grandeza do conselho altíssimo.',
-      'As palavras divinas não retornam vazias, mas executam com perfeição inalterável tudo quanto aprouve à vontade soberana de Deus manifestar ao seu povo.'
+      'As palavras de Deus não voltam vazias: cumprem tudo quanto ele quis manifestar ao seu povo.'
     ];
 
     let textoComplemento = '';
     let idxF = 0;
-    while (obterPalavrasLimpo(textoComplemento) < diff + 15 && idxF < 15) {
-      textoComplemento += (textoComplemento ? ' ' : '') + frasesComplemento[idxF % frasesComplemento.length];
+    while (obterPalavrasLimpo(textoComplemento) < diff + 15 && idxF < frasesComplemento.length) {
+      textoComplemento += (textoComplemento ? ' ' : '') + frasesComplemento[idxF];
       idxF++;
     }
 
