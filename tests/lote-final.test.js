@@ -138,6 +138,22 @@ assert(cap('O senhor Deus formou o homem.') === 'O Senhor Deus formou o homem.',
 assert(cap('Davi orou ao senhor.') === 'Davi orou ao Senhor.', '"orou ao senhor" vira Senhor');
 assert(cap('Nosso senhor Jesus Cristo é fiel.') === 'Nosso Senhor Jesus Cristo é fiel.', '"Nosso senhor Jesus" vira Senhor');
 assert(cap('Ele disse: "o senhor é meu pastor" e saiu.').includes('"o senhor é meu pastor"'), 'Dentro de aspas (citação) nada é alterado');
+
+console.log('\n📋 44. Cronologia: linha do tempo de referência e proibição de intervalos que o texto não traz');
+const Cronologia = (() => { try { return require('../js/cronologia.js'); } catch (e) { return null; } })();
+assert(Cronologia && /40º ano/.test(Cronologia.LINHA_DO_TEMPO) && /Números 20/.test(Cronologia.LINHA_DO_TEMPO) && /Deuteronômio/.test(Cronologia.LINHA_DO_TEMPO), 'js/cronologia.js tem a linha do tempo (Números 20 e Deuteronômio no 40º ano)');
+const moisesTxt = require('fs').readFileSync(require('path').join(__dirname, '..', 'testes-reais', 'moises-f8b5f2a.txt'), 'utf-8');
+const conf = Cronologia ? Cronologia.detectarConflitos(moisesTxt) : [];
+assert(conf.some(x => /Anos depois/.test(x.frase) && /40º ano/.test(x.motivo)), 'O teste real do Moisés: "Anos depois, ... Meribá-Cades ... Deuteronômio" é detectado (mesmo 40º ano)');
+assert(Cronologia && Cronologia.detectarConflitos('Anos depois, Davi reinou em Jerusalém e construiu uma cidade.').length === 0, 'Intervalo sem eventos do mesmo período não é conflito');
+assert(Cronologia && Cronologia.detectarConflitos('Quarenta anos depois da saída do Egito, Moisés falou na planície de Moabe, conforme Deuteronômio.').length === 0, 'Eventos de períodos diferentes (saída do Egito x Deuteronômio) não são conflito');
+assert(Cronologia && Cronologia.detectarIntervalos('Moisés tinha cento e vinte anos pela frente até sua morte.').length === 1, 'Intervalo inventado ("cento e vinte anos pela frente") vira aviso para revisão');
+assert(Cronologia && Cronologia.detectarIntervalos('A morte chegou ao terceiro dia do mês.').length === 0, 'Frase sem intervalo não gera aviso');
+const srcAll = html + catSrc;
+assert(/PROIBIDO afirmar intervalos de tempo/.test(srcAll) && /\$\{LINHA_DO_TEMPO_PT\}/.test(html), 'Prompts de roteiro trazem a regra de intervalos e a linha do tempo');
+assert(/PROIBIDO afirmar intervalos de tempo/.test(catSrc), 'Prompts do Catálogo trazem a regra de intervalos');
+assert(/LINHA DO TEMPO DE REFERÊNCIA/.test(html), 'A revisão automática recebe a linha do tempo (categoria CRONOLOGIA)');
+assert(/corrigirConflitosDeCronologia\(resultText/.test(html), 'O fluxo do roteiro reescreve a frase em conflito de cronologia');
 console.log(`\n${process.exitCode ? '❌ HÁ FALHAS' : '🎉'} ${total} verificações.\n`);
 }
 }

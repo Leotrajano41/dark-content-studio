@@ -1053,6 +1053,7 @@ ATENÇÃO: Os exemplos acima servem EXCLUSIVAMENTE para você aprender o TOM de 
    - A citação entre aspas deve corresponder à cena (quem fala ou age, onde, quando) e vir com a referência. Na dúvida sobre a redação exata, NÃO use aspas.
    - Nome fixo: escreva sempre "Sermão do Monte" (nunca "Sermão da Montanha").
    - Nenhuma palavra em inglês ou espanhol na narração.
+   - Cronologia: PROIBIDO afirmar intervalos de tempo (anos, décadas, séculos, "anos depois") que o texto bíblico citado não traz; use "depois" ou o dado literal. Números 20 e Deuteronômio são do mesmo ano (o 40º).
    - Cada explicação ou episódio aparece uma única vez no roteiro inteiro.
    - Se uma palavra proibida aparecer, reescreva a frase inteira de outro modo (nunca troque só a palavra por sinônimo).`;
   }

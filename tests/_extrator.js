@@ -24,7 +24,7 @@ function constSrc(nome, fim) {
 }
 
 function criarContexto({ funcoes = [], constantes = [], extras = {} } = {}) {
-  const ctx = { console, window: {}, globalThis: null, PontuacaoModule: require('../js/pontuacao.js'), NarracaoModule: require('../js/narracao.js'), ...extras };
+  const ctx = { console, window: {}, globalThis: null, PontuacaoModule: require('../js/pontuacao.js'), NarracaoModule: require('../js/narracao.js'), CitacaoModule: require('../js/citacao.js'), CronologiaModule: require('../js/cronologia.js'), ...extras };
   ctx.globalThis = ctx;
   vm.createContext(ctx);
   constantes.forEach(([nome, fim]) => vm.runInContext(constSrc(nome, fim), ctx));

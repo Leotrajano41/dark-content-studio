@@ -3027,6 +3027,7 @@ textarea.h-180 {
   <!-- Módulo Independente de Catálogo em N Itens e Pacote de Publicação -->
   <script src="js/pontuacao.js"></script>
   <script src="js/citacao.js"></script>
+  <script src="js/cronologia.js"></script>
   <script src="js/catalogo.js"></script>
   <script src="js/narracao.js"></script>
 
@@ -3276,6 +3277,9 @@ window.OpenRouterAPI = OpenRouterAPI;
  */
 const REGRA_FATOS_EN = `FACTUAL RESTRAINT (MANDATORY): Never present as fact a custom of the time, legal status, historical judgment or superlative that the biblical passage does not state (e.g. "it was illegal", "the most humiliating blow of the Empire", "any Jew could be..."). If it is an interpretation or a custom, attribute it with a VARIED context marker in Portuguese ("na época...", "naquela cultura...", "muitos estudiosos explicam...", "segundo historiadores...") or leave it out. Add no actions, words or details the biblical text does not record. Fixed name: always "Sermão do Monte". No English or Spanish words in Portuguese text.`;
 
+/** Linha do tempo bíblica de referência (js/cronologia.js) injetada nos prompts de roteiro */
+const LINHA_DO_TEMPO_PT = CronologiaModule.LINHA_DO_TEMPO;
+
 /**
  * Regra de atribuição, generalizações, citação x cena e repetição (compartilhada pelos prompts de roteiro)
  */
@@ -3290,8 +3294,10 @@ const REGRA_ATRIBUICAO_PT = `REGRA DE ATRIBUIÇÃO (OBRIGATÓRIA, PRIORIDADE MÁ
 - PROIBIDO inventar cenas, ações, falas ou detalhes que o texto bíblico não registra, inclusive em contexto histórico (ex.: o que um soldado romano 'teria dito' ou 'teria sentido').
 - NOMES FIXOS: escreva sempre 'Sermão do Monte' (nunca 'Sermão da Montanha' nem 'Discurso da Montanha'). Nomes próprios seguem a Almeida Revista e Corrigida (ARC).
 - NENHUMA palavra em inglês ou espanhol na narração: o texto é 100% em português do Brasil.
+- CRONOLOGIA: PROIBIDO afirmar intervalos de tempo (anos, décadas, séculos, 'anos depois', 'anos pela frente') que o texto bíblico citado não traz. Use 'depois', 'mais tarde' ou o dado literal do texto. Não calcule idades nem datas que a Escritura não dá.
 - SEM REPETIÇÃO: cada explicação ou episódio aparece uma única vez no roteiro. A conclusão tem um ÚNICO parágrafo de fechamento antes da chamada para inscrição (CTA).
-- PALAVRAS PROIBIDAS EM PORTUGUÊS: 'desvendar', 'desvendando', 'profundidade', 'precisão cirúrgica', 'mergulhar fundo'. Se uma frase usar uma delas, REESCREVA a frase inteira de outro modo (nunca apenas troque a palavra por sinônimo).`;
+- PALAVRAS PROIBIDAS EM PORTUGUÊS: 'desvendar', 'desvendando', 'profundidade', 'precisão cirúrgica', 'mergulhar fundo'. Se uma frase usar uma delas, REESCREVA a frase inteira de outro modo (nunca apenas troque a palavra por sinônimo).
+${LINHA_DO_TEMPO_PT}`;
 
 /**
  * REGRAS DE CONTEÚDO E STORYTELLING BÍBLICO (Item 2 & Ajustes Finais) - System Prompt Exclusivo para Geração de Roteiro
@@ -6464,7 +6470,7 @@ CHECK ACROSS THE ENTIRE SCRIPT FOR EXACTLY THESE 13 CATEGORIES:
 4. CITAÇÃO BÍBLICA: Verbatim biblical quotes enclosed in quotation marks that diverge from the official translation (King James Version / KJV for English; Almeida Revista e Corrigida / ARC for Portuguese; Reina-Valera 1909 / RVR1909 for Spanish).
    - Example: In Numbers 13:33, replacing "which come of the Nephilim" with the exact KJV text "which come of the giants".
    - Fix all literal quotes to match the exact wording of the official Bible translation.
-5. CRONOLOGIA: Erroneous, impossible, or contradictory dates, centuries, historical intervals, or time spans (e.g. claiming an event happened 40 years later when centuries elapsed).
+5. CRONOLOGIA: Use the LINHA DO TEMPO DE REFERÊNCIA below. Flag erroneous, impossible, invented or contradictory dates, centuries, historical intervals, or time spans (e.g. claiming an event happened 40 years later when centuries elapsed).
 6. AFIRMAÇÃO ALÉM DO TEXTO: Statements attributed to Scripture that the cited verse or passage does not actually state.
    RIGOROUSLY CHECK AND CORRECT:
    a) Dates, calendar years, or seasons not given in the Bible (e.g. "in the spring of the year 30 AD", "in 28 AD" — Scripture does not give Julian calendar years).
@@ -6503,6 +6509,10 @@ Format:
     "fraseCorrigida": "The corrected sentence (or empty string \"\" if the sentence should be removed)"
   }
 ]
+LINHA DO TEMPO DE REFERÊNCIA (for category 5):
+${LINHA_DO_TEMPO_PT}
+Any interval of years/decades/centuries between events that the cited text does not state is a CRONOLOGIA error (e.g. "anos depois" between Números 20 and Deuteronômio, which are the same 40th year): rewrite the sentence without the interval.
+
 If NO problems are detected, return strictly: []`;
 
 async function executarRevisaoAutomaticaRoteiro(roteiro, idioma, modelo) {
@@ -9342,6 +9352,37 @@ async function variarMarcadoresDeContexto(texto, idioma, modelo) {
 window.variarMarcadoresDeContexto = variarMarcadoresDeContexto;
 
 /**
+ * CRONOLOGIA (ITEM 44): frase que afirma tempo passado ("anos depois") entre eventos do MESMO período da linha do tempo
+ * (ex.: Meribá e Deuteronômio, ambos no 40º ano) é reescrita pela IA. Intervalos longos soltos viram aviso para revisão.
+ */
+async function corrigirConflitosDeCronologia(texto, idioma, modelo) {
+  if (!texto || typeof texto !== 'string') return { texto, regeneradas: 0 };
+  globalThis.__avisosPosProcessamento = globalThis.__avisosPosProcessamento || [];
+  let atual = texto;
+  let regeneradas = 0;
+  for (const conflito of CronologiaModule.detectarConflitos(texto)) {
+    if (!atual.includes(conflito.frase)) continue;
+    const nova = await reescreverFraseComIA({
+      frase: conflito.frase,
+      contexto: atual.split(/\n\s*\n/).find(p => p.includes(conflito.frase)) || '',
+      motivo: conflito.motivo,
+      instrucao: 'Remove the claim that years or decades passed. Do not invent any interval, age or date; use "depois" or a literal fact of the text. These events happened in the same period (' + conflito.periodo + ').',
+      modelo,
+      valido: (n) => !CronologiaModule.temIntervalo(n)
+    });
+    if (nova) {
+      atual = atual.replace(conflito.frase, () => nova);
+      regeneradas++;
+    } else {
+      globalThis.__avisosPosProcessamento.push({ tipo: 'cronologia', trecho: conflito.frase.slice(0, 90) });
+    }
+  }
+  CronologiaModule.detectarIntervalos(atual).forEach(a => globalThis.__avisosPosProcessamento.push({ tipo: 'intervalo_de_tempo', trecho: a.frase.slice(0, 90) }));
+  return { texto: atual, regeneradas };
+}
+window.corrigirConflitosDeCronologia = corrigirConflitosDeCronologia;
+
+/**
  * Garante que o Shorts fique estritamente entre 130 e 160 palavras na narração falada limpa.
  */
 function garantirExtensaoShorts(texto, idioma = 'pt') {
@@ -10112,6 +10153,10 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       // 7.2 Marcadores de contexto ("na época", "historiadores observam"...) não podem se repetir em sequência
       const marcRes = await variarMarcadoresDeContexto(resultText, idioma, modeloRoteiro);
       resultText = marcRes.texto;
+
+      // 7.3 Cronologia: "anos depois" entre eventos do mesmo período (ex.: Números 20 e Deuteronômio) é reescrito
+      const cronoRes = await corrigirConflitosDeCronologia(resultText, idioma, modeloRoteiro);
+      resultText = cronoRes.texto;
 
       // 8. Garante convite de inscrição no último parágrafo antes de auditar
       if (typeof garantirCtaNoUltimoParagrafo === 'function') {

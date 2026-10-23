@@ -141,7 +141,7 @@ sandbox.window.localStorage = mockLocalStorage;
 
 const context = vm.createContext(sandbox);
 // Módulos compartilhados carregados pela página antes do catálogo (js/pontuacao.js e js/narracao.js)
-for (const modulo of ['pontuacao.js', 'narracao.js', 'citacao.js']) {
+for (const modulo of ['pontuacao.js', 'narracao.js', 'citacao.js', 'cronologia.js']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', modulo), 'utf8'), context);
 }
 vm.runInContext(catalogoModuleCode, context);
