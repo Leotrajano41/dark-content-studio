@@ -7,6 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const Citacao = require('../js/citacao.js');
 
 function readJsonClean(filePath) {
   let content = fs.readFileSync(filePath, 'utf8');
@@ -209,6 +210,17 @@ function getVerseText(bibleData, bookCanonical, chapterNum, verseStart, verseEnd
  * Alinha e extrai a porção correspondente do versículo bíblico real da Almeida (ARA) / KJV
  * quando a citação do narrador for parcial. Substitui apenas as palavras citadas pelas literais.
  */
+// Palavras da mesma raiz ("santificardes" ~ "santificar") contam como a mesma ao alinhar a citação com o versículo
+function mesmaPalavra(a, b) {
+  if (a === b) return true;
+  const min = Math.min(a.length, b.length);
+  if (min < 6) return false;
+  let i = 0;
+  while (i < min && a[i] === b[i]) i++;
+  return i >= 6 && i / Math.max(a.length, b.length) >= 0.6;
+}
+const incluiPalavra = (lista, p) => lista.some(x => mesmaPalavra(x, p));
+
 function alinharTrechoCorrespondente(versiculoReal, textoCitado, langKey = 'pt') {
   if (!versiculoReal || !textoCitado) return versiculoReal;
 
@@ -241,7 +253,7 @@ function alinharTrechoCorrespondente(versiculoReal, textoCitado, langKey = 'pt')
     const sPalavras = limparPalavras(s).filter(p => p.length > 2);
     let matches = 0;
     for (const p of sPalavras) {
-      if (palavrasCitado.includes(p)) matches++;
+      if (incluiPalavra(palavrasCitado, p)) matches++;
     }
     const score = sPalavras.length > 0 ? (matches / sPalavras.length) : 0;
     return { sent: s.trim(), score, matches, total: sPalavras.length };
@@ -295,7 +307,7 @@ function alinharTrechoCorrespondente(versiculoReal, textoCitado, langKey = 'pt')
   const primeirasPalavras = palavrasCitado.slice(0, Math.min(5, palavrasCitado.length));
   while (minIdx < maxIdx) {
     const sPalavras = limparPalavras(sentencas[minIdx]).filter(p => p.length > 2);
-    const temInicioMatch = sPalavras.some(p => primeirasPalavras.includes(p));
+    const temInicioMatch = sPalavras.some(p => incluiPalavra(primeirasPalavras, p));
     const isFalaNarrativa = /[:]\s*$/.test(sentencas[minIdx]) && /\b(?:disse|falou|respondeu|clamou|chamou|disseram|perguntou|dizendo)\b/i.test(sentencas[minIdx]);
     if (!temInicioMatch || isFalaNarrativa) {
       minIdx++;
@@ -309,7 +321,7 @@ function alinharTrechoCorrespondente(versiculoReal, textoCitado, langKey = 'pt')
   const ultimasPalavras = palavrasCitado.slice(Math.max(0, palavrasCitado.length - 5));
   while (maxIdx > minIdx) {
     const sPalavras = limparPalavras(sentencas[maxIdx]).filter(p => p.length > 2);
-    const temFimMatch = sPalavras.some(p => ultimasPalavras.includes(p));
+    const temFimMatch = sPalavras.some(p => incluiPalavra(ultimasPalavras, p));
     if (!temFimMatch) {
       maxIdx--;
     } else {
@@ -499,6 +511,29 @@ function validarRoteiroBiblico(texto, idioma = 'pt', traducao = 'arc') {
               motivo: 'Texto citado possui baixa semelhança com o versículo da Almeida. Mantido para revisão manual.'
             });
           } else {
+            // ITEM 43: a citação entre aspas deve terminar no fim de uma oração do versículo
+            const fim = Citacao.analisarFimDaCitacao(realVerse, q.text);
+            if (fim.status === 'truncada') {
+              if (fim.completada) {
+                alteracoes.push({
+                  tipo: 'CITACAO_COMPLETADA',
+                  referencia: associatedRef.rawRef,
+                  textoAnterior: q.text,
+                  textoCorreto: fim.completada,
+                  motivo: 'A citação terminava no meio de uma oração; foi completada com o texto do versículo.'
+                });
+                substituicoes.push({ q, novaCitacao: q.openChar + fim.completada + q.closeChar });
+              } else {
+                alteracoes.push({
+                  tipo: 'CITACAO_SEM_ASPAS',
+                  referencia: associatedRef.rawRef,
+                  textoAnterior: q.text,
+                  motivo: `A citação terminava no meio de uma oração (faltavam ${fim.extensao} palavras): aspas removidas, o texto virou paráfrase.`
+                });
+                substituicoes.push({ q, novaCitacao: q.text });
+              }
+              continue;
+            }
             const textoSubstituto = alinharTrechoCorrespondente(realVerse, q.text, langKey);
             if (q.text !== textoSubstituto) {
               alteracoes.push({
@@ -592,7 +627,7 @@ function validarRoteiroBiblico(texto, idioma = 'pt', traducao = 'arc') {
     // Ponto 3: Limpeza de pontuação duplicada imediatamente após aspas e normalização
     p = p.replace(/([.!?]["”'])\s*[.,;:]+/g, '$1');
     p = p.replace(/(["”'])\1+/g, '$1');
-    p = p.replace(/([.!?])\s*\1+/g, '$1');
+    p = p.replace(/(?<!\.)\.\.(?!\.)/g, '.').replace(/!{2,}/g, '!').replace(/\?{2,}/g, '?'); // preserva '...'
 
     paragrafos[pIdx] = p;
   }
@@ -634,3 +669,4 @@ module.exports = async function handler(req, res) {
 module.exports.validarRoteiroBiblico = validarRoteiroBiblico;
 module.exports.loadBibles = loadBibles;
 module.exports.findBook = findBook;
+module.exports.analisarFimDaCitacao = Citacao.analisarFimDaCitacao;

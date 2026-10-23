@@ -995,7 +995,7 @@ ATENÇÃO: Os exemplos acima servem EXCLUSIVAMENTE para você aprender o TOM de 
      * NUNCA termine com regras, leis posteriores ou comentários morais.
 3. TOM E TRADUÇÃO (${nomeTraducao}):
    - Frases curtas, diretas, voz ativa. Discurso direto quando o texto traz fala ("Quem poderia estar em pé perante o Senhor, este Deus santo?"). Fala longa vira fala indireta ("Moisés disse a Arão que...").
-   - Citação entre aspas: no máximo 1 por item, curta, e COPIADA literalmente dos versículos carregados.
+   - Citação entre aspas: no máximo 1 por item, curta, COPIADA literalmente dos VERSÍCULOS CITADOS (a passagem central), NUNCA do contexto, e terminando no fim de uma oração do versículo. Na dúvida sobre a redação exata, NÃO use aspas.
    - Nomes e grafia seguem a tradução ${nomeTraducao} dos versículos carregados (ex. ARC: Geteu, Ararate, "tribunal", "Voz de Deus, e não de homem!", "comido de bichos", "os bois a deixavam pender").
 4. ROTULAR DADOS DE FORA DA BÍBLIA:
    - Nomes históricos não presentes nos versículos DEVEM vir expressamente rotulados na narração (exemplo: "o rei Herodes, conhecido fora da Bíblia como Herodes Agripa Primeiro").
@@ -1112,7 +1112,7 @@ ${textoItem}
 
 REGRAS DE AUDITORIA:
 1. O nome do personagem do item (ex: Senaqueribe, Herodes, Arão) e os fatos do CONTEXTO PERMITIDO fazem parte da fonte: NÃO os sinalize como contexto externo.
-2. Sinalize APENAS: (a) invenção de psicologia/intenção/motivo sem respaldo nos versículos; (b) fato que contradiz os versículos; (c) citação entre aspas que não seja literal ou que não corresponda à cena (quem fala/age, onde, quando); (d) costume, explicação cultural ou interpretação SEM marcador de contexto ("na época...", "muitos estudiosos explicam...", "segundo historiadores...") ou atribuída ao texto ("as Escrituras registram", "o texto diz") sem ser citação literal; (e) afirmação histórica categórica/generalização sem base nos versículos.
+2. Sinalize APENAS: (a) invenção de psicologia/intenção/motivo sem respaldo nos versículos; (b) fato que contradiz os versículos; (c) citação entre aspas que não seja literal dos VERSÍCULOS CITADOS (o CONTEXTO PERMITIDO serve só para fatos, NÃO do contexto para aspas), que termine no meio de uma oração, ou que não corresponda à cena (quem fala/age, onde, quando); (d) costume, explicação cultural ou interpretação SEM marcador de contexto ("na época...", "muitos estudiosos explicam...", "segundo historiadores...") ou atribuída ao texto ("as Escrituras registram", "o texto diz") sem ser citação literal; (e) afirmação histórica categórica/generalização sem base nos versículos.
 3. Liste em "referencias_fora_da_passagem" os versículos do CONTEXTO PERMITIDO, FORA da passagem central, dos quais o texto usou algum fato. Use o formato "Livro cap:versículo" ou intervalo "Livro cap:v1-v2" (ex.: "Atos 12:20", "Gênesis 18:20-33"). Se nenhum, devolva lista vazia.
 
 FORMATO DE RESPOSTA (JSON PURO):
@@ -1202,6 +1202,9 @@ Responda APENAS com o texto narrativo corrigido em português, em um único par�
 
     const versiculosNorm = normalizarTexto(versiculosTexto);
     const citacoesInvalidas = [];
+    // Versículos CITADOS (um por linha: [Livro c:v] "texto"). A citação é conferida só contra eles, nunca contra o contexto.
+    const versos = String(versiculosTexto || '').split('\n').map(l => l.replace(/^\s*\[[^\]]+\]\s*"?/, '').replace(/"?\s*(?:<-.*)?$/, '').trim()).filter(Boolean);
+    const Citacao = (typeof CitacaoModule !== 'undefined') ? CitacaoModule : require('./citacao.js');
 
     for (const c of citacoes) {
       const cNorm = normalizarTexto(c);
@@ -1209,6 +1212,18 @@ Responda APENAS com o texto narrativo corrigido em português, em um único par�
         citacoesInvalidas.push({
           citacao: c,
           motivo: 'A citação entre aspas não aparece literalmente no texto dos versículos fornecidos.'
+        });
+        continue;
+      }
+      // ITEM 43: a citação tem que terminar no fim de uma oração do versículo
+      const verso = versos.find(v => normalizarTexto(v).includes(cNorm));
+      const fim = verso ? Citacao.analisarFimDaCitacao(verso, c) : { status: 'ok' };
+      if (fim.status === 'truncada') {
+        citacoesInvalidas.push({
+          citacao: c,
+          truncada: true,
+          completada: fim.completada,
+          motivo: 'A citação entre aspas termina no meio de uma oração do versículo. Termine-a no fim da oração (texto da ARC) ou retire as aspas.'
         });
       }
     }
@@ -1396,7 +1411,21 @@ Responda APENAS com o texto narrativo corrigido em português, em um único par�
       }
     }
 
-    const invalidas = problemas.filter(p => p.tipo === 'citacao_incorreta' && p.frase);
+    // Citação TRUNCADA: completa com a ARC (ou tira as aspas se faltar muito) em vez de apagar a frase inteira
+    problemas.filter(p => p.tipo === 'citacao_incorreta' && p.truncada && p.frase).forEach(p => {
+      const entre = `"${p.frase}"`;
+      if (t.includes(entre)) {
+        if (p.completada) {
+          t = t.split(entre).join(`"${p.completada}"`);
+          acoes.push({ frase: p.frase, tipo: 'citacao_incorreta', motivo: 'Citação cortada completada com o texto da ARC.', acao: 'completada' });
+        } else {
+          t = t.split(entre).join(p.frase);
+          acoes.push({ frase: p.frase, tipo: 'citacao_incorreta', motivo: 'Citação cortada: aspas removidas.', acao: 'sem_aspas' });
+        }
+      }
+    });
+
+    const invalidas = problemas.filter(p => p.tipo === 'citacao_incorreta' && p.frase && !p.truncada);
     if (invalidas.length) {
       const r = filtrarSentencas(t, s => invalidas.some(p => restaurarAspas(s, [p.frase]).includes('"')) || false);
       // fallback por conteúdo: remove sentenças cuja aspas contenham a citação inválida
@@ -2217,7 +2246,7 @@ Subscribe to the channel for more Bible accounts explained from the text.`;
       }
       const cit = verificarCitacoesEmCodigo(texto, it.versiculosTexto);
       cit.citacoesInvalidas.forEach(c => {
-        problemas.push({ tipo: 'citacao_incorreta', frase: c.citacao, motivo: c.motivo + ' Use só texto literal do versículo citado ou remova as aspas.' });
+        problemas.push({ tipo: 'citacao_incorreta', frase: c.citacao, truncada: c.truncada, completada: c.completada, motivo: c.motivo + ' Use só texto literal do versículo citado ou remova as aspas.' });
       });
       const qtdCitacoesVersiculo = contarCitacoesVersiculo(texto);
       if (qtdCitacoesVersiculo > 1) {

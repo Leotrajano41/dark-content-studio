@@ -492,7 +492,7 @@ async function main() {
   const context = vm.createContext(sandbox);
   try {
     // Módulos compartilhados que a página carrega por <script src> (pontuação e narração)
-    for (const modulo of ['pontuacao.js', 'narracao.js']) {
+    for (const modulo of ['pontuacao.js', 'narracao.js', 'citacao.js']) {
       vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', modulo), 'utf8'), context);
     }
     vm.runInContext(scriptMatch[1], context);
