@@ -356,6 +356,7 @@ function validarRoteiroBiblico(texto, idioma = 'pt', traducao = 'arc') {
                 : 'pt';
   // `traducao` é aceito por compatibilidade, mas ignorado: a conferência é sempre pela ARC
   const currentBible = biblesLoaded[langKey] || biblesLoaded.pt;
+  const traducaoNome = langKey === 'pt' ? 'ARC' : langKey === 'en' ? 'KJV' : 'RVR';
 
   // Se a Bíblia não pôde ser carregada no ambiente, retorna texto intacto com aviso
   if (!currentBible) {
@@ -397,7 +398,10 @@ function validarRoteiroBiblico(texto, idioma = 'pt', traducao = 'arc') {
     refRegex.lastIndex = 0;
 
     while ((match = refRegex.exec(p)) !== null) {
-      const bookCan = findBook(match[1].trim());
+      const bookToken = match[1].trim();
+      // Siglas curtas (Is, Am, Os, Na, Ex...) só valem com inicial maiúscula e ":" ("Is 53:5"); "na 2.5", "os 3.5" são números comuns
+      if (bookToken.replace(/^[1-3]\s*/, '').length <= 3 && (!/^(?:[1-3]\s*)?[A-ZÁÂÃÉÊÍÓÔÕÚÇ]/.test(bookToken) || !/:/.test(match[0]))) continue;
+      const bookCan = findBook(bookToken);
       if (bookCan) {
         const leadingSpaces = match[0].match(/^\s*/)[0].length;
         const cleanRef = match[0].trim();
@@ -432,17 +436,12 @@ function validarRoteiroBiblico(texto, idioma = 'pt', traducao = 'arc') {
 
       const realText = getVerseText(currentBible, r.bookCan, r.chap, r.vStart, r.vEnd);
       if (!realText) {
+        // NÃO apaga a referência em silêncio: o texto fica como está e o problema é registrado para revisão manual
         const bookName = r.bookCan[langKey] || r.bookCan.pt;
-        const refPattern = new RegExp(`(?:em|conforme|segundo|de acordo com|como diz em|no livro de)?\\s*${r.rawRef.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1")}`, 'gi');
-        const generalReplacement = langKey === 'en' ? 'in the Holy Scriptures'
-                                  : langKey === 'es' ? 'en las Sagradas Escrituras'
-                                  : 'nas Sagradas Escrituras';
-        p = p.replace(refPattern, generalReplacement);
         alteracoes.push({
-          tipo: 'REFERENCIA_INEXISTENTE_REMOVIDA',
+          tipo: 'REFERENCIA_INEXISTENTE',
           referencia: r.rawRef,
-          motivo: `Capítulo ou versículo não existe em ${bookName}`,
-          substituicao: generalReplacement
+          motivo: `Capítulo ou versículo não existe em ${bookName} (${traducaoNome}). Confira a referência.`
         });
       }
     }
@@ -500,8 +499,13 @@ function validarRoteiroBiblico(texto, idioma = 'pt', traducao = 'arc') {
           for (const pWord of pCit) {
             if (pReal.includes(pWord)) matches++;
           }
-          const score = pCit.length > 0 ? (matches / pCit.length) : 0;
-          const semelhançaSuficiente = (matches >= 2) || (pCit.length <= 4 && matches >= 1) || (score >= 0.2);
+          // Troca pelo texto do versículo SÓ se a citação é claramente dele (60%+ das palavras): senão vai para revisão
+          let matchesFuzzy = 0;
+          for (const pWord of pCit) {
+            if (incluiPalavra(pReal, pWord)) matchesFuzzy++;
+          }
+          const score = pCit.length > 0 ? (matchesFuzzy / pCit.length) : 0;
+          const semelhançaSuficiente = score >= 0.6;
 
           if (!semelhançaSuficiente) {
             // Requisito 2: Se tiver baixa semelhança com o versículo, registra no relatório para conferência manual

@@ -5,6 +5,7 @@ const Catalogo = require('../js/catalogo.js');
 let total = 0;
 function assert(c, m) { total++; if (!c) { console.error(`  ❌ [FALHOU] ${m}`); process.exitCode = 1; } else console.log(`  ✅ [PASSOU] ${m}`); }
 
+const ctxPT = criarContexto({ funcoes: ['detectarPalavrasEstrangeirasPT'], constantes: [['REGEX_INGLES_EM_PT', ';'], ['REGEX_ESPANHOL_EM_PT', ';']] });
 const ctxFT = criarContexto({ constantes: [['FORBIDDEN_TERMS', '\n];']] });
 const ctxP = criarContexto({
   funcoes: ['normalizarAspasEPontuacao', 'validarECorrigirAspas', 'garantirEspacamentoEPontuacaoCitacoes', 'limparPontuacaoDuplicada', 'limparTextoParaNarracao', 'garantirCtaNoUltimoParagrafo', 'limitarTermosCanonicos', 'limitarDeclaracoesDeSilencioBiblico']
@@ -204,6 +205,37 @@ const ctxFluxo = criarContexto({
   tail27();
 })();
 function tail27() {
+
+console.log('\n📋 25. Inglês e espanhol na narração em português');
+const estr = (t) => ctxPT.detectarPalavrasEstrangeirasPT(t);
+assert(estr('Moses and Aaron foram ao Lord.') !== '' && estr('O povo disse unto thee que o God ouviu.') !== '', 'Nomes e palavras da KJV vazadas (Moses, Aaron, Lord, God, unto, thee) são detectados');
+assert(estr('Moisés orou mientras el pueblo esperaba.') !== '' && estr('Después de muchos años, siempre volvia.') !== '', 'Espanhol (mientras, pueblo, después, siempre) é detectado');
+assert(estr('Moisés e Arão foram ao Senhor, em Cades, no deserto de Zim.') === '', 'Texto normal em português não é acusado');
+assert(/NO English or Spanish words|nenhuma palavra em inglês ou espanhol/i.test(html.match(/const REVIEWER_SYSTEM_PROMPT[\s\S]*?If NO problems/)[0]), 'A revisão automática verifica palavras em inglês/espanhol');
+
+console.log('\n📋 10. Validador bíblico: siglas, citação fora do versículo e referência inexistente');
+const vb = (t) => Validar.validarRoteiroBiblico(t, 'Português (Brasil)', 'arc');
+let v = vb('A medida era na 2.5 e os 3.5 de largura, com 4.5 côvados.');
+assert(v.textoCorrigido === 'A medida era na 2.5 e os 3.5 de largura, com 4.5 côvados.' && v.totalReferencias === 0, 'Números com ponto ("na 2.5", "os 3.5") não são tratados como Naum/Oseias');
+v = vb('Isaías profetizou. "Mas ele foi ferido por causa das nossas transgressões" (Is 53:5)');
+assert(v.totalReferencias === 1, 'Sigla oficial com maiúscula e dois-pontos ("Is 53:5") continua reconhecida');
+v = vb('Moisés agiu. "Moisés feriu a rocha duas vezes diante do povo reunido" (Números 20:12)');
+assert(v.textoCorrigido.includes('"Moisés feriu a rocha duas vezes diante do povo reunido"') && v.alteracoes.some(a => a.tipo === 'CITACAO_PARA_REVISAO'), 'Citação que NÃO é do versículo não é trocada pelo texto dele: fica como está e vai para revisão');
+v = vb('Veja o que diz Salmos 200:1 sobre isso.');
+assert(v.textoCorrigido === 'Veja o que diz Salmos 200:1 sobre isso.' && v.alteracoes.some(a => a.tipo === 'REFERENCIA_INEXISTENTE'), 'Referência inexistente NÃO é apagada em silêncio: o texto fica e o problema é registrado');
+
+console.log('\n📋 9. Narração Limpa: colchetes e números de lista');
+assert(limpa('[Hook (0-15s)] O fogo caiu do céu.') === 'O fogo caiu do céu.' && limpa('[pausa] Moisés orou.') === 'Moisés orou.', 'Marcadores de produção entre colchetes ainda são removidos');
+assert(limpa('O povo cantou o hino [Selá] e Moisés orou.').includes('[Selá]'), 'Colchetes que fazem parte do texto ([Selá]) são preservados');
+assert(limpa('1. Primeiro ponto da história.') === 'Primeiro ponto da história.', 'Numeração de lista ("1. ") ainda é removida');
+assert(limpa('1948. Foi o ano da criação de Israel.').startsWith('1948.') && limpa('300. homens seguiram Gideão.').startsWith('300.'), 'Números que fazem parte da frase ("1948.", "300.") não são apagados');
+
+console.log('\n📋 16. Frase repetida (explicação contada duas vezes)');
+const rf = Regras ? Regras.removerFrasesRepetidas(moisesTxt) : null;
+assert(rf && rf.removidas.some(x => /A desobediência não foi privada/.test(x)), 'Teste real do Moisés: "A desobediência não foi privada." repetida é removida na 2ª vez');
+assert(rf && (rf.texto.match(/A desobediência não foi privada/g) || []).length === 1, 'Fica exatamente uma ocorrência');
+assert(Regras && Regras.removerFrasesRepetidas('Moisés orou ao Senhor no deserto de Cades. Depois o povo seguiu viagem para Edom. Inscreva-se no canal. Inscreva-se no canal.').removidas.length === 0, 'Frases curtas/CTA não são tratadas como explicação repetida');
+assert(/removerFrasesRepetidas\(/.test(html), 'O fluxo do roteiro remove frases repetidas');
 console.log(`\n${process.exitCode ? '❌ HÁ FALHAS' : '🎉'} ${total} verificações.\n`);
 }
 }

@@ -100,5 +100,34 @@
     return achados;
   }
 
-  return { MARCADORES, marcadorDeContexto, detectarCostumeSemMarcador, detectarAtribuicaoIndevida, detectarAbsolutos, detectarCenasInventadas, detectarCitacoesSemReferencia };
+  /**
+   * Frase repetida no roteiro (a mesma explicação contada duas vezes): a 2ª ocorrência é removida.
+   * Só frases SEM aspas, com 5+ palavras; igual ou 85%+ de palavras em comum. CTA nunca é tratado como repetição.
+   */
+  function removerFrasesRepetidas(texto) {
+    const norm = (x) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+    const vistas = [];
+    const removidas = [];
+    const paragrafos = String(texto || '').split(/\n\s*\n/).map(par => {
+      const mantidas = [];
+      for (const f of dividirFrases(par)) {
+        const sem = f.trim();
+        const palavras = (sem.match(/\S+/g) || []).length;
+        const temAspas = /["“”«»]/.test(sem);
+        const n = norm(sem);
+        if (palavras >= 5 && !temAspas && !/inscrev|subscribe|suscr/.test(n)) {
+          const tokens = new Set(n.split(' ').filter(w => w.length > 2));
+          const duplicada = vistas.some(v => v.n === n || (palavras >= 8 && v.tokens.size >= 6 && tokens.size >= 6 &&
+            (2 * [...tokens].filter(w => v.tokens.has(w)).length) / (tokens.size + v.tokens.size) >= 0.85));
+          if (duplicada) { removidas.push(sem); continue; }
+          vistas.push({ n, tokens });
+        }
+        mantidas.push(f);
+      }
+      return mantidas.join('').trim();
+    }).filter(Boolean);
+    return { texto: paragrafos.join('\n\n'), removidas };
+  }
+
+  return { removerFrasesRepetidas, MARCADORES, marcadorDeContexto, detectarCostumeSemMarcador, detectarAtribuicaoIndevida, detectarAbsolutos, detectarCenasInventadas, detectarCitacoesSemReferencia };
 });

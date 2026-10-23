@@ -6486,7 +6486,7 @@ CHECK ACROSS THE ENTIRE SCRIPT FOR EXACTLY THESE 13 CATEGORIES:
       - STRICT PROHIBITION: Rigorously check and correct any numbers, distances, calendar dates, ages, or quantities that are not explicitly written in the cited biblical passage (e.g. "guiado 16 quilômetros" in 2 Kings 6:19, where no distance appears in the text).
       - Conversions of measurements that ARE in the biblical text remain permitted, always as approximations (e.g. "9 cubits, about 4 meters" or "9 côvados, cerca de 4 metros").
       - CORRECTION: When an unwritten number, distance, or quantity is found, remove the invented number or rewrite the phrase smoothly without it, marked as "AFIRMAÇÃO ALÉM DO TEXTO".
-7. FRASE QUEBRADA / ASPAS: Sentences with missing words, ungrammatical phrasing, broken fragments, or mismatched quotation marks.
+7. FRASE QUEBRADA / ASPAS: Sentences with missing words, ungrammatical phrasing, broken fragments, or mismatched quotation marks. ALSO flag any English or Spanish word inside Portuguese narration (outside quotation marks): NO English or Spanish words are allowed; rewrite the WHOLE sentence in Portuguese (never just swap a word).
 8. REFERÊNCIA BÍBLICA CRUZADA AUSENTE: Citing or reciting a passage/verse from another biblical book without introducing its origin. Whenever a verse or account from another book is introduced (e.g. Numbers 21:9 regarding the bronze serpent within Jesus' conversation with Nicodemus in John 3), it MUST ALWAYS be introduced with its biblical origin (e.g. "referencing Moses in the wilderness in Numbers", "as written centuries earlier in Numbers"). Never paste an Old Testament quote into a dialogue without identifying its origin.
 9. INCONSISTÊNCIA DE CENÁRIO: The physical environment must remain strictly uniform and consistent throughout the scene. If the narrative establishes an enclosed private room ("room"), it CANNOT suddenly change to a "rooftop" or courtyard without an explicit scriptural movement. Any contradictory shift in physical location must be corrected to maintain uniform consistency.
 
@@ -8232,9 +8232,11 @@ function limparTextoParaNarracao(texto, estiloRoteiro = '') {
   // 5. Remove cabeçalho inicial de roteiro (ex: "**Roteiro: ...**", "# Script ...", "**Guion: ...**")
   limpo = limpo.replace(/^\s*(?:#+\s*)?(?:\*{0,2}(?:Roteiro|Script|Guión|Guion):\s*.*?\*{0,2}\s*\n+)+/im, '');
 
-  // 6. Remove qualquer marcador entre colchetes, com ou sem asteriscos e dois pontos ao redor:
-  // ex: **[Hook (0-15s)]:**, [Hook], [Ponto 1: Contexto], [Point 1: Narrative], [Conclusion], etc.
-  limpo = limpo.replace(/\*{0,2}\[[^\]]*\]\*{0,2}\s*:?/g, '');
+  // 6. Remove marcadores de PRODUÇÃO entre colchetes, com ou sem asteriscos e dois pontos ao redor:
+  // ex: **[Hook (0-15s)]:**, [Hook], [Ponto 1: Contexto], [Point 1: Narrative], [Conclusion], [pausa], [música], etc.
+  // Colchetes que fazem parte do texto bíblico (ex.: [Selá]) NÃO são marcadores e ficam.
+  const ROTULO_PRODUCAO = /^(?:hook|gancho|introdu|intro|ponto|point|punto|conclus|cta|abertura|item|se[cç][aã]o|section|fecho|fechamento|encerramento|roteiro|cena|bloco|parte|pausa|m[úu]sica|vinheta|b-?roll|corte|sfx|narrador|locu[cç][aã]o|tela|imagem|v[íi]deo|\d+\s*[-–:]\s*\d+\s*s|\d+\s*s\b|\d+:\d{2})/i;
+  limpo = limpo.replace(/\*{0,2}\[([^\]]*)\]\*{0,2}\s*:?/g, (m, dentro) => (ROTULO_PRODUCAO.test(dentro.trim()) ? '' : m));
 
   // 7. Remove marcadores de cabeçalho sem colchetes em linhas isoladas ou com tempo
   // ex: HOOK (0-15s):, INTRODUÇÃO (0-45s):, PONTO 1: Título, POINT 1:, PUNTO 1:, CONCLUSÃO:, CONCLUSION:
@@ -8269,7 +8271,8 @@ function limparTextoParaNarracao(texto, estiloRoteiro = '') {
 
   // 11. Remove marcadores de listas ou tópicos no início de linha (- ou * ou • ou 1.)
   limpo = limpo.replace(/^\s*[-*•]\s+/gm, '');
-  limpo = limpo.replace(/^\s*\d+\.\s+/gm, '');
+  // Só numeração de lista (1 a 30 seguido de maiúscula); "1948. Foi..." e "300. homens" são parte do texto
+  limpo = limpo.replace(/^\s*(?:[1-9]|[12]\d|30)\.\s+(?=[A-ZÀ-Ý])/gm, '');
 
   // 12. Remove menções a termos internos de arquitetura ou rótulos editoriais
   limpo = limpo.replace(/\b(?:the\s+)?(?:canonical\s+boundary|scriptural\s+boundary|editorial\s+hook|narrative\s+hook|opening\s+hook)\b/gi, '');
@@ -8338,6 +8341,11 @@ async function validarRoteiroComBiblia(roteiro, idioma = 'pt') {
         if (data.alteracoes && data.alteracoes.length > 0) {
           console.log('[Validador Bíblico] Ajustes automáticos aplicados:', data.alteracoes);
         }
+        // Problemas que o validador NÃO corrige sozinho viram aviso para revisão manual
+        globalThis.__avisosPosProcessamento = globalThis.__avisosPosProcessamento || [];
+        (data.alteracoes || []).filter(a => ['REFERENCIA_INEXISTENTE', 'CITACAO_PARA_REVISAO', 'CITACAO_SEM_ASPAS'].includes(a.tipo)).forEach(a => {
+          globalThis.__avisosPosProcessamento.push({ tipo: String(a.tipo).toLowerCase(), trecho: `${a.referencia || a.referenciaSugerida || ''} ${String(a.textoCitado || a.motivo || '').slice(0, 60)}`.trim() });
+        });
         return data.textoCorrigido;
       }
     }
@@ -9208,8 +9216,8 @@ window.limparPontuacaoDuplicada = limparPontuacaoDuplicada;
  * transformava "força" em "paraça". Agora a regra do projeto vale também aqui: NUNCA trocar palavra;
  * a FRASE inteira é regenerada pela IA e, se a palavra persistir, só um aviso é mostrado.
  */
-const REGEX_INGLES_EM_PT = /(?<![\p{L}\p{N}-])(?:the|and|of|with|from|that|this|which|they|their|was|were|are|have|has|would|could|should|into|about|because|however|therefore|in|to)(?![\p{L}\p{N}-])/iu;
-const REGEX_ESPANHOL_EM_PT = /[ñÑ¿¡]|(?<![\p{L}])(?:también|además|entonces|nuestro|nuestra|nuestros|nuestras|dios|señor|hacia|según|aquí|así)(?![\p{L}])/iu;
+const REGEX_INGLES_EM_PT = /(?<![\p{L}\p{N}-])(?:the|and|of|with|from|that|this|which|they|their|was|were|are|have|has|would|could|should|into|about|because|however|therefore|in|to|shall|unto|thee|thy|thou|hath|saith|god|lord|moses|aaron|egypt|pharaoh|joshua|solomon|jordan|jerusalem|israelites)(?![\p{L}\p{N}-])/iu;
+const REGEX_ESPANHOL_EM_PT = /[ñÑ¿¡]|(?<![\p{L}])(?:también|además|entonces|nuestro|nuestra|nuestros|nuestras|dios|señor|hacia|según|aquí|así|mientras|pueblo|después|siempre|cuando|ellos|ellas|años)(?![\p{L}])/iu;
 
 function detectarPalavrasEstrangeirasPT(frase) {
   const fora = String(frase || '').replace(/["“«][^"”»]*["”»]/g, ' ');
@@ -10206,6 +10214,13 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       // 7.1b Atribuição indevida, costume sem marcador e absolutos: a frase é reescrita (nunca troca de palavra)
       const conteudoRes = await corrigirRegrasDeConteudo(resultText, idioma, modeloRoteiro);
       resultText = conteudoRes.texto;
+
+      // 7.1c Mesma explicação contada duas vezes: a 2ª ocorrência (frase igual ou 85%+ parecida, sem aspas) é removida e listada
+      if (!isCatalogo) {
+        const repFrases = RegrasModule.removerFrasesRepetidas(resultText);
+        resultText = repFrases.texto;
+        repFrases.removidas.forEach(f => globalThis.__frasesRemovidas.push({ regra: 'frase repetida', trecho: f.slice(0, 90) }));
+      }
 
       // 7.2 Marcadores de contexto ("na época", "historiadores observam"...) não podem se repetir em sequência
       const marcRes = await variarMarcadoresDeContexto(resultText, idioma, modeloRoteiro);
