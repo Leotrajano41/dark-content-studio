@@ -70,4 +70,30 @@ const rem = Catalogo.remediarItem('Deus disse: "Porquanto não me crestes a mim,
 assert(/metereis esta congregação na terra que lhes tenho dado/.test(rem.texto) && /Ele entrou/.test(rem.texto), 'Catálogo: remediação completa a citação em vez de apagar a frase inteira');
 assert(/NÃO do contexto|nunca do contexto/i.test(require('fs').readFileSync(require('path').join(__dirname, '..', 'js', 'catalogo.js'), 'utf-8')), 'Prompts do Catálogo mandam citar só os versículos citados, nunca o contexto');
 
+
+console.log('\n📋 45. Jó e "Jo" no mapa de livros');
+const arcJson = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'data', 'bible', 'pt_arc.json'), 'utf8').replace(/^\uFEFF/, ''));
+(async () => {
+  const ruins = [];
+  for (const b of arcJson) {
+    const r = await Catalogo.carregarVersiculos(`${b.name} 1:1`, 'pt', { traducao: 'arc' });
+    if ((r.versiculos[0] || {}).livro !== b.name) ruins.push(b.name);
+  }
+  assert(ruins.length === 0, `Os 66 nomes oficiais carregam o próprio livro (falhas: ${ruins.join(', ') || 'nenhuma'})`);
+  const livroDe = async (ref) => ((await Catalogo.carregarVersiculos(ref, 'pt', { traducao: 'arc' })).versiculos[0] || {}).livro;
+  assert(await livroDe('Jó 1:1') === 'Jó', '"Jó 1:1" carrega Jó');
+  assert(await livroDe('Job 1:1') === 'Jó', '"Job 1:1" carrega Jó');
+  assert(await livroDe('Jo 3:16') === 'João', '"Jo 3:16" carrega João');
+  assert(await livroDe('João 3:16') === 'João', '"João 3:16" carrega João');
+  assert(await livroDe('Jn 1:1') === 'Jonas' && await livroDe('Jl 2:28') === 'Joel' && await livroDe('Js 6:1') === 'Josué', 'Jn/Jl/Js continuam Jonas/Joel/Josué');
+  assert(Validar.findBook('Jó').id === 'job' && Validar.findBook('Job').id === 'job' && Validar.findBook('Jo').id === 'jo' && Validar.findBook('João').id === 'jo', 'Validador bíblico: Jó/Job = Jó e Jo/João = João');
+  const jo316 = Validar.validarRoteiroBiblico('Jesus ensinou. "Porque Deus amou o mundo de tal maneira que deu o seu Filho unigênito" (Jo 3:16)', 'Português (Brasil)', 'arc');
+  assert(!jo316.alteracoes.some(a => /Jó/.test(JSON.stringify(a))) && jo316.textoCorrigido.includes('Porque Deus amou o mundo'), 'Validador: "(Jo 3:16)" não é tratado como Jó 3:16');
+  assert(Catalogo.referenciaEmIngles('Jó 1:1') === 'Job 1:1' && Catalogo.referenciaEmIngles('Jo 3:16') === 'John 3:16', 'Pacote em inglês: Jó → Job e Jo → John');
+  const parsed = Catalogo.parseIdeia('Tema\n1. Jó - Jó 1:12\n2. Uzias - 2 Crônicas 26:19\n3. Corá - Números 16:31\n4. Uzá - 2 Samuel 6:6\n5. Nadabe - Levítico 10:1\n6. Ananias - Atos 5:5');
+  assert(parsed.itens[0].referenciaStr === 'Jó 1:12', 'parseIdeia aceita Jó como livro');
+  tail();
+})();
+function tail() {
 console.log(`\n${process.exitCode ? '❌ HÁ FALHAS' : '🎉'} ${total} verificações.\n`);
+}

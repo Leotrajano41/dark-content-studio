@@ -149,6 +149,10 @@ function normalizeStr(str) {
 }
 
 function findBook(bookName) {
+  // O acento decide: 'Jó'/'Job' = Jó, 'Jo' = João (normalizeStr tira o acento e juntaria os dois)
+  const bruto = String(bookName || '').trim().toLowerCase();
+  if (bruto === 'jó' || bruto === 'job') return BOOK_CANONICAL.find(b => b.id === 'job');
+  if (bruto === 'jo') return BOOK_CANONICAL.find(b => b.id === 'jo');
   const norm = normalizeStr(bookName);
   // Prioridade 1: correspondência exata de nome sem acento nos 66 livros canônicos
   for (const b of BOOK_CANONICAL) {

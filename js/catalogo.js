@@ -71,7 +71,7 @@
     'ne': 'ne', 'neemias': 'ne', 'nehemiah': 'ne',
     'et': 'et', 'ester': 'et', 'esther': 'et',
     // Poéticos
-    'job': 'job', 'jó': 'job', 'jo': 'job',
+    'job': 'jó', 'jó': 'jó', 'jb': 'jó', // nos JSONs a abreviação de Jó é 'jó' ('jo' é João)
     'sl': 'sl', 'salmo': 'sl', 'salmos': 'sl', 'psalms': 'sl', 'psalm': 'sl',
     'pv': 'pv', 'proverbio': 'pv', 'provérbio': 'pv', 'proverbios': 'pv', 'provérbios': 'pv', 'proverbs': 'pv',
     'ec': 'ec', 'eclesiastes': 'ec', 'ecclesiastes': 'ec',
@@ -99,7 +99,7 @@
     'mt': 'mt', 'mateus': 'mt', 'matthew': 'mt',
     'mc': 'mc', 'marcos': 'mc', 'mark': 'mc',
     'lc': 'lc', 'lucas': 'lc', 'luke': 'lc',
-    'joao': 'jo', 'joão': 'jo', 'john': 'jo',
+    'joao': 'jo', 'joão': 'jo', 'john': 'jo', 'jo': 'jo',
     'at': 'atos', 'atos': 'atos', 'acts': 'atos',
     // Epístolas Paulinas
     'rm': 'rm', 'romanos': 'rm', 'romans': 'rm',
@@ -132,7 +132,7 @@
     gn: 'Genesis', ex: 'Exodus', lv: 'Leviticus', nm: 'Numbers', dt: 'Deuteronomy',
     js: 'Joshua', jz: 'Judges', rt: 'Ruth', '1sm': '1 Samuel', '2sm': '2 Samuel',
     '1rs': '1 Kings', '2rs': '2 Kings', '1cr': '1 Chronicles', '2cr': '2 Chronicles',
-    ed: 'Ezra', ne: 'Nehemiah', et: 'Esther', job: 'Job', sl: 'Psalms', pv: 'Proverbs',
+    ed: 'Ezra', ne: 'Nehemiah', et: 'Esther', 'jó': 'Job', sl: 'Psalms', pv: 'Proverbs',
     ec: 'Ecclesiastes', ct: 'Song of Solomon', is: 'Isaiah', jr: 'Jeremiah', lm: 'Lamentations',
     ez: 'Ezekiel', dn: 'Daniel', os: 'Hosea', jl: 'Joel', am: 'Amos', ob: 'Obadiah',
     jn: 'Jonah', mq: 'Micah', na: 'Nahum', hc: 'Habakkuk', sf: 'Zephaniah', ag: 'Haggai',
@@ -711,6 +711,10 @@
    * Converte nome do livro em chave canônica
    */
   function resolverLivroCanonica(nomeLivro) {
+    // O acento decide: 'Jó'/'Job' = Jó, 'Jo' = João (normalizarTexto tira o acento e juntaria os dois)
+    const bruto = String(nomeLivro || '').trim().toLowerCase();
+    if (bruto === 'jó' || bruto === 'job') return 'jó';
+    if (bruto === 'jo') return 'jo';
     const norm = normalizarTexto(nomeLivro);
     if (LIVROS_MAP[norm]) return LIVROS_MAP[norm];
 
