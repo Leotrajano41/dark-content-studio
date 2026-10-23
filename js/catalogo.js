@@ -375,6 +375,8 @@
     { rotulo: 'desvendar', re: reProibida('desvend(?:ar|ando|ado|ada|ados|adas|a|am|e|em|o|ou|aram|amos)') },
     { rotulo: 'profundidade', re: reProibida('profundidades?') },
     { rotulo: 'precisão cirúrgica', re: reProibida('precis[ãa]o\\s+cir[úu]rgica') },
+    { rotulo: 'Sermão da Montanha', re: reProibida('Serm[aã]o\\s+(?:da|na|no)\\s+(?:Montanha|Monte\\s+das)|Discurso\\s+da\\s+Montanha') },
+    { rotulo: 'exclusivamente', re: reProibida('exclusivamente') },
     { rotulo: 'mergulhar fundo', re: reProibida('mergulh(?:ar|e|a|am|ando|ou|aram|amos|o)\\s+fundo') }
   ];
 
@@ -1009,6 +1011,8 @@ ATENÇÃO: Os exemplos acima servem EXCLUSIVAMENTE para você aprender o TOM de 
    - PROIBIDO escrever "as Escrituras registram" ou "o texto diz" antes de algo que não seja citação literal do versículo ou fato que o texto declara.
    - PROIBIDO afirmação histórica absoluta sem base no texto ("qualquer judeu podia ser...", "o gesto tinha significado uniforme").
    - A citação entre aspas deve corresponder à cena (quem fala ou age, onde, quando) e vir com a referência. Na dúvida sobre a redação exata, NÃO use aspas.
+   - Nome fixo: escreva sempre "Sermão do Monte" (nunca "Sermão da Montanha").
+   - Nenhuma palavra em inglês ou espanhol na narração.
    - Cada explicação ou episódio aparece uma única vez no roteiro inteiro.
    - Se uma palavra proibida aparecer, reescreva a frase inteira de outro modo (nunca troque só a palavra por sinônimo).`;
   }
@@ -2619,6 +2623,7 @@ Responda APENAS com o texto em um único parágrafo contínuo, sem tópicos e se
 
   return {
     LIMITES,
+    limitesTotal,
     LIVROS_MAP,
     LIVROS_EN,
     NOMES_PT_EN,

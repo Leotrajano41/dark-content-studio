@@ -17,7 +17,7 @@ function readJsonClean(filePath) {
 }
 
 // Cache em memória para Serverless singleton
-let bibles = { pt: null, en: null, es: null };
+let bibles = { pt: null, ptJfa: null, en: null, es: null };
 
 function loadBibles() {
   const possibleDirs = [
@@ -39,9 +39,14 @@ function loadBibles() {
     return bibles;
   }
 
+  // Português: o padrão do projeto é a Almeida Revista e Corrigida (ARC). A JFA só é usada se pedida explicitamente.
   if (!bibles.pt) {
-    const ptPath = path.join(actualDir, 'pt_jfa.json');
+    const ptPath = path.join(actualDir, 'pt_arc.json');
     if (fs.existsSync(ptPath)) bibles.pt = readJsonClean(ptPath);
+  }
+  if (!bibles.ptJfa) {
+    const jfaPath = path.join(actualDir, 'pt_jfa.json');
+    if (fs.existsSync(jfaPath)) bibles.ptJfa = readJsonClean(jfaPath);
   }
   if (!bibles.en) {
     const enPath = path.join(actualDir, 'en_kjv.json');
@@ -207,12 +212,8 @@ function getVerseText(bibleData, bookCanonical, chapterNum, verseStart, verseEnd
 function alinharTrechoCorrespondente(versiculoReal, textoCitado, langKey = 'pt') {
   if (!versiculoReal || !textoCitado) return versiculoReal;
 
+  // Redação literal da tradução carregada (ARC): NÃO força "SENHOR" em maiúsculas nem altera o texto do versículo
   let vFormatado = versiculoReal;
-  if (langKey === 'pt') {
-    vFormatado = vFormatado.replace(/\b(?:ao|do|o|no|pelo|para\s+o)?\s*senhor\b/gi, (match) => {
-      return match.replace(/senhor/i, 'SENHOR');
-    });
-  }
 
   const limparPalavras = (str) => {
     return normalizeStr(str).replace(/[^\w\s]/g, ' ').split(/\s+/).filter(p => p.length > 0);
@@ -229,10 +230,6 @@ function alinharTrechoCorrespondente(versiculoReal, textoCitado, langKey = 'pt')
   const strCitadoJoin = palavrasCitado.join(' ');
   const strRealJoin = palavrasReal.join(' ');
   if (strRealJoin.includes(strCitadoJoin)) {
-    // Se estiver em português, garante apenas que SENHOR fique em maiúsculas se houver
-    if (langKey === 'pt' && /\bsenhor\b/i.test(textoCitado)) {
-      return textoCitado.replace(/\b(?:ao|do|o|no|pelo|para\s+o)?\s*senhor\b/gi, (m) => m.replace(/senhor/i, 'SENHOR'));
-    }
     return textoCitado;
   }
 
@@ -335,7 +332,7 @@ function alinharTrechoCorrespondente(versiculoReal, textoCitado, langKey = 'pt')
  * @param {string} idioma
  * @returns {{ textoCorrigido: string, alteracoes: Array, totalReferencias: number }}
  */
-function validarRoteiroBiblico(texto, idioma = 'pt') {
+function validarRoteiroBiblico(texto, idioma = 'pt', traducao = 'arc') {
   if (!texto || typeof texto !== 'string') {
     return { textoCorrigido: texto || '', alteracoes: [], totalReferencias: 0 };
   }
@@ -344,7 +341,8 @@ function validarRoteiroBiblico(texto, idioma = 'pt') {
   const langKey = (idioma.toLowerCase().includes('en') || idioma.toLowerCase().includes('ing')) ? 'en'
                 : (idioma.toLowerCase().includes('es') || idioma.toLowerCase().includes('esp')) ? 'es'
                 : 'pt';
-  const currentBible = biblesLoaded[langKey] || biblesLoaded.pt;
+  const usaJfa = langKey === 'pt' && /^(?:aa|jfa)$/i.test(String(traducao || ''));
+  const currentBible = usaJfa ? (biblesLoaded.ptJfa || biblesLoaded.pt) : (biblesLoaded[langKey] || biblesLoaded.pt);
 
   // Se a Bíblia não pôde ser carregada no ambiente, retorna texto intacto com aviso
   if (!currentBible) {
@@ -616,13 +614,13 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { texto, idioma = 'pt' } = req.body || {};
+    const { texto, idioma = 'pt', traducao = 'arc' } = req.body || {};
 
     if (!texto || typeof texto !== 'string') {
       return res.status(400).json({ error: 'Parâmetro obrigatório ausente: "texto".' });
     }
 
-    const resultado = validarRoteiroBiblico(texto, idioma);
+    const resultado = validarRoteiroBiblico(texto, idioma, traducao);
     return res.status(200).json({
       sucesso: true,
       ...resultado

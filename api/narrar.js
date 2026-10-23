@@ -169,7 +169,8 @@ function limparTextoParaNarracao(texto) {
 
   // 4. Remove rótulos internos estruturais mantendo o texto que vem depois:
   // "Afirmação:", "Desenvolvimento:", "Evidências/Referências:", "Análise/Impacto:", etc.
-  limpo = limpo.replace(/(?:Afirmação|Desenvolvimento|Evidências\/Referências|Evidências|Referências|Análise\/Impacto|Análise|Impacto|Ganchos Internos|CTAs Orgânicas|Chamada para Ação|CTA)\s*:\s*/gi, '');
+  // Só no início da linha: no meio da frase "afirmação:" é palavra normal
+  limpo = limpo.replace(/^[^\S\r\n]*(?:\*{1,2})?(?:Afirmação|Desenvolvimento|Evidências\/Referências|Evidências|Referências|Análise\/Impacto|Análise|Impacto|Ganchos Internos|CTAs Orgânicas|Chamada para Ação|CTA)(?:\*{1,2})?[^\S\r\n]*:[^\S\r\n]*/gmi, '');
 
   // 5. Remove marcadores de negrito markdown (**texto** vira texto) e itálico (*texto* vira texto)
   limpo = limpo.replace(/\*\*([^*]+)\*\*/g, '$1');

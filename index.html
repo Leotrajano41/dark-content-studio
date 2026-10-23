@@ -3153,7 +3153,7 @@ const OpenRouterAPI = {
     return { apiKey: cleanKey, modelIdeas: cleanModelIdeas, modelRoteiro: cleanModelRoteiro };
   },
 
-  async generateContent(promptText, specificModel = null, customSystemPrompt = null) {
+  async generateContent(promptText, specificModel = null, customSystemPrompt = null, opcoes = {}) {
     const apiKey = this.getApiKey();
     const model = specificModel || this.getModelIdeas();
 
@@ -3175,7 +3175,7 @@ const OpenRouterAPI = {
       else if (activeModel.startsWith('openai/')) activeModel = activeModel.replace('openai/', '');
     }
 
-    const defaultSystemPrompt = 'You are an expert biblical documentary scriptwriter and YouTube channel strategist for our biblical documentary channel.\n\nCRITICAL MANDATORY RULES FOR ALL GENERATIONS:\n1. HISTORICAL & BIBLICAL TRUTH: Always treat the biblical narrative as literal truth and real history. STRICTLY FORBIDDEN: never use skepticism, never use terms or concepts like "myth", "legend", "debate", "were they real", "scholars suggest", "traditional theology may not reveal", or any translations/equivalents in Portuguese, Spanish, or any other language (e.g., "mito", "lenda", "debate", "se eram reais", "estudiosos sugerem", "a teologia tradicional oculta").\n2. STRICTLY CANONICAL TEXT: Strictly restrict all content to the 66 canonical books of the Bible. STRICTLY FORBIDDEN: never include extra-biblical theories, secular ancient civilizational hypotheses, human evolutionary ancestry theories, or apocryphal/pseudepigraphal books (such as the Book of Enoch / Livro de Enoque).\n3. EXACT SCRIPTURAL TRANSLATIONS: Direct Bible quotations must always be 100% literal from the authorized canonical translation for the target language:\n   - English: King James Version (KJV)\n   - Portuguese: João Ferreira de Almeida (JFA)\n   - Spanish: Reina-Valera 1909 (RVR1909)\n4. STRICT LANGUAGE COMPLIANCE: Always deliver 100% of the output in the requested language.';
+    const defaultSystemPrompt = 'You are an expert biblical documentary scriptwriter and YouTube channel strategist for our biblical documentary channel.\n\nCRITICAL MANDATORY RULES FOR ALL GENERATIONS:\n1. HISTORICAL & BIBLICAL TRUTH: Always treat the biblical narrative as literal truth and real history. STRICTLY FORBIDDEN: never use skepticism, never use terms or concepts like "myth", "legend", "debate", "were they real", "traditional theology may not reveal", or any translations/equivalents in Portuguese, Spanish, or any other language (e.g., "mito", "lenda", "debate", "se eram reais", "estudiosos sugerem", "a teologia tradicional oculta").\n2. STRICTLY CANONICAL TEXT: Strictly restrict all content to the 66 canonical books of the Bible. STRICTLY FORBIDDEN: never include extra-biblical theories, secular ancient civilizational hypotheses, human evolutionary ancestry theories, or apocryphal/pseudepigraphal books (such as the Book of Enoch / Livro de Enoque).\n3. EXACT SCRIPTURAL TRANSLATIONS: Direct Bible quotations must always be 100% literal from the authorized canonical translation for the target language:\n   - English: King James Version (KJV)\n   - Portuguese: Almeida Revista e Corrigida (ARC)\n   - Spanish: Reina-Valera 1909 (RVR1909)\n4. STRICT LANGUAGE COMPLIANCE: Always deliver 100% of the output in the requested language.';
 
     const headers = {
       'Authorization': `Bearer ${apiKey}`,
@@ -3186,59 +3186,93 @@ const OpenRouterAPI = {
       headers['X-Title'] = 'Dark Studio Pro';
     }
 
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify({
-          model: activeModel,
-          messages: [
-            {
-              role: 'system',
-              content: customSystemPrompt || defaultSystemPrompt
-            },
-            {
-              role: 'user',
-              content: promptText
+    const temperatura = (opcoes && typeof opcoes.temperature === 'number') ? opcoes.temperature : 0.7;
+    const maxTentativas = 3;
+    const esperas = [2000, 5000, 10000];
+    let ultimoErro = null;
+
+    for (let tentativa = 0; tentativa < maxTentativas; tentativa++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 240000);
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: headers,
+          signal: controller.signal,
+          body: JSON.stringify({
+            model: activeModel,
+            messages: [
+              { role: 'system', content: customSystemPrompt || defaultSystemPrompt },
+              { role: 'user', content: promptText }
+            ],
+            temperature: temperatura,
+            max_tokens: 8192
+          })
+        });
+        clearTimeout(timer);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          let msg = `Erro HTTP ${response.status}`;
+          let tentarDeNovo = false;
+
+          if (response.status === 401) {
+            msg = 'API Key inválida ou não autorizada na OpenRouter. Verifique sua chave nas configurações.';
+          } else if (response.status === 402) {
+            msg = 'Créditos insuficientes na sua conta OpenRouter.';
+          } else if (response.status === 404) {
+            msg = `Modelo de IA "${model}" não foi encontrado ou não está disponível na sua conta.`;
+          } else if (response.status === 429) {
+            msg = 'Limite de requisições (Rate Limit) atingido na OpenRouter. Aguarde alguns instantes.';
+            tentarDeNovo = true;
+          } else if (response.status >= 500) {
+            msg = `Erro temporário do servidor de IA (HTTP ${response.status}).`;
+            tentarDeNovo = true;
+          } else if (errorData.error && errorData.error.message) {
+            msg = `Erro OpenRouter: ${errorData.error.message}`;
+          }
+
+          const erroHttp = new Error(msg);
+          if (!tentarDeNovo) throw erroHttp;
+          ultimoErro = erroHttp;
+        } else {
+          const data = await response.json();
+          if (data.choices && data.choices.length > 0 && data.choices[0].message) {
+            if (data.choices[0].finish_reason === 'length') {
+              console.warn('OpenRouter: resposta cortada por limite de tokens (finish_reason=length).');
+              globalThis.__avisosPosProcessamento = globalThis.__avisosPosProcessamento || [];
+              globalThis.__avisosPosProcessamento.push({ tipo: 'resposta_truncada', trecho: String(promptText).slice(0, 60) });
             }
-          ],
-          temperature: 0.7,
-          max_tokens: 8192
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        let msg = `Erro HTTP ${response.status}`;
-
-        if (response.status === 401) {
-          msg = 'API Key inválida ou não autorizada na OpenRouter. Verifique sua chave nas configurações.';
-        } else if (response.status === 402) {
-          msg = 'Créditos insuficientes na sua conta OpenRouter.';
-        } else if (response.status === 404) {
-          msg = `Modelo de IA "${model}" não foi encontrado ou não está disponível na sua conta.`;
-        } else if (response.status === 429) {
-          msg = 'Limite de requisições (Rate Limit) atingido na OpenRouter. Aguarde alguns instantes.';
-        } else if (errorData.error && errorData.error.message) {
-          msg = `Erro OpenRouter: ${errorData.error.message}`;
+            return data.choices[0].message.content;
+          }
+          ultimoErro = new Error('Resposta vazia recebida da IA na OpenRouter.');
         }
-
-        throw new Error(msg);
+      } catch (err) {
+        clearTimeout(timer);
+        const abortou = err && err.name === 'AbortError';
+        const falhaDeRede = err instanceof TypeError || abortou;
+        if (!falhaDeRede) {
+          console.error('OpenRouter API Error:', err);
+          throw err;
+        }
+        ultimoErro = abortou ? new Error('A IA demorou demais para responder (timeout).') : err;
       }
 
-      const data = await response.json();
-      if (data.choices && data.choices.length > 0 && data.choices[0].message) {
-        return data.choices[0].message.content;
-      } else {
-        throw new Error('Resposta vazia recebida da IA na OpenRouter.');
+      if (tentativa < maxTentativas - 1) {
+        console.warn(`OpenRouter: tentativa ${tentativa + 1} falhou (${ultimoErro && ultimoErro.message}). Tentando de novo...`);
+        await new Promise(r => setTimeout(r, esperas[tentativa]));
       }
-    } catch (err) {
-      console.error('OpenRouter API Error:', err);
-      throw err;
     }
+    console.error('OpenRouter API Error:', ultimoErro);
+    throw ultimoErro || new Error('Falha ao chamar a IA.');
   }
 };
 window.OpenRouterAPI = OpenRouterAPI;
+
+/**
+ * Contenção factual (em inglês, para os prompts de ideias/esboço/SEO): afirmação sem base no texto não pode virar fato
+ */
+const REGRA_FATOS_EN = `FACTUAL RESTRAINT (MANDATORY): Never present as fact a custom of the time, legal status, historical judgment or superlative that the biblical passage does not state (e.g. "it was illegal", "the most humiliating blow of the Empire", "any Jew could be..."). If it is an interpretation or a custom, attribute it with a VARIED context marker in Portuguese ("na época...", "naquela cultura...", "muitos estudiosos explicam...", "segundo historiadores...") or leave it out. Add no actions, words or details the biblical text does not record. Fixed name: always "Sermão do Monte". No English or Spanish words in Portuguese text.`;
 
 /**
  * Regra de atribuição, generalizações, citação x cena e repetição (compartilhada pelos prompts de roteiro)
@@ -3250,6 +3284,10 @@ const REGRA_ATRIBUICAO_PT = `REGRA DE ATRIBUIÇÃO (OBRIGATÓRIA, PRIORIDADE MÁ
 - Use o marcador SOMENTE quando houver de fato interpretação ou costume. Não use marcador de contexto em fato que o texto bíblico declara literalmente.
 - PROIBIDO GENERALIZAR: não faça afirmações históricas absolutas sem base no texto bíblico (ex.: 'qualquer judeu podia ser...', 'todos faziam...', 'o gesto tinha significado uniforme'). Se for costume, use marcador de contexto e linguagem não absoluta ('em muitos casos', 'costumava').
 - CITAÇÃO x CENA: toda citação bíblica deve corresponder à cena narrada (quem fala ou age, onde e quando) e vir com a referência. Na dúvida sobre a redação exata, NÃO use aspas: parafraseie e cite a referência.
+- PROIBIDO palavras absolutas em afirmação histórica sem base no texto bíblico: 'exclusivamente', 'qualquer', 'todos os (judeus/romanos...)', 'ninguém', 'sempre foi costume', 'nunca'. Se for costume, use marcador de contexto e linguagem não absoluta.
+- PROIBIDO inventar cenas, ações, falas ou detalhes que o texto bíblico não registra, inclusive em contexto histórico (ex.: o que um soldado romano 'teria dito' ou 'teria sentido').
+- NOMES FIXOS: escreva sempre 'Sermão do Monte' (nunca 'Sermão da Montanha' nem 'Discurso da Montanha'). Nomes próprios seguem a Almeida Revista e Corrigida (ARC).
+- NENHUMA palavra em inglês ou espanhol na narração: o texto é 100% em português do Brasil.
 - SEM REPETIÇÃO: cada explicação ou episódio aparece uma única vez no roteiro. A conclusão tem um ÚNICO parágrafo de fechamento antes da chamada para inscrição (CTA).
 - PALAVRAS PROIBIDAS EM PORTUGUÊS: 'desvendar', 'desvendando', 'profundidade', 'precisão cirúrgica', 'mergulhar fundo'. Se uma frase usar uma delas, REESCREVA a frase inteira de outro modo (nunca apenas troque a palavra por sinônimo).`;
 
@@ -3281,7 +3319,7 @@ EXEMPLOS DO TOM CORRETO:
 EXEMPLOS PROIBIDOS (nunca escrever assim):
 - 'Muitos ainda consideram a história de Noé uma fábula.'
 - 'Registros cuneiformes confirmam que a torre era visível a dezenas de quilômetros.' (PROIBIDO: evidência inventada / dados fora da Bíblia)
-- 'Arqueólogos e historiadores descobriram inscrições que comprovam...' (PROIBIDO: menção a arqueologia / historiadores)
+- 'Arqueólogos e historiadores descobriram inscrições que comprovam...' (PROIBIDO: evidência arqueológica inventada. Marcadores de contexto como 'segundo historiadores' continuam PERMITIDOS para costume ou interpretação)
 - 'Após o dilúvio, as gerações se espalharam pela terra...' (PROIBIDO no Hook: abertura cronológica lenta em vez de dramática)
 - 'É crucial abordar essas evidências com um olhar crítico.'
 - 'Segundo a tradição, acredita-se que...'
@@ -3315,7 +3353,7 @@ ABSOLUTE CANONICAL & STORYTELLING RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
    - Narrate each biblical battle or historical episode in only ONE section.
    - Formulas reinforcing biblical reality (e.g. "not legends or myths", "historical fact", "the Scripture treats this as") must appear at most TWICE in the ENTIRE script.
 7. FACT VS INTERPRETATION & STRICT CANONICAL TRUTH (ITEM 4 & ITEM 2):
-   - State as sacred historical FACT ONLY what the literal canonical text explicitly declares, always backed by verbatim scripture quotes (KJV for English, João Ferreira de Almeida for Portuguese, Reina-Valera 1909 for Spanish).
+   - State as sacred historical FACT ONLY what the literal canonical text explicitly declares, always backed by verbatim scripture quotes (KJV for English, Almeida Revista e Corrigida (ARC) for Portuguese, Reina-Valera 1909 for Spanish).
    - Context markers for interpretations or customs ("many scholars explain...", "in that era...", "historians observe...") have NO fixed cap, but must be VARIED (never the same marker twice in a row) and used ONLY where a genuine interpretation or custom is stated (see REGRA DE ATRIBUIÇÃO).
    - STRICTLY FORBIDDEN to call the biblical account a "metaphor", "symbol", "symbolic", "cautionary tale", or "narrative device".
    - STRICTLY FORBIDDEN: Any language of genetic, biological, or racial purity/corruption ("genetic", "bloodline", "hybrid", "pure humans", "gene pool").
@@ -3327,7 +3365,7 @@ ABSOLUTE CANONICAL & STORYTELLING RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
    - STRICTLY FORBIDDEN BACKSTAGE PHRASES: "in the next section", "as we transition", "we will explore", "as we continue our exploration", "moving ahead", "as the narrative unfolds".
 9. LITERAL SCRIPTURE FIDELITY & LANGUAGE COMPLIANCE:
    - Scripture quotes must be literal and verbatim from the target language's authorized Bible version:
-     * Portuguese: João Ferreira de Almeida (Almeida). Quando o roteiro for em português: Escreva 100% em português do Brasil. Use SEMPRE os nomes próprios e geográficos da Bíblia Almeida em português (ex: use sempre "Ogue", nunca "Og"; "Nabucodonosor", não "Nebuchadnezzar"; "Ezequias", não "Hezekiah"). Citações bíblicas pela Almeida. Nunca use palavras em inglês no roteiro.
+     * Portuguese: Almeida Revista e Corrigida (ARC). Quando o roteiro for em português: Escreva 100% em português do Brasil. Use SEMPRE os nomes próprios e geográficos da Bíblia Almeida Revista e Corrigida (ARC) em português (ex: use sempre "Ogue", nunca "Og"; "Nabucodonosor", não "Nebuchadnezzar"; "Ezequias", não "Hezekiah"). Citações bíblicas pela Almeida. Nunca use palavras em inglês no roteiro.
      * English: King James Version (KJV). (The KJV rule applies ONLY when the script language is English).
      * Spanish: Reina-Valera 1909 (RVR1909).
    - Deliver 100% of the script in the selected content language.`;
@@ -3397,6 +3435,12 @@ const FORBIDDEN_TERMS = [
   { term: 'mergulhar fundo', pattern: /\bmergulhar\s+fundo\b/i },
   { term: 'desvendar', pattern: /\bdesvend(?:ar|ando|ado|ada|ados|adas|a|am|e|em|o|ou|aram|amos)\b/i },
   { term: 'profundidade', pattern: /\bprofundidades?\b/i },
+  { term: 'Sermão da Montanha', pattern: /Serm[aã]o\s+(?:da|na|no)\s+(?:Montanha|Monte\s+das)|Discurso\s+da\s+Montanha/i },
+  { term: 'exclusivamente', pattern: /(?<![\p{L}])exclusivamente(?![\p{L}])/iu },
+  { term: 'qualquer judeu podia', pattern: /(?<![\p{L}])qualquer\s+(?:judeu|romano|homem|pessoa|cidad[aã]o|israelita|fariseu|soldado)\s+(?:podia|poderia|pode|era|tinha)(?![\p{L}])/iu },
+  { term: 'todos os judeus faziam', pattern: /(?<![\p{L}])todos\s+os\s+(?:judeus|romanos|israelitas|fariseus|soldados)\s+(?:faziam|podiam|eram|tinham|costumavam)(?![\p{L}])/iu },
+  { term: 'significado uniforme', pattern: /significado\s+uniforme/i },
+  { term: 'sempre foi costume', pattern: /(?<![\p{L}])sempre\s+(?:foi|era)\s+(?:costume|tradi[cç][aã]o|pr[aá]tica)(?![\p{L}])/iu },
   { term: 'precisão cirúrgica', pattern: /\bprecis[ãa]o\s+cir[úu]rgica\b/i },
   { term: 'enigmatic', pattern: /\benigmatic\b/i },
   { term: 'enigmático', pattern: /\benigm[aá]tico\b/i },
@@ -3474,7 +3518,6 @@ const FORBIDDEN_TERMS = [
   { term: 'legend', pattern: /\blegends?\b/i },
   { term: 'lenda', pattern: /\blendas?\b/i },
   { term: 'were they real', pattern: /\bwere\s+they\s+real\b/i },
-  { term: 'scholars suggest', pattern: /\bscholars\s+suggest\b/i },
   { term: 'traditional theology may not reveal', pattern: /\btraditional\s+theology\s+may\s+not\s+reveal\b/i },
   { term: 'book of enoch', pattern: /\bbook\s+of\s+enoch\b/i },
   { term: 'livro de enoque', pattern: /\blivro\s+de\s+enoque\b/i },
@@ -3558,6 +3601,27 @@ function removerParagrafosDuplicadosPorSimilaridade(texto, threshold = 0.6, esti
       if (dice >= threshold) {
         console.log(`[Remover Duplicado] Parágrafo ${i + 1} possui ${(dice * 100).toFixed(1)}% de similaridade com parágrafo anterior. Removendo duplicata.`);
         duplicado = true;
+      }
+    }
+
+    // Repetição à distância (explicação/episódio contado de novo mais adiante): limiar mais alto para não apagar
+    // parágrafos legítimos que só compartilham nomes próprios
+    if (!duplicado && palavrasAtual.length >= 12) {
+      const setAtual2 = new Set(palavrasAtual);
+      for (let k = 0; k < resultado.length - 1; k++) {
+        const palavrasK = extrairPalavrasSignificativas(resultado[k]);
+        if (palavrasK.length < 12) continue;
+        const setK = new Set(palavrasK);
+        let comunsK = 0;
+        for (const w of setAtual2) if (setK.has(w)) comunsK++;
+        const diceK = (2 * comunsK) / (setAtual2.size + setK.size);
+        if (diceK >= Math.max(threshold + 0.15, 0.75)) {
+          console.log(`[Remover Duplicado] Parágrafo ${i + 1} repete (${(diceK * 100).toFixed(1)}%) o parágrafo ${k + 1}. Removendo.`);
+          globalThis.__frasesRemovidas = globalThis.__frasesRemovidas || [];
+          globalThis.__frasesRemovidas.push({ regra: 'parágrafo repetido', trecho: atual.slice(0, 90) });
+          duplicado = true;
+          break;
+        }
       }
     }
 
@@ -3900,6 +3964,7 @@ You MUST create a completely DIFFERENT idea from all existing ones above:
 - Focus on a completely DIFFERENT miracle, event, character, or historical angle of the biblical account.
 - Do NOT repeat the same miracle, title phrasing, or hook premise of ANY existing idea above.
 - Strict canonical biblical fidelity. Zero mistakes in assigning miracles, prophets, kings, places, or events.
+- Never state as fact anything the passage does not state (legal status, customs, superlatives); attribute with a context marker in Portuguese ("segundo estudiosos...") or omit.
 
 MANDATORY OUTPUT FORMAT (EXACTLY 4 LINES in Portuguese Brasil, maximum 80 characters for title line):
 [Título curto com no máximo 80 caracteres e no máximo 1 palavra em MAIÚSCULAS]
@@ -4015,6 +4080,7 @@ CRITICAL FIDELITY AND PROOF RULES (STRICTLY ENFORCED):
   Exemplo de formato: "SUBSTITUIR: 8 | Josué 12:24 diz 'trinta e um reis' | título diz 60 reis"
 - SEM CITAÇÃO DE VERSÍCULO QUE CONTRADIZ, A AFIRMAÇÃO É CONSIDERADA BIBLICAMENTE CORRETA E NÃO PODE SER MARCADA COMO ERRO.
 - Em caso de dúvida, ou se o texto bíblico apoia a afirmação, ela é considerada CORRETA.
+- O texto de "Motivo" também não pode afirmar como fato nada que a passagem não diga (legalidade, costumes, superlativos históricos como "o mais humilhante do Império"); use marcador de contexto ("segundo estudiosos...") ou omita.
 - RESSALVAS DE ESTILO (título longo, foco dividido, gancho fraco, tom dramático, metáforas) NUNCA SÃO ERROS BÍBLICOS! Ficam APENAS na seção "⚠️ QUAIS EVITAR" e JAMAIS entram em ERROS_BIBLICOS.
 - Se houver duas ideias praticamente iguais ou com o mesmo milagre/ângulo, liste a mais fraca em "IDEIAS_REPETIDAS:" para substituição automática!
 
@@ -4037,7 +4103,9 @@ IDEIAS_REPETIDAS: [Números de ideias duplicadas que devem ser trocadas, ex: "ID
     try {
       const avaliacao = await OpenRouterAPI.generateContent(
         promptAvaliador,
-        modeloAvaliacao
+        modeloAvaliacao,
+        null,
+        { temperature: 0.2 }
       );
 
       if (!avaliacao || !avaliacao.trim()) {
@@ -4170,6 +4238,7 @@ You MUST create a completely DIFFERENT idea from all existing ones above:
 - Focus on a completely DIFFERENT miracle, event, character, or historical angle of the biblical account.
 - Do NOT repeat the same miracle, title phrasing, or hook premise of ANY existing idea above.
 - Strict canonical biblical fidelity. Zero mistakes in assigning miracles, prophets, kings, places, or events.
+- Never state as fact anything the passage does not state (legal status, customs, superlatives); attribute with a context marker in Portuguese ("segundo estudiosos...") or omit.
 
 MANDATORY OUTPUT FORMAT (EXACTLY 4 LINES in Portuguese Brasil, maximum 80 characters for the title line):
 [Título curto com no máximo 80 caracteres e no máximo 1 palavra em MAIÚSCULAS]
@@ -4242,7 +4311,7 @@ async function revisarFatosBiblicosIdeiasComIA(ideiasTexto, tema, modelo, textoA
   const avaliacaoContexto = textoAvaliacaoAnterior || window._ultimaAvaliacaoIdeias || '';
   const escapeRegex = (s) => String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-  const promptRevisor = `Act as an ultra-strict Biblical Fact-Checker and Scholar using the canonical biblical text in Portuguese (João Ferreira de Almeida translation - ARC/ARA).
+  const promptRevisor = `Act as an ultra-strict Biblical Fact-Checker and Scholar using the canonical biblical text in Portuguese (Almeida Revista e Corrigida translation - ARC).
 Fact-check all concrete historical, geographical, numerical, and biographical claims in these 10 biblical video ideas for the theme: "${tema}".
 
 IDEAS TO AUDIT:
@@ -4272,6 +4341,12 @@ CRITICAL AUDIT & PROOF RULES (STRICTLY ENFORCED):
    - Conversions of measurements that ARE in the biblical text remain permitted, always as an approximation (e.g. "9 côvados, cerca de 4 metros").
    - TREAT UNWRITTEN/INVENTED NUMBERS AS CORRECAO: Remove the invented number or rewrite the phrase smoothly without it, so the card displays the correction (e.g. "CORRECAO: 3 | 2 Reis 6:19 não cita distância | guiado 16 quilômetros | guiado até Samaria").
 
+6. UNSUPPORTED CLAIMS PRESENTED AS FACT (EXCEPTION TO RULES 2 AND 3 — NO CONTRADICTING VERSE NEEDED):
+   - If the idea states as fact a legal status, custom of the time, historical judgment or superlative that the declared passage does NOT state (e.g. "era ILEGAL", "o golpe mais humilhante do Império", "qualquer judeu podia..."), issue a CORRECAO that rewrites the phrase with a varied context marker in Portuguese ("na época...", "muitos estudiosos explicam...", "segundo historiadores...") or removes the unsupported claim.
+   - In the proof field cite the idea's own primary passage and say that it does not state the claim, e.g.:
+     CORRECAO: 3 | Marcos 15:15 não afirma que era ilegal | era ILEGAL | segundo historiadores, o procedimento era controverso
+   - Never add facts of your own; when unsure how to attribute, just remove the unsupported claim.
+
 MANDATORY PROTOCOL OUTPUT (Protocol lines at the very end of your response, strictly one per finding or per idea, NO PREAMBLE, NO HEADERS, NO MARKDOWN):
 CORRECAO: [Idea Number] | [Verse Proof] | [Exact Wrong Word/Phrase] | [Exact Correct Word/Phrase]
 SUBSTITUIR: [Idea Number] | [Verse Proof] | [Reason of Major Error]
@@ -4281,7 +4356,9 @@ OK: [Idea Number]`;
   try {
     respostaRaw = await OpenRouterAPI.generateContent(
       promptRevisor,
-      modelo || OpenRouterAPI.getModelRoteiro()
+      modelo || OpenRouterAPI.getModelRoteiro(),
+      null,
+      { temperature: 0.2 }
     );
   } catch (errApi) {
     console.warn('[Revisor de Fatos] Erro na API:', errApi);
@@ -4631,7 +4708,7 @@ async function revisarFatosTitulosSeoComIA(textoSeo, temaComReferencia, roteiroO
 
   const escapeRegex = (s) => String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-  const promptRevisorTitulos = `Act as an ultra-strict Biblical Fact-Checker using the canonical biblical text in Portuguese (João Ferreira de Almeida translation - ARC/ARA).
+  const promptRevisorTitulos = `Act as an ultra-strict Biblical Fact-Checker using the canonical biblical text in Portuguese (Almeida Revista e Corrigida translation - ARC).
 Fact-check the YouTube video titles generated in this SEO package against the chosen biblical theme reference and script:
 
 CHOSEN BIBLICAL THEME & PRIMARY SCRIPTURE REFERENCE:
@@ -4774,7 +4851,7 @@ MANDATORY RULES:
 4. STRICT BIBLICAL FIDELITY: Never contradict canonical Scripture. When Scripture is silent on a specific detail or mechanism, state that silence in at most ONE honest sentence in the entire script. NEVER speculate or introduce unwritten conjectures.
 5. BATTLES & SOLEMN RESTRAINT: Narrate battles strictly from biblical citation without evaluating or justifying the destruction of peoples. Never use "eliminated", "hunted down", "not an injustice", "populations were".
 6. NO DUPLICATION: Flow naturally from the previous paragraph into the next without repeating sentences from either.
-7. Keep the exact same historical narrative tone and language (${lang.name}).
+7. Keep the exact same historical narrative tone and language (${lang.name}). If a forbidden term is a wrong variant of a fixed name, write the fixed name: "Sermão do Monte". Do not just swap the word for a synonym: rewrite the whole sentence.
 8. Output EXCLUSIVELY the rewritten paragraph text. Do NOT include commentary, quotes around the paragraph, or preamble.`;
 
         const novoParagrafo = await OpenRouterAPI.generateContent(
@@ -4951,7 +5028,8 @@ const TERMOS_TOM_CETICISMO = [
   { termo: 'alegoria', pattern: /\balegorias?\b/i, aceitaExcecaoNegacao: true },
   { termo: 'acredita-se', pattern: /\bacredita[-\s]se\b/i, aceitaExcecaoNegacao: false },
   { termo: 'segundo a tradição', pattern: /\bsegundo\s+a\s+tradi[cç][aã]o\b/i, aceitaExcecaoNegacao: false },
-  { termo: 'muitos consideram', pattern: /\b(?:muitos|alguns)(?:\s+ainda)?\s+consideram\b/i, aceitaExcecaoNegacao: false },
+  // Só é ceticismo quando o complemento chama o relato de lenda/mito/fábula etc.; 'alguns consideram que o costume...' é marcador de contexto
+  { termo: 'muitos consideram', pattern: /(?<![\p{L}])(?:muitos|alguns)(?:\s+ainda)?\s+consideram(?![\p{L}])(?=[^.!?]{0,80}(?<![\p{L}])(?:lenda|mito|f[aá]bula|alegoria|folclore|simb[oó]lic[oa]|met[aá]fora|fic[cç][aã]o)(?![\p{L}]))/iu, aceitaExcecaoNegacao: false },
   { termo: 'olhar crítico', pattern: /\b(?:olhar\s+cr[ií]tico|an[aá]lise\s+cr[ií]tica|analisar\s+criticamente)\b/i, aceitaExcecaoNegacao: false },
   { termo: 'não há provas', pattern: /\bn[aã]o\s+h[aá]\s+provas?\b/i, aceitaExcecaoNegacao: false },
   { termo: 'historiadores questionam', pattern: /\b(?:historiadores|estudiosos)\s+questionam\b/i, aceitaExcecaoNegacao: false },
@@ -5031,12 +5109,13 @@ function encontrarTermosCeticismoNoParagrafo(paragrafo) {
 function verificarAlertasEvidencia(texto) {
   if (!texto || typeof texto !== 'string') return [];
   const termosRegex = [
-    { termo: 'registros', regex: /\b(?:registros?|records?)\b/i },
+    { termo: 'registros', regex: /(?<![\p{L}])registros\s+(?:arqueol|cuneif|antigos)/iu },
     { termo: 'arqueólogos', regex: /\b(?:arque[oó]logos?|arqueologia|arqueol[oó]gic[ao]s?|archaeolog(?:ist|ists|y|ical))\b/i },
-    { termo: 'historiadores', regex: /\b(?:historiador(?:es)?|historians?)\b/i },
+    // 'historiadores/estudiosos' são marcadores de contexto OBRIGATÓRIOS; só alerta quando a frase afirma descoberta/prova
+    { termo: 'historiadores', regex: /(?<![\p{L}])(?:historiador(?:es)?|historians?)(?![\p{L}])(?=[^.!?]*(?:descobr|comprov|prov(?:am|aram)|confirm|encontr|inscri|escava|discover|prove|confirm))/iu },
     { termo: 'descobertas', regex: /\b(?:descobertas?|discoveries|discovery)\b/i },
     { termo: 'escavações', regex: /\b(?:escava[cç][oõ]es|escava[cç][aã]o|excavations?)\b/i },
-    { termo: 'estudiosos', regex: /\b(?:estudiosos?|scholars?)\b/i },
+    { termo: 'estudiosos', regex: /(?<![\p{L}])(?:estudiosos?|scholars?)(?![\p{L}])(?=[^.!?]*(?:descobr|comprov|prov(?:am|aram)|confirm|encontr|inscri|escava|discover|prove|confirm))/iu },
     { termo: 'inscrições', regex: /\b(?:inscri[cç][oõ]es|inscri[cç][aã]o|inscriptions?)\b/i },
     { termo: 'cuneiforme', regex: /\b(?:cuneiformes?|cuneiform)\b/i }
   ];
@@ -5103,7 +5182,7 @@ async function validarERegenerarTomAfirmativo(roteiro, idioma, modelo) {
       try {
         const promptReescrita = `Act as an expert biblical documentary script editor for our biblical documentary channel.
 Rewrite the following target paragraph to strictly enforce an ABSOLUTE AFFIRMATIVE HISTORICAL TONE.
-Treat the biblical record as literal historical fact witnessed and recorded by Scripture. Eliminate every trace of skepticism, uncertainty, hesitation, or critical questioning.
+Treat the biblical record as literal historical fact witnessed and recorded by Scripture. Eliminate every trace of skepticism, uncertainty, hesitation, or critical questioning about the biblical text itself. BUT keep every context marker that attributes a custom or interpretation ("na época", "naquela cultura", "muitos estudiosos explicam", "segundo historiadores", "historiadores observam"): these are NOT skepticism; never turn an attributed interpretation into a flat fact and never attribute it to Scripture.
 
 POSTURA OBRIGATÓRIA DO NARRADOR:
 - Trate todo relato bíblico como verdade sagrada afirmada diretamente: 'o fogo caiu', nunca 'o relato diz que o fogo teria caído'.
@@ -5309,6 +5388,8 @@ function limitarFrasesHistoricas(texto, estiloRoteiro = '') {
 
       if (temAutodefesa) {
         // PONTO 3: Filtro nunca apaga palavras soltas; remove a frase inteira.
+        globalThis.__frasesRemovidas = globalThis.__frasesRemovidas || [];
+        globalThis.__frasesRemovidas.push({ regra: 'autodefesa', trecho: sTrim.slice(0, 90) });
         continue;
       }
 
@@ -5318,6 +5399,8 @@ function limitarFrasesHistoricas(texto, estiloRoteiro = '') {
           sentencasMantidas.push(sTrim);
         } else {
           // Ultrapassou o limite: descarta totalmente a sentença excedente
+          globalThis.__frasesRemovidas = globalThis.__frasesRemovidas || [];
+          globalThis.__frasesRemovidas.push({ regra: 'descarte de ceticismo acima do limite', trecho: sTrim.slice(0, 90) });
           continue;
         }
       } else {
@@ -5369,6 +5452,8 @@ function limitarDeclaracoesDeSilencioBiblico(texto, estiloRoteiro = '') {
           sentencasMantidas.push(sent); // Mantém até o limite permitido no roteiro
         } else {
           console.log('[Silêncio Bíblico] Sentença repetida removida no pós-processamento:', sTrim);
+          globalThis.__frasesRemovidas = globalThis.__frasesRemovidas || [];
+          globalThis.__frasesRemovidas.push({ regra: 'silêncio bíblico repetido', trecho: sTrim.slice(0, 90) });
         }
       } else {
         sentencasMantidas.push(sent);
@@ -5385,34 +5470,10 @@ function limitarDeclaracoesDeSilencioBiblico(texto, estiloRoteiro = '') {
  * PONTO 5: Limitar o uso de "canonical" (canonical record/text/account) a no máximo 2 vezes no roteiro inteiro.
  */
 function limitarTermosCanonicos(texto) {
-  if (!texto || typeof texto !== 'string') return texto;
-
-  let contagem = 0;
-  const canonicalRegex = /\b(?:the\s+)?canonical\s+(?:record|text|account|narrative|scripture|witness|boundary|framework)\b|\bcanonical\b|\b(?:o\s+)?(?:texto|registro|relato|c[aâ]non)\s+can[oô]nic[oa]\b|\bcan[oô]nic[oa]s?\b/gi;
-
-  return texto.replace(canonicalRegex, (match) => {
-    contagem++;
-    if (contagem <= 2) {
-      return match; // Mantém no máximo 2 ocorrências
-    }
-    const mLower = match.toLowerCase();
-    if (mLower.includes('canonical record')) return 'biblical record';
-    if (mLower.includes('canonical text')) return 'biblical text';
-    if (mLower.includes('canonical account')) return 'biblical account';
-    if (mLower.includes('canonical narrative')) return 'sacred narrative';
-    if (mLower.includes('canonical scripture')) return 'Holy Scripture';
-    if (mLower.includes('canonical witness')) return 'scriptural witness';
-    if (mLower.includes('canonical boundary')) return 'scriptural boundary';
-    if (mLower.includes('canonical')) return 'biblical';
-
-    // Português / Espanhol
-    if (mLower.includes('registro can')) return 'registro bíblico';
-    if (mLower.includes('texto can')) return 'texto bíblico';
-    if (mLower.includes('relato can')) return 'relato bíblico';
-    if (mLower.includes('canônic') || mLower.includes('canonic')) return 'bíblico';
-
-    return 'biblical';
-  });
+  // Regra do projeto: NUNCA trocar palavras por sinônimos automaticamente (a troca antiga injetava
+  // "biblical record"/"Holy Scripture" em texto português e apagava artigos). O limite de "canônico/canonical"
+  // (máx. 2 vezes) agora é aplicado por limitarRepeticaoExpressoes, que REGENERA a frase via IA.
+  return texto;
 }
 window.limitarDeclaracoesDeSilencioBiblico = limitarDeclaracoesDeSilencioBiblico;
 window.limitarTermosCanonicos = limitarTermosCanonicos;
@@ -5463,7 +5524,10 @@ function normalizarAspasEPontuacao(texto) {
     }
     return out;
   });
-  return linhas.join('\n').replace(/(["”»])\.\.(?!\.)/g, '$1.');
+  return linhas.join('\n')
+    .replace(/(["”»])\.\.(?!\.)/g, '$1.')           // outra".. -> outra".
+    .replace(/(["”»][!?])\.(?!\.)/g, '$1')           // "!. -> "!
+    .replace(/(["”»][.!?;:,])(?=[\p{L}\p{N}])/gu, '$1 '); // ".Depois / ",e -> espaço depois da pontuação
 }
 window.normalizarAspasEPontuacao = normalizarAspasEPontuacao;
 
@@ -5473,46 +5537,26 @@ window.normalizarAspasEPontuacao = normalizarAspasEPontuacao;
 function validarECorrigirAspas(texto) {
   if (!texto || typeof texto !== 'string') return texto;
   const paragrafos = texto.split(/\n\s*\n/);
+  globalThis.__avisosPosProcessamento = globalThis.__avisosPosProcessamento || [];
 
-  const corrigidos = paragrafos.map(p => {
+  const corrigidos = paragrafos.map((p, idx) => {
     let limpo = p.trim();
     if (!limpo) return limpo;
 
     // Normaliza aspas curvas para retas
     limpo = limpo.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
 
-    // A1: Sem espaço depois da aspa de abertura nem antes da de fechamento (distingue abertura de fechamento)
+    // Espaços e pontuação ao redor das aspas (distingue abertura de fechamento)
     limpo = normalizarAspasEPontuacao(limpo);
 
-    const totalAspas = (limpo.match(/"/g) || []).length;
-    if (totalAspas % 2 === 0) return limpo;
-
-    const primeiraAspa = limpo.indexOf('"');
-    const antes = limpo.substring(0, primeiraAspa);
-
-    // Se a primeira aspa está colada em pontuação de fechamento (ex: earth.") e não abriu antes:
-    if (/[a-z0-9][.,;!?]$/i.test(antes)) {
-      limpo = '"' + limpo;
-    } else {
-      // Aspa foi aberta mas faltou fechar antes ou no final da oração
-      if (limpo.endsWith('.')) {
-        limpo = limpo.slice(0, -1) + '".';
-      } else if (/[!?]$/.test(limpo)) {
-        limpo = limpo.slice(0, -1) + '"' + limpo.slice(-1);
-      } else {
-        limpo = limpo + '"';
-      }
+    // Aspas desbalanceadas: NÃO inventa abertura/fechamento (isso criava citações que a Bíblia não tem).
+    // Só registra o aviso para o usuário revisar.
+    if (((limpo.match(/"/g) || []).length % 2) !== 0) {
+      globalThis.__avisosPosProcessamento.push({
+        tipo: 'aspas_desbalanceadas',
+        trecho: limpo.slice(0, 80)
+      });
     }
-
-    const finalCount = (limpo.match(/"/g) || []).length;
-    if (finalCount % 2 !== 0) {
-      if (limpo.endsWith('."') && !limpo.startsWith('"')) {
-        limpo = '"' + limpo.replace(/\."$/, '".');
-      } else {
-        limpo = limpo.replace(/([.!?])$/, '"$1');
-      }
-    }
-
     return limpo;
   });
 
@@ -5621,8 +5665,18 @@ function garantirCtaNoUltimoParagrafo(texto, idioma = 'pt', estiloRoteiro = '') 
     return pLimpo;
   }).filter(Boolean);
 
+  // Um único CTA no fim: se o último parágrafo já é um convite de inscrição (escrito pelo modelo ou o fixo),
+  // NÃO acrescenta outro. Se sobraram dois CTAs seguidos, mantém só o último.
+  // Convite de inscrição já presente (limite Unicode: o \b do JavaScript não entende acentos)
+  const REGEX_CTA_INSCRICAO = /(?<![\p{L}])(?:inscreva-se|se\s+inscreva|inscrev(?:a|er)\s+(?:no|neste)\s+canal|subscribe|acompanhe\s+(?:este|o)\s+canal|suscr[ií]bete|ative\s+o\s+sino)(?![\p{L}])/iu;
+  const ehCta = (p) => REGEX_CTA_INSCRICAO.test(p || '');
+  while (paragrafos.length >= 2 && ehCta(paragrafos[paragrafos.length - 1]) && ehCta(paragrafos[paragrafos.length - 2])
+         && (paragrafos[paragrafos.length - 2].match(/\S+/g) || []).length <= 45) {
+    paragrafos.splice(paragrafos.length - 2, 1);
+  }
+
   const ultimoP = paragrafos[paragrafos.length - 1] || '';
-  if (ultimoP.toLowerCase() === ctaPadrao.toLowerCase()) {
+  if (ultimoP.toLowerCase() === ctaPadrao.toLowerCase() || ehCta(ultimoP)) {
     return paragrafos.join('\n\n');
   }
 
@@ -6157,6 +6211,10 @@ async function limitarRepeticaoExpressoes(texto, idioma, modelo, estiloRoteiro =
     {
       nome: 'biblical record',
       regex: /\b(?:the\s+)?biblical\s+record\b|\bo\s+registro\s+b[ií]blico\b|\bel\s+registro\s+b[ií]blico\b/i
+    },
+    {
+      nome: 'canonical',
+      regex: /(?<![\p{L}])(?:canonical|can[oô]nic[oa]s?|c[aâ]non)(?![\p{L}])/iu
     }
   ];
 
@@ -6165,12 +6223,8 @@ async function limitarRepeticaoExpressoes(texto, idioma, modelo, estiloRoteiro =
     : { name: 'English' };
 
   let paragrafos = texto.split(/\n\s*\n/);
-  const contadores = {
-    'historical reality': 0,
-    'the Scripture treats': 0,
-    'Holy Scripture records': 0,
-    'biblical record': 0
-  };
+  const contadores = {};
+  regras.forEach(r => { contadores[r.nome] = 0; });
 
   for (let pIdx = 0; pIdx < paragrafos.length; pIdx++) {
     let p = paragrafos[pIdx];
@@ -6240,6 +6294,10 @@ window.limitarRepeticaoExpressoes = limitarRepeticaoExpressoes;
  * - espaço antes de aspas de fechamento (ex: 'with him. "').
  * Se encontrar anomalia estrutural, regenera cirurgicamente a frase/parágrafo afetado.
  */
+// Palavra funcional repetida por erro ("de de"). Usa limite Unicode: o \b do JavaScript trata letras acentuadas
+// como borda e apagava o artigo depois de palavras como "então" ("então o rei" virava "então rei").
+const REGEX_PALAVRA_REPETIDA = /(?<![\p{L}\p{N}])(the|that|in|of|and|to|for|is|are|a|o|que|em|de|e|para|la|el|en|y)\s+\1(?![\p{L}\p{N}])/giu;
+
 async function executarChecagemFinalIntegridade(texto, idioma, modelo) {
   if (!texto || typeof texto !== 'string') return texto;
 
@@ -6251,10 +6309,10 @@ async function executarChecagemFinalIntegridade(texto, idioma, modelo) {
 
   // 1. Correções sintáticas imediatas e determinísticas:
   // Remove espaço antes de aspas de fechamento (ex: 'with him. "' -> 'with him."')
-  limpo = limpo.replace(/([.,;:!?])\s+(["])(?=\s|$|[A-Z])/g, '$1$2');
+  limpo = limpo.replace(/([.,;:!?])\s+(["])(?=\s|$)/g, '$1$2');
 
   // Remove palavras repetidas em sequência (ex: "The the" -> "The")
-  limpo = limpo.replace(/\b(the|that|in|of|and|to|for|is|are|a|o|que|em|de|e|para|la|el|en|y)\s+\1\b/gi, '$1');
+  limpo = limpo.replace(REGEX_PALAVRA_REPETIDA, '$1');
 
   // 2. Análise por parágrafos para detectar anomalias que exigem regeneração
   let paragrafos = limpo.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
@@ -6304,8 +6362,8 @@ Output EXCLUSIVELY the corrected paragraph, without markdown blocks or explanati
   }
 
   limpo = paragrafos.join('\n\n');
-  limpo = limpo.replace(/([.,;:!?])\s+(["])(?=\s|$|[A-Z])/g, '$1$2');
-  limpo = limpo.replace(/\b(the|that|in|of|and|to|for|is|are|a|o|que|em|de|e|para|la|el|en|y)\s+\1\b/gi, '$1');
+  limpo = limpo.replace(/([.,;:!?])\s+(["])(?=\s|$)/g, '$1$2');
+  limpo = limpo.replace(REGEX_PALAVRA_REPETIDA, '$1');
 
   return limpo;
 }
@@ -6442,7 +6500,7 @@ CHECK ACROSS THE ENTIRE SCRIPT FOR EXACTLY THESE 13 CATEGORIES:
 3. SILÊNCIO REPETIDO: Phrases stating that the Bible is silent, does not explain, or offers no further details (e.g. "Scripture remains silent", "the biblical text does not elaborate", "the inspired record leaves unaddressed").
    - RULE: Allowed at most ONCE in the ENTIRE script.
    - If stated more than once, mark subsequent occurrences to be removed ("") or replaced.
-4. CITAÇÃO BÍBLICA: Verbatim biblical quotes enclosed in quotation marks that diverge from the official translation (King James Version / KJV for English; João Ferreira de Almeida / JFA for Portuguese; Reina-Valera 1909 / RVR1909 for Spanish).
+4. CITAÇÃO BÍBLICA: Verbatim biblical quotes enclosed in quotation marks that diverge from the official translation (King James Version / KJV for English; Almeida Revista e Corrigida / ARC for Portuguese; Reina-Valera 1909 / RVR1909 for Spanish).
    - Example: In Numbers 13:33, replacing "which come of the Nephilim" with the exact KJV text "which come of the giants".
    - Fix all literal quotes to match the exact wording of the official Bible translation.
 5. CRONOLOGIA: Erroneous, impossible, or contradictory dates, centuries, historical intervals, or time spans (e.g. claiming an event happened 40 years later when centuries elapsed).
@@ -6509,11 +6567,12 @@ Remember: Output EXCLUSIVELY a JSON array [ { "fraseOriginal": "...", "tipo": ".
     rawResponse = await OpenRouterAPI.generateContent(
       reviewerPrompt,
       modelo,
-      REVIEWER_SYSTEM_PROMPT
+      REVIEWER_SYSTEM_PROMPT,
+      { temperature: 0.2 }
     );
   } catch (err) {
     console.warn('[Revisão Automática] Erro na chamada à API do revisor:', err);
-    return { texto: roteiro, problemasDetectados: [], problemasCorrigidos: [] };
+    return { texto: roteiro, problemasDetectados: [], problemasCorrigidos: [], falhou: true, motivoFalha: err && err.message };
   }
 
   let problemas = [];
@@ -6528,6 +6587,7 @@ Remember: Output EXCLUSIVELY a JSON array [ { "fraseOriginal": "...", "tipo": ".
     problemas = JSON.parse(cleaned);
   } catch (eParse) {
     console.warn('[Revisão Automática] Falha ao fazer parse do JSON:', eParse, rawResponse);
+    return { texto: roteiro, problemasDetectados: [], problemasCorrigidos: [], falhou: true, motivoFalha: 'Resposta do revisor fora do formato JSON' };
   }
 
   if (!Array.isArray(problemas)) {
@@ -6571,12 +6631,19 @@ Remember: Output EXCLUSIVELY a JSON array [ { "fraseOriginal": "...", "tipo": ".
 
     if (!original) continue;
 
-    if (textoAtual.includes(original)) {
-      if (corrigida === '') {
-        textoAtual = textoAtual.replace(original, '');
-      } else {
-        textoAtual = textoAtual.replace(original, corrigida);
+    // Nunca apaga frase do parágrafo de fechamento/CTA (só reescreve): a conclusão e o convite de inscrição não podem sumir
+    if (corrigida === '') {
+      const paragrafosAtuais = textoAtual.split(/\n\s*\n/);
+      const ultimos = paragrafosAtuais.slice(-2).join('\n\n');
+      if (ultimos.includes(original)) {
+        console.warn('[Revisão Automática] Remoção no fechamento ignorada:', original);
+        continue;
       }
+    }
+
+    if (textoAtual.includes(original)) {
+      // Função como substituto: evita que '$&', '$1' etc. dentro do texto corrigido sejam interpretados
+      textoAtual = textoAtual.replace(original, () => corrigida);
       problemasCorrigidos.push({ original, tipo, corrigida });
     } else {
       // Tenta substituição flexível normalizando espaços
@@ -6584,11 +6651,7 @@ Remember: Output EXCLUSIVELY a JSON array [ { "fraseOriginal": "...", "tipo": ".
         const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regexFlex = new RegExp(escapeRegex(original).replace(/\s+/g, '\\s+'));
         if (regexFlex.test(textoAtual)) {
-          if (corrigida === '') {
-            textoAtual = textoAtual.replace(regexFlex, '');
-          } else {
-            textoAtual = textoAtual.replace(regexFlex, corrigida);
-          }
+          textoAtual = textoAtual.replace(regexFlex, () => corrigida);
           problemasCorrigidos.push({ original, tipo, corrigida });
         }
       } catch (eRegex) {
@@ -6637,6 +6700,17 @@ function atualizarRelatorioRevisaoNaTela(revisaoRes) {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
   };
+
+  if (revisaoRes.falhou) {
+    tituloEl.textContent = 'Revisão automática NÃO foi executada';
+    if (badgeEl) {
+      badgeEl.style.background = '#f59e0b';
+      badgeEl.style.color = '#451a03';
+      badgeEl.textContent = 'REVISÃO NÃO EXECUTADA';
+    }
+    listaEl.innerHTML = `<div style="color: #fcd34d;">A chamada ao revisor falhou (${String(revisaoRes.motivoFalha || 'erro desconhecido').replace(/</g, '&lt;')}). O roteiro NÃO foi auditado: revise manualmente ou gere de novo.</div>`;
+    return;
+  }
 
   if (total === 0) {
     if (badgeEl) {
@@ -6758,7 +6832,7 @@ const PromptEngine = {
       return {
         name: 'Português (Brasil)',
         code: 'pt',
-        bibleTranslation: 'João Ferreira de Almeida (Almeida)',
+        bibleTranslation: 'Almeida Revista e Corrigida (ARC)',
         citationRule: 'Escreva 100% em português do Brasil. Use sempre os nomes da Bíblia Almeida em português (ex: "Ogue", não "Og"). Citações bíblicas pela Almeida. Nunca use palavras em inglês no roteiro.',
         titleHookSample: 'A REAL Verdade Sobre a Profecia (Muitos Não Sabem)'
       };
@@ -6793,6 +6867,8 @@ CRITICAL MANDATORY GUIDELINES:
 3. LANGUAGE COMPLIANCE: Output the items and descriptions in ${lang.name} with English title option.
 4. ZERO FORBIDDEN CLICHÉS: Do NOT use "delve", "dive deep", "profound", "meticulously", "shrouded in mystery", "fabric", "enigmatic", "fascinating", "journey through", "annals", "testament to", "sacred texts".
 
+${REGRA_FATOS_EN}
+
 OUTPUT FORMAT:
 Provide the 10 catalog ideas numbered 1 to 10, each with English Title, Local Title, and the list of ${n} numbered items with their respective scripture passages.`;
     }
@@ -6825,12 +6901,14 @@ CRITICAL MANDATORY GUIDELINES & EVALUATION PILLARS:
    - MAXIMUM OF 2 out of the 10 titles may use parentheses.
    - All 10 titles MUST exhibit distinct grammatical structures.
 
+${REGRA_FATOS_EN}
+
 OUTPUT FORMAT:
 Provide the 10 ideas numbered 1 to 10 in ${lang.name}. Format for each idea:
 [Número]. [Título com no máx 1 palavra em MAIÚSCULAS]
 - Referência Bíblica Principal: [Livro X:Y]
 - Detalhe Concreto Principal: [Número, objeto físico ou cena específica]
-- Gancho / Premissa: [1 a 2 frases curtas instigantes]`;
+- Gancho / Premissa: [1 a 2 frases curtas instigantes, SEM afirmar como fato nada que a passagem não diga]`;
   },
 
   generateScriptPrompt({ ideia, estiloRoteiro, tomVoz, tipoGancho, idioma, numItens = 9 }) {
@@ -7003,7 +7081,7 @@ EXEMPLOS DO TOM CORRETO:
 EXEMPLOS PROIBIDOS (nunca escrever assim):
 - 'Muitos ainda consideram a história de Noé uma fábula.'
 - 'Registros cuneiformes confirmam que a torre era visível a dezenas de quilômetros.' (PROIBIDO: evidência inventada / dados fora da Bíblia)
-- 'Arqueólogos e historiadores descobriram inscrições que comprovam...' (PROIBIDO: menção a arqueologia / historiadores)
+- 'Arqueólogos e historiadores descobriram inscrições que comprovam...' (PROIBIDO: evidência arqueológica inventada. Marcadores de contexto como 'segundo historiadores' continuam PERMITIDOS para costume ou interpretação)
 - 'Após o dilúvio, as gerações se espalharam pela terra...' (PROIBIDO no Hook: abertura cronológica lenta em vez de dramática)
 - 'Isso não é uma fábula, mas um fato histórico registrado nas Escrituras.' (Tom defensivo proibido!)
 - 'É crucial abordar essas evidências com um olhar crítico.'
@@ -7064,6 +7142,9 @@ CATALOG STRUCTURE (EXACTLY ${n} ITEMS DISTRIBUTED OVER 7 SECTIONS):
 - SECTION 7: Closing Synthesis (80-120 words) + 1 Question for comments + Short final CTA.
 
 CRITICAL: For EACH of the 7 sections, list the specific catalog items and canonical scripture passages assigned exclusively to it. Zero repetition across sections.
+
+${REGRA_FATOS_EN}
+${REGRA_ATRIBUICAO_PT}
 
 OUTPUT FORMAT:
 Output EXACTLY the 7 sections formatted as follows:
@@ -7140,6 +7221,9 @@ CRITICAL ALLOCATION OF EXCLUSIVE EVENTS AND VERSES (ZERO REPETITION):
 2. STRICT PROHIBITION: Any event or verse assigned to one section is ABSOLUTELY FORBIDDEN in all other sections.
    - For example, if the Genesis 7 Flood, Numbers 13 spies, King Og, or Nicodemus at night is assigned to a section, it is STRICTLY PROHIBITED from appearing in any other section.
 3. Every biblical event must have EXACTLY ONE home section.
+
+${REGRA_FATOS_EN}
+${REGRA_ATRIBUICAO_PT}
 
 OUTPUT FORMAT:
 Output EXACTLY the 7 sections formatted as follows, without markdown fences or extra commentary:
@@ -7328,7 +7412,7 @@ EXEMPLOS DO TOM CORRETO:
 EXEMPLOS PROIBIDOS (nunca escrever assim):
 - 'Muitos ainda consideram a história de Noé uma fábula.'
 - 'Registros cuneiformes confirmam que a torre era visível a dezenas de quilômetros.' (PROIBIDO: evidência inventada / dados fora da Bíblia)
-- 'Arqueólogos e historiadores descobriram inscrições que comprovam...' (PROIBIDO: menção a arqueologia / historiadores)
+- 'Arqueólogos e historiadores descobriram inscrições que comprovam...' (PROIBIDO: evidência arqueológica inventada. Marcadores de contexto como 'segundo historiadores' continuam PERMITIDOS para costume ou interpretação)
 - 'Após o dilúvio, as gerações se espalharam pela terra...' (PROIBIDO no Hook: abertura cronológica lenta em vez de dramática)
 - 'Isso não é uma fábula, mas um fato histórico registrado nas Escrituras.' (Tom defensivo proibido!)
 - 'É crucial abordar essas evidências com um olhar crítico.'
@@ -7550,6 +7634,8 @@ MANDATORY OUTPUT GUIDELINES FOR CATALOG FORMAT:
 3. SEARCH TAGS (15-20 TAGS): High-volume search tags.
 4. HASHTAGS (5-7 HASHTAGS): #BiblicalHistory #ScriptureTruth #BibleCatalog, etc.
 
+${REGRA_FATOS_EN}
+
 OUTPUT FORMAT:
 - 3 TITLES (Catalog High CTR)
 - FULL VIDEO DESCRIPTION
@@ -7577,6 +7663,8 @@ MANDATORY OUTPUT GUIDELINES (ITEM 8):
    - High-volume relevant search tags separated by commas.
 4. HASHTAGS (5-7 HASHTAGS):
    - 5 to 7 high-impact hashtags (#BiblicalHistory #ScriptureTruth, etc.).
+
+${REGRA_FATOS_EN}
 
 OUTPUT FORMAT:
 Present the complete SEO package clearly separated into:
@@ -8123,7 +8211,7 @@ ${texto}
 
   let bruto = '';
   try {
-    bruto = await OpenRouterAPI.generateContent(prompt, modelo, 'Você é um revisor gramatical. Responda somente com JSON válido.');
+    bruto = await OpenRouterAPI.generateContent(prompt, modelo, 'Você é um revisor gramatical de roteiros bíblicos em português do Brasil. Corrija só frases genuinamente quebradas, sem trocar palavras por sinônimos, sem acrescentar fatos, sem mexer em citações entre aspas, sem palavras em inglês ou espanhol e preservando marcadores de contexto ("na época", "muitos estudiosos explicam", "segundo historiadores"). Responda somente com JSON válido.', { temperature: 0.2 });
   } catch (err) {
     console.warn('[Revisão Gramatical] Falha na chamada ao revisor:', err);
     return { texto, aplicadas: [] };
@@ -8186,6 +8274,8 @@ function limparTextoParaNarracao(texto, estiloRoteiro = '') {
   // 8. Remove cabeçalhos de seção em CAPS (linhas isoladas onde as palavras estão todas em maiúsculas)
   limpo = limpo.replace(/^\s*(?:[A-ZÀ-Ú0-9\s:()\-–—\[\]./]{3,70})\s*:?\s*$/gm, (match) => {
     const letters = match.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, '');
+    // Linha em CAPS que termina em pontuação de frase ("AMÉM.", "SENHOR!") é conteúdo, não cabeçalho
+    if (/[.!?]\s*$/.test(match)) return match;
     if (letters.length >= 3 && letters === letters.toUpperCase()) {
       return '';
     }
@@ -8194,7 +8284,8 @@ function limparTextoParaNarracao(texto, estiloRoteiro = '') {
 
   // 9. Remove rótulos internos estruturais mantendo o texto que vem depois:
   // "Assertion:", "Afirmação:", "Development:", "Desenvolvimento:", "Evidence/References:", "Analysis/Impact:", etc.
-  limpo = limpo.replace(/(?:Afirmação|Assertion|Afirmación|Desenvolvimento|Development|Desarrollo|Evidências\/Referências|Evidências|Evidencias\/Referencias|Evidencias|Evidence\/References|Evidence|Referências|Referencias|References|Análise\/Impacto|Análise|Análisis\/Impacto|Análisis|Analysis\/Impact|Analysis|Impacto|Impact|Ganchos Internos|Internal Hooks|CTAs Orgânicas|Organic CTAs|Chamada para Ação|Call to Action|CTA|Hook|Introdução|Introduction|Introducción|Conclusão|Conclusion|Conclusión)\s*:\s*/gi, '');
+  // Rótulo só é removido no INÍCIO da linha ("Afirmação: ..."); no meio da frase ele é palavra normal ("fez uma afirmação: ...").
+  limpo = limpo.replace(/^[^\S\r\n]*(?:\*{1,2})?(?:Afirmação|Assertion|Afirmación|Desenvolvimento|Development|Desarrollo|Evidências\/Referências|Evidências|Evidencias\/Referencias|Evidencias|Evidence\/References|Evidence|Referências|Referencias|References|Análise\/Impacto|Análise|Análisis\/Impacto|Análisis|Analysis\/Impact|Analysis|Impacto|Impact|Ganchos Internos|Internal Hooks|CTAs Orgânicas|Organic CTAs|Chamada para Ação|Call to Action|CTA|Hook|Introdução|Introduction|Introducción|Conclusão|Conclusion|Conclusión)(?:\*{1,2})?[^\S\r\n]*:[^\S\r\n]*/gmi, '');
 
   // 10. Remove marcadores de negrito markdown (**texto** vira texto) e itálico (*texto* vira texto)
   limpo = limpo.replace(/^#+\s+/gm, '');
@@ -8258,11 +8349,15 @@ function limparTextoParaNarracao(texto, estiloRoteiro = '') {
 async function validarRoteiroComBiblia(roteiro, idioma = 'pt') {
   if (!roteiro || typeof roteiro !== 'string') return roteiro;
 
+  // A tradução escolhida na tela (ARC por padrão) vale também para o validador: ele não pode "corrigir" para outra versão
+  const traducaoEl = (typeof document !== 'undefined') ? document.getElementById('select-traducao-biblica') : null;
+  const traducao = traducaoEl ? traducaoEl.value : 'arc';
+
   try {
     const response = await fetch('/api/validar-biblia', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ texto: roteiro, idioma })
+      body: JSON.stringify({ texto: roteiro, idioma, traducao })
     });
 
     if (response.ok) {
@@ -8915,11 +9010,10 @@ function apararParaLimiteMaximo(texto, maxPalavras = 3000) {
   // Sempre preserva o último parágrafo intacto (CTA / Fechamento)
   blocoFinal.unshift(paragrafosMiolo.pop());
 
-  // Se o penúltimo parágrafo for a conclusão ou se o último parágrafo for apenas a frase de inscrição
+  // Se o penúltimo parágrafo for a conclusão (curta), preserva também
   if (paragrafosMiolo.length >= 3) {
     const penultimo = paragrafosMiolo[paragrafosMiolo.length - 1];
-    const palavrasPenultimo = contarPalavras(penultimo);
-    if (palavrasPenultimo < 80) {
+    if (contarPalavras(penultimo) < 80) {
       blocoFinal.unshift(paragrafosMiolo.pop());
     }
   }
@@ -8927,50 +9021,52 @@ function apararParaLimiteMaximo(texto, maxPalavras = 3000) {
   // 2. Isolar e preservar o primeiro parágrafo intacto (Gancho / Introdução)
   const blocoInicial = [paragrafosMiolo.shift()];
 
-  // 3. Calcular orçamento disponível exclusivamente para o miolo
+  // 3. Orçamento disponível exclusivamente para o miolo
   const palavrasFim = contarPalavras(blocoFinal.join(' '));
   const palavrasInicio = contarPalavras(blocoInicial.join(' '));
   const orcamentoMiolo = maxPalavras - palavrasInicio - palavrasFim;
 
   const temCitacaoBiblica = (frase) => /(?:["“][^"”]{5,}["”]|(?:\b[1-3]?\s*[A-Za-zÀ-ÖØ-öø-ÿ]+\s+\d+[:\.]\d+))/i.test(frase);
 
-  // Divide os parágrafos do miolo em frases com metadados
-  let frasesMiolo = [];
-  paragrafosMiolo.forEach((p, pIdx) => {
+  // O miolo mantém a ESTRUTURA DE PARÁGRAFOS: cada parágrafo é uma lista de frases
+  const mioloParas = paragrafosMiolo.map(p => {
     const fs = p.match(/[^.!?]+(?:[.!?]+["']?|$)/g) || [p];
-    fs.forEach(f => {
-      const fTrim = f.trim();
-      if (fTrim) {
-        frasesMiolo.push({
-          texto: fTrim,
-          pIdx,
-          protegido: temCitacaoBiblica(fTrim),
-          count: contarPalavras(fTrim)
-        });
-      }
-    });
+    return fs.map(f => f.trim()).filter(Boolean).map(f => ({
+      texto: f,
+      protegido: temCitacaoBiblica(f),
+      count: contarPalavras(f)
+    }));
   });
+  const palavrasPara = (arr) => arr.reduce((acc, f) => acc + f.count, 0);
+  const totalMiolo = () => mioloParas.reduce((acc, arr) => acc + palavrasPara(arr), 0);
 
-  let contagemMiolo = frasesMiolo.reduce((acc, f) => acc + f.count, 0);
-
-  // Se exceder o orçamento, remove primeiro as frases acessórias que NÃO contêm citação bíblica
-  for (let i = 0; i < frasesMiolo.length && contagemMiolo > orcamentoMiolo; i++) {
-    if (!frasesMiolo[i].protegido) {
-      contagemMiolo -= frasesMiolo[i].count;
-      frasesMiolo.splice(i, 1);
-      i--; // ajusta índice após remoção
+  // Remove, do parágrafo MAIS LONGO, a última frase que não tem citação bíblica (a 1ª frase de cada parágrafo é preservada).
+  // Assim o corte fica espalhado pelo miolo, sem apagar o começo da história nem juntar tudo num parágrafo só.
+  const removerUmaFrase = (permitirProtegida) => {
+    const ordem = mioloParas.map((arr, i) => ({ i, w: palavrasPara(arr) })).sort((x, y) => y.w - x.w);
+    for (const { i } of ordem) {
+      const arr = mioloParas[i];
+      for (let j = arr.length - 1; j >= 1; j--) {
+        if (permitirProtegida || !arr[j].protegido) {
+          arr.splice(j, 1);
+          return true;
+        }
+      }
     }
-  }
+    return false;
+  };
 
-  // Se ainda assim exceder o orçamento, enxuga frases acessórias do blocoInicial
-  if (contagemMiolo + palavrasInicio + palavrasFim > maxPalavras) {
+  while (totalMiolo() > orcamentoMiolo && removerUmaFrase(false)) { /* corta frases acessórias */ }
+  while (totalMiolo() > orcamentoMiolo && removerUmaFrase(true)) { /* só se ainda estourar: corta frases com citação */ }
+
+  // Se ainda assim exceder, enxuga frases acessórias do blocoInicial
+  if (totalMiolo() + palavrasInicio + palavrasFim > maxPalavras) {
     const fsInicio = blocoInicial[0].match(/[^.!?]+(?:[.!?]+["']?|$)/g) || [blocoInicial[0]];
     if (fsInicio.length > 1) {
-      let novoInicioFs = [fsInicio[0]];
+      let novoInicioFs = [fsInicio[0].trim()];
       for (let j = 1; j < fsInicio.length; j++) {
         const fTrim = fsInicio[j].trim();
-        const fCount = contarPalavras(fTrim);
-        if (contarPalavras(novoInicioFs.join(' ')) + fCount + contagemMiolo + palavrasFim <= maxPalavras) {
+        if (contarPalavras(novoInicioFs.join(' ')) + contarPalavras(fTrim) + totalMiolo() + palavrasFim <= maxPalavras) {
           novoInicioFs.push(fTrim);
         }
       }
@@ -8978,37 +9074,15 @@ function apararParaLimiteMaximo(texto, maxPalavras = 3000) {
     }
   }
 
-  // Reconstrói os parágrafos do miolo
-  let mioloReconstruido = [];
-  let pAtual = '';
-  frasesMiolo.forEach(f => {
-    pAtual += (pAtual ? ' ' : '') + f.texto;
-  });
-  if (pAtual) mioloReconstruido.push(pAtual);
-
-  let resultadoFinal = [...blocoInicial, ...mioloReconstruido, ...blocoFinal].filter(Boolean).join('\n\n');
-
-  // Salvaguarda final estrita: garante que NUNCA ultrapasse maxPalavras sob nenhuma circunstância
-  if (contarPalavras(resultadoFinal) > maxPalavras) {
-    const ultParagrafo = blocoFinal.length > 0 ? blocoFinal[blocoFinal.length - 1] : '';
-    const palavrasUlt = contarPalavras(ultParagrafo);
-    const orcamentoRestante = Math.max(maxPalavras - palavrasUlt, 20);
-    const todasSentencas = resultadoFinal.match(/[^.!?]+(?:[.!?]+["']?|$)/g) || [resultadoFinal];
-    let sentencasAparadas = [];
-    for (const s of todasSentencas) {
-      const sTrim = s.trim();
-      if (!sTrim) continue;
-      if (sTrim === ultParagrafo || /\b(?:inscreva-se|inscrever|subscribe|acompanhe\s+este\s+canal)\b/i.test(sTrim)) continue;
-      if (contarPalavras(sentencasAparadas.join(' ')) + contarPalavras(sTrim) <= orcamentoRestante) {
-        sentencasAparadas.push(sTrim);
-      } else {
-        break;
-      }
-    }
-    resultadoFinal = sentencasAparadas.join(' ') + (ultParagrafo ? '\n\n' + ultParagrafo : '');
+  // Último recurso: remove parágrafos inteiros do FIM do miolo (nunca o fechamento nem o CTA) e avisa o usuário
+  while (mioloParas.length > 0 && totalMiolo() + contarPalavras(blocoInicial.join(' ')) + palavrasFim > maxPalavras) {
+    mioloParas.pop();
+    globalThis.__avisosPosProcessamento = globalThis.__avisosPosProcessamento || [];
+    globalThis.__avisosPosProcessamento.push({ tipo: 'corte_extremo', trecho: 'Parágrafo do miolo removido para respeitar o teto de palavras' });
   }
 
-  return resultadoFinal;
+  const mioloReconstruido = mioloParas.map(arr => arr.map(f => f.texto).join(' ')).filter(Boolean);
+  return [...blocoInicial, ...mioloReconstruido, ...blocoFinal].filter(Boolean).join('\n\n');
 }
 
 /**
@@ -9125,8 +9199,13 @@ function limparPontuacaoDuplicada(texto) {
   // 2. Dois-pontos depois de verbo de fala antes de citação com aspas
   // Ex: disse "..." -> disse: "..." | clamou "..." -> clamou: "..."
   const verbosFala = 'disse|diz|dizendo|afirmou|afirma|declarou|declara|clamou|clama|gritou|gritando|respondeu|responde|perguntou|pergunta|ordenou|ordena|falou|fala|bradou|brada|proclamou|proclama|escreveu|escreve|registram|registra|afirmam';
-  const regexFalaAspas = new RegExp(`\\b(${verbosFala})((?:\\s+(?:ao|aos|à|às|a|para)\\s+[A-Za-zÀ-ÖØ-öø-ÿ]+)?)(\\s*[:;,]?\\s*)(["“])`, 'gi');
-  res = res.replace(regexFalaAspas, '$1$2: $4');
+  // Só vira dois-pontos quando a aspa abre uma FALA (próxima letra maiúscula): 'disse "Vem agora"', não 'falou "sim" e "não"'
+  const regexFalaAspas = new RegExp(`(?<![\\p{L}])(${verbosFala})((?:\\s+(?:ao|aos|à|às|a|para)\\s+[A-Za-zÀ-ÖØ-öø-ÿ]+)?)(\\s*[:;,]?\\s*)(["“])`, 'giu');
+  res = res.replace(regexFalaAspas, (m, verbo, comp, sep, aspa, off, str) => {
+    const prox = str[off + m.length] || '';
+    const abreFala = (prox !== prox.toLowerCase()) || /[¿¡]/.test(prox);
+    return abreFala ? `${verbo}${comp}: ${aspa}` : m;
+  });
 
   // 3. Espaço antes de abrir aspas (inclusive depois de dois-pontos) e nenhum espaço depois da abertura
   res = normalizarAspasEPontuacao(res);
@@ -9138,7 +9217,8 @@ function limparPontuacaoDuplicada(texto) {
   // 6. Limpeza de pontuação duplicada pós-substituição (ex: feito.”.” -> feito.”)
   res = res.replace(/(["”'])\.\.(?!\.)/g, '$1.');
   res = res.replace(/([.!?]["”'])\s*[.,;:]+/g, '$1');
-  res = res.replace(/([.!?])\s*\1+/g, '$1');
+  // Pontuação duplicada: '..'→'.', '!!'→'!', '??'→'?'; as reticências '...' são preservadas ('....'→'...')
+  res = res.replace(/(?<!\.)\.\.(?!\.)/g, '.').replace(/\.{4,}/g, '...').replace(/!{2,}/g, '!').replace(/\?{2,}/g, '?');
   res = res.replace(/([:;,])(["”'])/g, '.$2');
 
   // 7. Normaliza espaços múltiplos
@@ -9151,39 +9231,155 @@ window.eliminarParagrafosOrfaos = eliminarParagrafosOrfaos;
 window.limparPontuacaoDuplicada = limparPontuacaoDuplicada;
 
 /**
- * Remove anglicismos e resíduos de palavras em inglês acidentais em roteiros em português
+ * PALAVRAS EM INGLÊS/ESPANHOL DENTRO DE ROTEIRO EM PORTUGUÊS
+ * A antiga removerAnglicismosAcidentais trocava palavra por palavra com \b (que não entende acentos) e
+ * transformava "força" em "paraça". Agora a regra do projeto vale também aqui: NUNCA trocar palavra;
+ * a FRASE inteira é regenerada pela IA e, se a palavra persistir, só um aviso é mostrado.
  */
-function removerAnglicismosAcidentais(texto, idioma = 'pt') {
-  if (!texto || typeof texto !== 'string') return texto;
-  const id = (idioma || '').toLowerCase();
-  if (!id.includes('port') && !id.includes('pt')) return texto;
+const REGEX_INGLES_EM_PT = /(?<![\p{L}\p{N}-])(?:the|and|of|with|from|that|this|which|they|their|was|were|are|have|has|would|could|should|into|about|because|however|therefore|in|to)(?![\p{L}\p{N}-])/iu;
+const REGEX_ESPANHOL_EM_PT = /[ñÑ¿¡]|(?<![\p{L}])(?:también|además|entonces|nuestro|nuestra|nuestros|nuestras|dios|señor|hacia|según|aquí|así)(?![\p{L}])/iu;
 
-  const mapa = [
-    { regex: /\bIn\b/g, sub: 'Em' },
-    { regex: /\bin\b/g, sub: 'em' },
-    { regex: /\bFor\b/g, sub: 'Para' },
-    { regex: /\bfor\b/g, sub: 'para' },
-    { regex: /\bAnd\b/g, sub: 'E' },
-    { regex: /\band\b/g, sub: 'e' },
-    { regex: /\bThe\b/g, sub: 'O' },
-    { regex: /\bthe\b/g, sub: 'o' },
-    { regex: /\bOf\b/g, sub: 'De' },
-    { regex: /\bof\b/g, sub: 'de' },
-    { regex: /\bWith\b/g, sub: 'Com' },
-    { regex: /\bwith\b/g, sub: 'com' },
-    { regex: /\bTo\b/g, sub: 'Para' },
-    { regex: /\bto\b/g, sub: 'para' },
-    { regex: /\bFrom\b/g, sub: 'De' },
-    { regex: /\bfrom\b/g, sub: 'de' }
-  ];
-
-  let res = texto;
-  for (const item of mapa) {
-    res = res.replace(item.regex, item.sub);
-  }
-  return res;
+function detectarPalavrasEstrangeirasPT(frase) {
+  const fora = String(frase || '').replace(/["“«][^"”»]*["”»]/g, ' ');
+  const m = fora.match(REGEX_INGLES_EM_PT) || fora.match(REGEX_ESPANHOL_EM_PT);
+  return m ? m[0] : '';
 }
-window.removerAnglicismosAcidentais = removerAnglicismosAcidentais;
+window.detectarPalavrasEstrangeirasPT = detectarPalavrasEstrangeirasPT;
+
+function idiomaEhPortugues(idioma) {
+  const id = String(idioma || '').toLowerCase();
+  return id.includes('port') || id === 'pt' || id.startsWith('pt');
+}
+
+/**
+ * Reescreve UMA frase com a IA (frase inteira, nunca troca de palavra). Devolve null se não conseguir
+ * uma versão que passe em `valido`.
+ */
+async function reescreverFraseComIA({ frase, contexto = '', motivo, instrucao = '', modelo, valido, tentativas = 2 }) {
+  for (let t = 0; t < tentativas; t++) {
+    const prompt = `Act as an expert copy-editor of biblical documentary scripts in Brazilian Portuguese.
+Rewrite ONLY the sentence below to fix this problem: ${motivo}
+${instrucao}
+RULES: rewrite the WHOLE sentence in a different way. NEVER just swap one word for a synonym. Keep the same biblical facts. Keep every text inside quotation marks 100% unchanged. Add no new facts, names, numbers or quotations. 100% Brazilian Portuguese, with no English or Spanish words. Output EXCLUSIVELY the rewritten sentence, with no explanation.
+
+PARAGRAPH (context only):
+"""${String(contexto).slice(0, 700)}"""
+
+SENTENCE TO REWRITE:
+"""${frase}"""`;
+    try {
+      const r = await OpenRouterAPI.generateContent(prompt, modelo, SCRIPT_SYSTEM_PROMPT, { temperature: 0.3 });
+      const nova = (r || '').trim().replace(/^```[a-z]*\s*/i, '').replace(/\s*```$/i, '').trim();
+      if (nova.length > 8 && (!valido || valido(nova))) return nova;
+    } catch (e) {
+      console.warn('[Reescrita de frase] Falha na chamada à IA:', e);
+      break;
+    }
+  }
+  return null;
+}
+window.reescreverFraseComIA = reescreverFraseComIA;
+
+async function corrigirPalavrasEstrangeiras(texto, idioma, modelo) {
+  if (!texto || typeof texto !== 'string' || !idiomaEhPortugues(idioma)) return { texto, regeneradas: 0, pendentes: [] };
+  globalThis.__avisosPosProcessamento = globalThis.__avisosPosProcessamento || [];
+  const paragrafos = texto.split(/\n\s*\n/);
+  let regeneradas = 0;
+  const pendentes = [];
+  for (let pIdx = 0; pIdx < paragrafos.length; pIdx++) {
+    const sentencas = paragrafos[pIdx].match(/[^.!?]+(?:[.!?]+["”']?|$)/g) || [paragrafos[pIdx]];
+    let mudou = false;
+    for (let sIdx = 0; sIdx < sentencas.length; sIdx++) {
+      const sent = sentencas[sIdx].trim();
+      const achada = sent ? detectarPalavrasEstrangeirasPT(sent) : '';
+      if (!achada) continue;
+      const nova = await reescreverFraseComIA({
+        frase: sent,
+        contexto: paragrafos[pIdx],
+        motivo: `the word "${achada}" is not Portuguese`,
+        modelo,
+        valido: (n) => !detectarPalavrasEstrangeirasPT(n)
+      });
+      if (nova) {
+        sentencas[sIdx] = sentencas[sIdx].match(/^\s*/)[0] + nova;
+        mudou = true;
+        regeneradas++;
+      } else {
+        pendentes.push(sent);
+        globalThis.__avisosPosProcessamento.push({ tipo: 'palavra_estrangeira', trecho: sent.slice(0, 80) });
+      }
+    }
+    if (mudou) paragrafos[pIdx] = sentencas.join('').trim();
+  }
+  return { texto: paragrafos.join('\n\n'), regeneradas, pendentes };
+}
+window.corrigirPalavrasEstrangeiras = corrigirPalavrasEstrangeiras;
+
+/**
+ * VARIAR OS MARCADORES DE CONTEXTO ("na época", "historiadores observam"...): o mesmo marcador não pode se repetir
+ * em sequência (até 8 frases de distância). A frase repetida é regenerada com outro marcador.
+ */
+const MARCADORES_CONTEXTO = [
+  { id: 'na época', re: /(?<![\p{L}])na\s+[eé]poca(?![\p{L}])/iu },
+  { id: 'naquela cultura', re: /(?<![\p{L}])naquela\s+cultura(?![\p{L}])/iu },
+  { id: 'muitos estudiosos explicam', re: /(?<![\p{L}])muitos\s+estudiosos\s+(?:explicam|apontam|entendem|observam)(?![\p{L}])/iu },
+  { id: 'segundo historiadores', re: /(?<![\p{L}])segundo\s+(?:os\s+)?historiadores(?![\p{L}])/iu },
+  { id: 'historiadores observam', re: /(?<![\p{L}])historiadores\s+(?:observam|explicam|apontam)(?![\p{L}])/iu },
+  { id: 'segundo estudiosos', re: /(?<![\p{L}])segundo\s+(?:os\s+)?estudiosos(?![\p{L}])/iu },
+  { id: 'estudiosos explicam', re: /(?<![\p{L}])estudiosos\s+(?:explicam|apontam|observam)(?![\p{L}])/iu }
+];
+
+function marcadorDeContexto(frase) {
+  const fora = String(frase || '').replace(/["“«][^"”»]*["”»]/g, ' ');
+  for (const m of MARCADORES_CONTEXTO) if (m.re.test(fora)) return m.id;
+  return '';
+}
+window.marcadorDeContexto = marcadorDeContexto;
+
+async function variarMarcadoresDeContexto(texto, idioma, modelo) {
+  if (!texto || typeof texto !== 'string' || !idiomaEhPortugues(idioma)) return { texto, regeneradas: 0 };
+  globalThis.__avisosPosProcessamento = globalThis.__avisosPosProcessamento || [];
+  const paragrafos = texto.split(/\n\s*\n/);
+  let ultimo = '';
+  let distancia = 99;
+  let regeneradas = 0;
+  for (let pIdx = 0; pIdx < paragrafos.length; pIdx++) {
+    const sentencas = paragrafos[pIdx].match(/[^.!?]+(?:[.!?]+["”']?|$)/g) || [paragrafos[pIdx]];
+    let mudou = false;
+    for (let sIdx = 0; sIdx < sentencas.length; sIdx++) {
+      const sent = sentencas[sIdx].trim();
+      if (!sent) continue;
+      distancia++;
+      const marc = marcadorDeContexto(sent);
+      if (!marc) continue;
+      if (marc === ultimo && distancia <= 8) {
+        const outros = MARCADORES_CONTEXTO.map(m => m.id).filter(i => i !== marc).join('", "');
+        const nova = await reescreverFraseComIA({
+          frase: sent,
+          contexto: paragrafos[pIdx],
+          motivo: `the context marker "${marc}" repeats the previous one`,
+          instrucao: `Use a DIFFERENT context marker (for example "${outros}"), and only because the sentence states a custom of the time or an interpretation. Keep the marker in Portuguese.`,
+          modelo,
+          valido: (n) => marcadorDeContexto(n) !== marc
+        });
+        if (nova) {
+          sentencas[sIdx] = sentencas[sIdx].match(/^\s*/)[0] + nova;
+          mudou = true;
+          regeneradas++;
+          ultimo = marcadorDeContexto(nova) || '';
+          distancia = 0;
+          continue;
+        }
+        globalThis.__avisosPosProcessamento.push({ tipo: 'marcador_repetido', trecho: sent.slice(0, 80) });
+      }
+      ultimo = marc;
+      distancia = 0;
+    }
+    if (mudou) paragrafos[pIdx] = sentencas.join('').trim();
+  }
+  return { texto: paragrafos.join('\n\n'), regeneradas };
+}
+window.variarMarcadoresDeContexto = variarMarcadoresDeContexto;
 
 /**
  * Garante que o Shorts fique estritamente entre 130 e 160 palavras na narração falada limpa.
@@ -9315,7 +9511,9 @@ function ajustarExtensaoRoteiro(texto, estiloRoteiro = '') {
     // Catálogo em N itens (14-17 min): meta 1.800 a 2.600 palavras
     const nItensEl = (typeof document !== 'undefined') ? document.getElementById('input-num-itens-catalogo') : null;
     const nItens = nItensEl ? parseInt(nItensEl.value, 10) : 9;
-    const metaMax = Math.min(2600, Math.max(1800, (nItens * 200) + 350));
+    // Teto = o do próprio módulo do Catálogo (escala com o nº de itens); o antigo teto fixo cortava itens já validados
+    const limModulo = (typeof CatalogoModule !== 'undefined' && CatalogoModule.limitesTotal) ? CatalogoModule.limitesTotal(nItens) : null;
+    const metaMax = limModulo ? limModulo.max : Math.min(2600, Math.max(1800, (nItens * 200) + 350));
     if (obterContagem(res) > metaMax) {
       res = apararParaLimiteMaximo(res, metaMax, estilo);
     }
@@ -9344,6 +9542,47 @@ function ajustarExtensaoRoteiro(texto, estiloRoteiro = '') {
 }
 
 window.ajustarExtensaoRoteiro = ajustarExtensaoRoteiro;
+
+/**
+ * Onde começa o FECHAMENTO do roteiro (parágrafo de conclusão + CTA). Usa a âncora da Seção 7 guardada na montagem;
+ * se ela não for encontrada (texto reescrito por validadores), usa os CTAs finais + 1 parágrafo de conclusão.
+ * Evita o erro antigo de "pegar os 2 últimos parágrafos" e colocar conteúdo DEPOIS da conclusão.
+ */
+function auditarEstruturaFinal(texto, estiloRoteiro = '') {
+  const avisos = [];
+  if (/Cat[aá]logo/i.test(String(estiloRoteiro))) return avisos; // o Catálogo tem CTA intermediário por desenho
+  const paras = String(texto || '').split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  const ehCta = (p) => /(?<![\p{L}])(?:inscreva-se|se\s+inscreva|inscrev(?:a|er)\s+(?:no|neste)\s+canal|subscribe|acompanhe\s+(?:este|o)\s+canal|suscr[ií]bete|ative\s+o\s+sino)(?![\p{L}])/iu.test(p || '');
+  const idxCtas = paras.map((p, i) => ehCta(p) ? i : -1).filter(i => i >= 0);
+  if (idxCtas.length > 1) avisos.push({ tipo: 'mais_de_um_cta', trecho: `${idxCtas.length} parágrafos de convite de inscrição` });
+  if (idxCtas.length && idxCtas[idxCtas.length - 1] !== paras.length - 1) avisos.push({ tipo: 'conteudo_depois_do_cta', trecho: 'Há texto depois do convite de inscrição' });
+  if (!idxCtas.length) avisos.push({ tipo: 'sem_cta', trecho: 'O roteiro não termina com convite de inscrição' });
+  return avisos;
+}
+window.auditarEstruturaFinal = auditarEstruturaFinal;
+
+function indiceInicioFechamento(paragrafos, ancora) {
+  const norm = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  const ehCta = (p) => /(?<![\p{L}])(?:inscreva-se|se\s+inscreva|inscrev(?:a|er)\s+(?:no|neste)\s+canal|subscribe|acompanhe\s+(?:este|o)\s+canal|suscr[ií]bete|ative\s+o\s+sino)(?![\p{L}])/iu.test(p || '');
+  const a = norm(ancora).slice(0, 30);
+  if (a.length >= 15) {
+    const limite = Math.max(0, paragrafos.length - 6);
+    for (let i = paragrafos.length - 1; i >= limite; i--) {
+      if (norm(paragrafos[i]).startsWith(a)) return Math.max(1, i);
+    }
+  }
+  let i = paragrafos.length;
+  while (i > 0 && ehCta(paragrafos[i - 1])) i--;
+  return Math.max(1, i - 1);
+}
+
+function inserirAntesDoFechamento(texto, bloco, ancora) {
+  const paragrafos = String(texto || '').split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  const idx = indiceInicioFechamento(paragrafos, ancora);
+  return [...paragrafos.slice(0, idx), String(bloco).trim(), ...paragrafos.slice(idx)].join('\n\n');
+}
+window.indiceInicioFechamento = indiceInicioFechamento;
+window.inserirAntesDoFechamento = inserirAntesDoFechamento;
 
 /**
  * ITEM 2: Geração Estruturada em 7 Seções Bíblicas Canônicas
@@ -9462,6 +9701,7 @@ async function gerarRoteiroEmSeteSecoes({
 
   // Passo 2: Geração individual de cada seção com isolamento mútuo estrito de eventos
   const secoesGeradas = [];
+  let ancoraSecao7 = '';
   const versiculosCitados = [];
   let resumoSecoesAnteriores = '';
 
@@ -9505,13 +9745,21 @@ async function gerarRoteiroEmSeteSecoes({
       tipoGancho
     });
 
-    const textoSecao = await OpenRouterAPI.generateContent(
-      sectionPrompt,
-      modelo,
-      SCRIPT_SYSTEM_PROMPT
-    );
+    // Cada seção precisa vir com tamanho mínimo; se vier vazia/curta, tenta de novo (até 3 vezes) e, se continuar
+    // assim, interrompe com mensagem clara em vez de montar um roteiro com seção faltando.
+    const minPalavrasSecao = (i === secoes.length - 1) ? 40 : 150;
+    let textoSecao = '';
+    for (let tentativaSecao = 0; tentativaSecao < 3; tentativaSecao++) {
+      textoSecao = await OpenRouterAPI.generateContent(sectionPrompt, modelo, SCRIPT_SYSTEM_PROMPT);
+      if (textoSecao && (textoSecao.trim().match(/\S+/g) || []).length >= minPalavrasSecao) break;
+      console.warn(`[Geração em 7 Seções] Seção ${secNum} veio vazia ou curta (tentativa ${tentativaSecao + 1}/3).`);
+      textoSecao = '';
+    }
+    if (!textoSecao) {
+      throw new Error(`A Seção ${secNum} de 7 saiu vazia ou curta demais depois de 3 tentativas. Nenhum roteiro foi montado; tente gerar novamente.`);
+    }
 
-    let limpo = textoSecao ? textoSecao.trim() : '';
+    let limpo = textoSecao.trim();
 
     // Conclusão do Longo (Seção 7): no máximo 120 palavras, sem recapitular
     if (i === 6) {
@@ -9527,6 +9775,10 @@ async function gerarRoteiroEmSeteSecoes({
         textoConclusao = apararParaLimiteMaximo(textoConclusao, 120);
       }
       limpo = ctaSec7 ? (textoConclusao + '\n\n' + ctaSec7) : textoConclusao;
+    }
+
+    if (i === 6) {
+      ancoraSecao7 = (limpo.split(/\n\s*\n/)[0] || '').slice(0, 80);
     }
 
     secoesGeradas.push(limpo);
@@ -9583,6 +9835,26 @@ async function gerarRoteiroEmSeteSecoes({
     return (limpo.match(/\S+/g) || []).length;
   };
 
+  // Expansão de duração: 2 parágrafos de DESENVOLVIMENTO inseridos no miolo (antes da Seção 7), nunca depois da conclusão
+  const gerarExpansaoMiolo = async (faltam, contagemAtual) => {
+    console.log(`[Geração em 7 Seções] Narração limpa em ${contagemAtual} palavras. Complementando ${faltam} palavras para cumprir meta de 2.700...`);
+    const promptExpansao = `Act as the same senior biblical documentary scriptwriter.
+The clean narration of the documentary on '${ideia}' is currently at ${contagemAtual} words. The required documentary minimum is 2,700 words (strict range: 2,700 - 3,000 words).
+Without repeating any stories, explanations or verses already told, without speculating beyond the canonical text, without backstage phrases, without internal labels, and without forbidden clichés, write a dense and reverent 2-paragraph narrative expansion developing the canonical context and historical gravity of '${ideia}'.
+This expansion goes in the MIDDLE of the script, BEFORE the conclusion: it must NOT be a conclusion, summary, wrap-up, closing reflection or subscription call (the script already has its single closing paragraph and its single call to subscribe).
+Any custom of the time or interpretation MUST carry a varied context marker ("na época...", "naquela cultura...", "muitos estudiosos explicam...", "segundo historiadores..."); never attribute it to Scripture; no absolute generalizations. Do not invent actions, words or details the biblical text does not record. Do not use: desvendar, desvendando, profundidade, precisão cirúrgica, mergulhar fundo.
+Length: at least ${faltam + 50} words.
+Language: 100% in ${lang.name}. Literal quotes from ${lang.bibleTranslation}.
+Output EXCLUSIVELY the 2 new paragraphs.`;
+    try {
+      const extra = await OpenRouterAPI.generateContent(promptExpansao, modelo, SCRIPT_SYSTEM_PROMPT);
+      return (extra && extra.trim()) ? extra.trim() : '';
+    } catch (eExp) {
+      console.warn('Falha na expansão de duração:', eExp);
+      return '';
+    }
+  };
+
   // Controle estrito de palavras na Narração Limpa: Entre 2.700 e 3.000 palavras. NUNCA passar de 3.000 e NUNCA menos de 2.700.
   let contagem = obterPalavrasLimpo(scriptFinal);
   console.log(`[Geração em 7 Seções] Contagem na narração limpa pós-validação bíblica: ${contagem} palavras.`);
@@ -9593,49 +9865,14 @@ async function gerarRoteiroEmSeteSecoes({
     contagem = obterPalavrasLimpo(scriptFinal);
     console.log(`[Geração em 7 Seções] Miolo condensado estritamente para o teto de 3.000 palavras: ${contagem} palavras.`);
   } else if (contagem < 2700) {
-    const faltam = 2700 - contagem;
-    console.log(`[Geração em 7 Seções] Narração limpa em ${contagem} palavras. Complementando ${faltam} palavras para cumprir meta de 2.700...`);
-    const promptExpansao = `Act as the same senior biblical documentary scriptwriter.
-The clean narration of the documentary on '${ideia}' is currently at ${contagem} words. The required documentary minimum is 2,700 words (strict range: 2,700 - 3,000 words).
-Without repeating any stories, explanations or verses already told, without speculating beyond the canonical text, without backstage phrases, without internal labels, and without forbidden clichés, write a dense and reverent 2-paragraph narrative expansion developing the canonical context and historical gravity of '${ideia}'.
-This expansion goes in the MIDDLE of the script: it must NOT be a conclusion, summary, wrap-up or closing reflection (the script already has its single closing paragraph).
-Any custom of the time or interpretation MUST carry a varied context marker ("na época...", "naquela cultura...", "muitos estudiosos explicam...", "segundo historiadores..."); never attribute it to Scripture; no absolute generalizations. Do not use: desvendar, desvendando, profundidade, precisão cirúrgica, mergulhar fundo.
-Length: at least ${faltam + 50} words.
-Language: 100% in ${lang.name}. Literal quotes from ${lang.bibleTranslation}.
-Output EXCLUSIVELY the final 2 paragraphs.`;
-
-    try {
-      const extra = await OpenRouterAPI.generateContent(promptExpansao, modelo, SCRIPT_SYSTEM_PROMPT);
-      if (extra && extra.trim()) {
-        const paragrafosAtuais = scriptFinal.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
-        const ctaRegex = /\b(?:subscrib(?:e|ing)|inscreva-se|inscrever|join\s+(?:this\s+)?channel|follow\s+(?:this\s+)?channel|acompanhe\s+este\s+canal|suscr[ií]bete|suscribir)\b/i;
-        let ctaParagrafo = '';
-        if (paragrafosAtuais.length > 0 && ctaRegex.test(paragrafosAtuais[paragrafosAtuais.length - 1])) {
-          ctaParagrafo = paragrafosAtuais.pop();
-        }
-
-        // Preserva a Conclusão legítima da Seção 7 como o penúltimo bloco (<= 120 palavras)
-        let conclusaoParagrafo = '';
-        if (paragrafosAtuais.length > 0) {
-          conclusaoParagrafo = paragrafosAtuais.pop();
-        }
-
-        if (conclusaoParagrafo && ctaParagrafo) {
-          scriptFinal = [...paragrafosAtuais, extra.trim(), conclusaoParagrafo, ctaParagrafo].join('\n\n');
-        } else if (ctaParagrafo) {
-          scriptFinal = [...paragrafosAtuais, extra.trim(), ctaParagrafo].join('\n\n');
-        } else {
-          scriptFinal = scriptFinal.trim() + '\n\n' + extra.trim();
-        }
-
-        scriptFinal = removerParagrafosDuplicadosPorSimilaridade(scriptFinal, 0.6);
-        contagem = obterPalavrasLimpo(scriptFinal);
-        if (contagem > 3000) {
-          scriptFinal = await condensarParagrafoMaisLongoDoMiolo(scriptFinal, 3000, modelo, lang);
-        }
+    const extra = await gerarExpansaoMiolo(2700 - contagem, contagem);
+    if (extra) {
+      scriptFinal = inserirAntesDoFechamento(scriptFinal, extra, ancoraSecao7);
+      scriptFinal = removerParagrafosDuplicadosPorSimilaridade(scriptFinal, 0.6);
+      contagem = obterPalavrasLimpo(scriptFinal);
+      if (contagem > 3000) {
+        scriptFinal = await condensarParagrafoMaisLongoDoMiolo(scriptFinal, 3000, modelo, lang);
       }
-    } catch (eExp) {
-      console.warn('Falha na expansão de encerramento:', eExp);
     }
   }
 
@@ -9661,46 +9898,22 @@ Output EXCLUSIVELY the final 2 paragraphs.`;
   if (typeof limparPontuacaoDuplicada === 'function') {
     scriptFinal = limparPontuacaoDuplicada(scriptFinal);
   }
-  if (typeof removerAnglicismosAcidentais === 'function') {
-    scriptFinal = removerAnglicismosAcidentais(scriptFinal, idioma);
-  }
 
-  // Garantia matemática de mínimo de 2.700 palavras (caso limpezas tenham reduzido a contagem)
+  // Garantia de mínimo de 2.700 palavras (caso as limpezas tenham reduzido a contagem): uma nova expansão de
+  // desenvolvimento no miolo. NÃO usa mais frases fixas de reserva (viravam um 2º fechamento e afirmações sem base).
   contagem = obterPalavrasLimpo(scriptFinal);
   if (contagem < 2700) {
-    const diff = 2700 - contagem;
-    console.log(`[Geração em 7 Seções] Pós-processamento resultou em ${contagem} palavras. Adicionando complemento reverente de ${diff} palavras...`);
-    const paragrafosAtuais = scriptFinal.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
-    const ctaFinal = paragrafosAtuais.pop(); // Remove CTA fixo
-    const conclusaoFinal = paragrafosAtuais.pop(); // Preserva Conclusão legítima
-    
-    // Constrói complemento solene e reverente
-    const frasesComplemento = [
-      'A história que as Escrituras preservaram ao longo dos séculos mostra a soberania do Criador sobre o destino das nações e dos homens.',
-      'Cada juízo decretado e cada promessa feita nas Escrituras cumpre, com fidelidade, o propósito que Deus estabeleceu desde o princípio.',
-      'O registro bíblico permanece firme diante do silêncio dos impérios antigos e mostra a justiça de Deus atravessando as gerações.',
-      'Diante da magnitude dos feitos divinos relatados no texto bíblico, a reverência e o temor diante do Senhor revelam a grandeza do conselho altíssimo.',
-      'As palavras de Deus não voltam vazias: cumprem tudo quanto ele quis manifestar ao seu povo.'
-    ];
-
-    let textoComplemento = '';
-    let idxF = 0;
-    while (obterPalavrasLimpo(textoComplemento) < diff + 15 && idxF < frasesComplemento.length) {
-      textoComplemento += (textoComplemento ? ' ' : '') + frasesComplemento[idxF];
-      idxF++;
+    const extra2 = await gerarExpansaoMiolo(2700 - contagem, contagem);
+    if (extra2) {
+      scriptFinal = inserirAntesDoFechamento(scriptFinal, extra2, ancoraSecao7);
+      scriptFinal = limparPontuacaoDuplicada(scriptFinal);
+      contagem = obterPalavrasLimpo(scriptFinal);
     }
-
-    if (conclusaoFinal) {
-      scriptFinal = [...paragrafosAtuais, textoComplemento, conclusaoFinal, ctaFinal].join('\n\n');
-    } else {
-      scriptFinal = [...paragrafosAtuais, textoComplemento, ctaFinal].join('\n\n');
+    if (contagem < 2700) {
+      globalThis.__avisosPosProcessamento = globalThis.__avisosPosProcessamento || [];
+      globalThis.__avisosPosProcessamento.push({ tipo: 'texto_curto', trecho: `${contagem} palavras (meta mínima: 2.700)` });
     }
-    scriptFinal = limparPontuacaoDuplicada(scriptFinal);
-    if (typeof removerAnglicismosAcidentais === 'function') {
-      scriptFinal = removerAnglicismosAcidentais(scriptFinal, idioma);
-    }
-    contagem = obterPalavrasLimpo(scriptFinal);
-    console.log(`[Geração em 7 Seções] Contagem final garantida: ${contagem} palavras.`);
+    console.log(`[Geração em 7 Seções] Contagem final: ${contagem} palavras.`);
   }
 
   updateProgress(7, 7, 'Geração em 7 seções concluída com êxito!', 100);
@@ -9736,6 +9949,8 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
 
     // Requisito 11: Limpa as caixas de resultado das etapas 2 a 5 para não exibir dados do vídeo anterior
     limparResultadosEtapasPosteriores();
+    globalThis.__avisosPosProcessamento = [];
+    globalThis.__frasesRemovidas = [];
 
     const estiloRoteiro = document.getElementById('select-estilo-roteiro').value;
     const tomVoz = UI.getValue('select-tom', 'input-tom-custom');
@@ -9874,12 +10089,12 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
 
       // 3. Limitador de "silêncio da Bíblia" (máximo 1 vez no roteiro inteiro)
       if (typeof limitarDeclaracoesDeSilencioBiblico === 'function') {
-        resultText = limitarDeclaracoesDeSilencioBiblico(resultText);
+        resultText = limitarDeclaracoesDeSilencioBiblico(resultText, estiloRoteiro);
       }
 
       // 4. PONTO 5: Limitar Expressões Repetitivas (máx 2 vezes cada via regeneração por LLM)
       if (typeof limitarRepeticaoExpressoes === 'function') {
-        resultText = await limitarRepeticaoExpressoes(resultText, idioma, modeloRoteiro);
+        resultText = await limitarRepeticaoExpressoes(resultText, idioma, modeloRoteiro, estiloRoteiro);
       }
 
       // 5. Limitar Frases de Reforço de Historicidade e Descarte de Ceticismo (máx 2 longo, 1 shorts/médio)
@@ -9929,6 +10144,14 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       if (filtroRes.modificado) {
         UI.showToast(`Filtro pós-geração: ${filtroRes.totalCorrigidos} termo(s) proibido(s) corrigido(s) automaticamente.`);
       }
+
+      // 7.1 Palavras em inglês/espanhol no texto em português: a frase é regenerada (nunca trocada palavra por palavra)
+      const estrangRes = await corrigirPalavrasEstrangeiras(resultText, idioma, modeloRoteiro);
+      resultText = estrangRes.texto;
+
+      // 7.2 Marcadores de contexto ("na época", "historiadores observam"...) não podem se repetir em sequência
+      const marcRes = await variarMarcadoresDeContexto(resultText, idioma, modeloRoteiro);
+      resultText = marcRes.texto;
 
       // 8. Garante convite de inscrição no último parágrafo antes de auditar
       if (typeof garantirCtaNoUltimoParagrafo === 'function') {
@@ -10016,6 +10239,11 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
           const gramRes = await revisarGramaticaNarracaoLimpa(textoLimpo, idioma, modeloRoteiro);
           textoLimpo = gramRes.texto;
           if (gramRes.aplicadas.length > 0) {
+            // As mesmas correções valem para o Roteiro Completo (as duas versões não podem divergir)
+            const emCompleto = aplicarCorrecoesGramaticais(resultText, gramRes.aplicadas.map(a => ({ fraseOriginal: a.original, fraseCorrigida: a.corrigida })));
+            resultText = emCompleto.texto;
+            if (outputRoteiroEl) outputRoteiroEl.value = resultText;
+            if (textareaRoteiroGerado) textareaRoteiroGerado.value = resultText;
             UI.showToast(`Revisão gramatical: ${gramRes.aplicadas.length} frase(s) quebrada(s) corrigida(s) na Narração Limpa.`);
           }
         } catch (eGram) {
@@ -10066,6 +10294,23 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       } else {
         const containerRelatorio = document.getElementById('relatorio-validador-catalogo');
         if (containerRelatorio) containerRelatorio.classList.add('hidden');
+      }
+
+      // Avisos do pós-processamento (aspas desbalanceadas, palavra estrangeira persistente, corte extremo, frases removidas...)
+      auditarEstruturaFinal(resultText, estiloRoteiro).forEach(a => globalThis.__avisosPosProcessamento.push(a));
+      const avisosPos = globalThis.__avisosPosProcessamento || [];
+      const removidasPos = globalThis.__frasesRemovidas || [];
+      if (avisosPos.length > 0) {
+        console.group('[Pós-processamento] Avisos para revisão manual');
+        avisosPos.forEach(a => console.warn(a.tipo, '→', a.trecho));
+        console.groupEnd();
+        UI.showToast(`Atenção: ${avisosPos.length} aviso(s) no roteiro (${[...new Set(avisosPos.map(a => a.tipo))].join(', ')}). Detalhes no console do navegador.`, 'warning');
+      }
+      if (removidasPos.length > 0) {
+        console.group('[Pós-processamento] Trechos removidos por regra');
+        removidasPos.forEach(r => console.warn(r.regra, '→', r.trecho));
+        console.groupEnd();
+        UI.showToast(`${removidasPos.length} trecho(s) foram removidos por regras automáticas (lista no console).`, 'warning');
       }
 
       atualizarSeloAba(1, true);
