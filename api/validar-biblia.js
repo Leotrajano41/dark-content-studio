@@ -7,6 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const Citacao = require('../js/citacao.js');
 
 function readJsonClean(filePath) {
   let content = fs.readFileSync(filePath, 'utf8');
@@ -39,10 +40,12 @@ function loadBibles() {
     return bibles;
   }
 
+  // Português: SOMENTE a Almeida Revista e Corrigida (ARC). A opção JFA/Atualizada foi desligada (pt_jfa.json não é lido).
   if (!bibles.pt) {
-    const ptPath = path.join(actualDir, 'pt_jfa.json');
+    const ptPath = path.join(actualDir, 'pt_arc.json');
     if (fs.existsSync(ptPath)) bibles.pt = readJsonClean(ptPath);
   }
+
   if (!bibles.en) {
     const enPath = path.join(actualDir, 'en_kjv.json');
     if (fs.existsSync(enPath)) bibles.en = readJsonClean(enPath);
@@ -143,6 +146,10 @@ function normalizeStr(str) {
 }
 
 function findBook(bookName) {
+  // O acento decide: 'Jó'/'Job' = Jó, 'Jo' = João (normalizeStr tira o acento e juntaria os dois)
+  const bruto = String(bookName || '').trim().toLowerCase();
+  if (bruto === 'jó' || bruto === 'job') return BOOK_CANONICAL.find(b => b.id === 'job');
+  if (bruto === 'jo') return BOOK_CANONICAL.find(b => b.id === 'jo');
   const norm = normalizeStr(bookName);
   // Prioridade 1: correspondência exata de nome sem acento nos 66 livros canônicos
   for (const b of BOOK_CANONICAL) {
@@ -204,15 +211,22 @@ function getVerseText(bibleData, bookCanonical, chapterNum, verseStart, verseEnd
  * Alinha e extrai a porção correspondente do versículo bíblico real da Almeida (ARA) / KJV
  * quando a citação do narrador for parcial. Substitui apenas as palavras citadas pelas literais.
  */
+// Palavras da mesma raiz ("santificardes" ~ "santificar") contam como a mesma ao alinhar a citação com o versículo
+function mesmaPalavra(a, b) {
+  if (a === b) return true;
+  const min = Math.min(a.length, b.length);
+  if (min < 6) return false;
+  let i = 0;
+  while (i < min && a[i] === b[i]) i++;
+  return i >= 6 && i / Math.max(a.length, b.length) >= 0.6;
+}
+const incluiPalavra = (lista, p) => lista.some(x => mesmaPalavra(x, p));
+
 function alinharTrechoCorrespondente(versiculoReal, textoCitado, langKey = 'pt') {
   if (!versiculoReal || !textoCitado) return versiculoReal;
 
+  // Redação literal da tradução carregada (ARC): NÃO força "SENHOR" em maiúsculas nem altera o texto do versículo
   let vFormatado = versiculoReal;
-  if (langKey === 'pt') {
-    vFormatado = vFormatado.replace(/\b(?:ao|do|o|no|pelo|para\s+o)?\s*senhor\b/gi, (match) => {
-      return match.replace(/senhor/i, 'SENHOR');
-    });
-  }
 
   const limparPalavras = (str) => {
     return normalizeStr(str).replace(/[^\w\s]/g, ' ').split(/\s+/).filter(p => p.length > 0);
@@ -229,10 +243,6 @@ function alinharTrechoCorrespondente(versiculoReal, textoCitado, langKey = 'pt')
   const strCitadoJoin = palavrasCitado.join(' ');
   const strRealJoin = palavrasReal.join(' ');
   if (strRealJoin.includes(strCitadoJoin)) {
-    // Se estiver em português, garante apenas que SENHOR fique em maiúsculas se houver
-    if (langKey === 'pt' && /\bsenhor\b/i.test(textoCitado)) {
-      return textoCitado.replace(/\b(?:ao|do|o|no|pelo|para\s+o)?\s*senhor\b/gi, (m) => m.replace(/senhor/i, 'SENHOR'));
-    }
     return textoCitado;
   }
 
@@ -244,7 +254,7 @@ function alinharTrechoCorrespondente(versiculoReal, textoCitado, langKey = 'pt')
     const sPalavras = limparPalavras(s).filter(p => p.length > 2);
     let matches = 0;
     for (const p of sPalavras) {
-      if (palavrasCitado.includes(p)) matches++;
+      if (incluiPalavra(palavrasCitado, p)) matches++;
     }
     const score = sPalavras.length > 0 ? (matches / sPalavras.length) : 0;
     return { sent: s.trim(), score, matches, total: sPalavras.length };
@@ -298,7 +308,7 @@ function alinharTrechoCorrespondente(versiculoReal, textoCitado, langKey = 'pt')
   const primeirasPalavras = palavrasCitado.slice(0, Math.min(5, palavrasCitado.length));
   while (minIdx < maxIdx) {
     const sPalavras = limparPalavras(sentencas[minIdx]).filter(p => p.length > 2);
-    const temInicioMatch = sPalavras.some(p => primeirasPalavras.includes(p));
+    const temInicioMatch = sPalavras.some(p => incluiPalavra(primeirasPalavras, p));
     const isFalaNarrativa = /[:]\s*$/.test(sentencas[minIdx]) && /\b(?:disse|falou|respondeu|clamou|chamou|disseram|perguntou|dizendo)\b/i.test(sentencas[minIdx]);
     if (!temInicioMatch || isFalaNarrativa) {
       minIdx++;
@@ -312,7 +322,7 @@ function alinharTrechoCorrespondente(versiculoReal, textoCitado, langKey = 'pt')
   const ultimasPalavras = palavrasCitado.slice(Math.max(0, palavrasCitado.length - 5));
   while (maxIdx > minIdx) {
     const sPalavras = limparPalavras(sentencas[maxIdx]).filter(p => p.length > 2);
-    const temFimMatch = sPalavras.some(p => ultimasPalavras.includes(p));
+    const temFimMatch = sPalavras.some(p => incluiPalavra(ultimasPalavras, p));
     if (!temFimMatch) {
       maxIdx--;
     } else {
@@ -335,7 +345,7 @@ function alinharTrechoCorrespondente(versiculoReal, textoCitado, langKey = 'pt')
  * @param {string} idioma
  * @returns {{ textoCorrigido: string, alteracoes: Array, totalReferencias: number }}
  */
-function validarRoteiroBiblico(texto, idioma = 'pt') {
+function validarRoteiroBiblico(texto, idioma = 'pt', traducao = 'arc') {
   if (!texto || typeof texto !== 'string') {
     return { textoCorrigido: texto || '', alteracoes: [], totalReferencias: 0 };
   }
@@ -344,7 +354,9 @@ function validarRoteiroBiblico(texto, idioma = 'pt') {
   const langKey = (idioma.toLowerCase().includes('en') || idioma.toLowerCase().includes('ing')) ? 'en'
                 : (idioma.toLowerCase().includes('es') || idioma.toLowerCase().includes('esp')) ? 'es'
                 : 'pt';
+  // `traducao` é aceito por compatibilidade, mas ignorado: a conferência é sempre pela ARC
   const currentBible = biblesLoaded[langKey] || biblesLoaded.pt;
+  const traducaoNome = langKey === 'pt' ? 'ARC' : langKey === 'en' ? 'KJV' : 'RVR';
 
   // Se a Bíblia não pôde ser carregada no ambiente, retorna texto intacto com aviso
   if (!currentBible) {
@@ -386,7 +398,10 @@ function validarRoteiroBiblico(texto, idioma = 'pt') {
     refRegex.lastIndex = 0;
 
     while ((match = refRegex.exec(p)) !== null) {
-      const bookCan = findBook(match[1].trim());
+      const bookToken = match[1].trim();
+      // Siglas curtas (Is, Am, Os, Na, Ex...) só valem com inicial maiúscula e ":" ("Is 53:5"); "na 2.5", "os 3.5" são números comuns
+      if (bookToken.replace(/^[1-3]\s*/, '').length <= 3 && (!/^(?:[1-3]\s*)?[A-ZÁÂÃÉÊÍÓÔÕÚÇ]/.test(bookToken) || !/:/.test(match[0]))) continue;
+      const bookCan = findBook(bookToken);
       if (bookCan) {
         const leadingSpaces = match[0].match(/^\s*/)[0].length;
         const cleanRef = match[0].trim();
@@ -421,17 +436,12 @@ function validarRoteiroBiblico(texto, idioma = 'pt') {
 
       const realText = getVerseText(currentBible, r.bookCan, r.chap, r.vStart, r.vEnd);
       if (!realText) {
+        // NÃO apaga a referência em silêncio: o texto fica como está e o problema é registrado para revisão manual
         const bookName = r.bookCan[langKey] || r.bookCan.pt;
-        const refPattern = new RegExp(`(?:em|conforme|segundo|de acordo com|como diz em|no livro de)?\\s*${r.rawRef.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1")}`, 'gi');
-        const generalReplacement = langKey === 'en' ? 'in the Holy Scriptures'
-                                  : langKey === 'es' ? 'en las Sagradas Escrituras'
-                                  : 'nas Sagradas Escrituras';
-        p = p.replace(refPattern, generalReplacement);
         alteracoes.push({
-          tipo: 'REFERENCIA_INEXISTENTE_REMOVIDA',
+          tipo: 'REFERENCIA_INEXISTENTE',
           referencia: r.rawRef,
-          motivo: `Capítulo ou versículo não existe em ${bookName}`,
-          substituicao: generalReplacement
+          motivo: `Capítulo ou versículo não existe em ${bookName} (${traducaoNome}). Confira a referência.`
         });
       }
     }
@@ -489,8 +499,13 @@ function validarRoteiroBiblico(texto, idioma = 'pt') {
           for (const pWord of pCit) {
             if (pReal.includes(pWord)) matches++;
           }
-          const score = pCit.length > 0 ? (matches / pCit.length) : 0;
-          const semelhançaSuficiente = (matches >= 2) || (pCit.length <= 4 && matches >= 1) || (score >= 0.2);
+          // Troca pelo texto do versículo SÓ se a citação é claramente dele (60%+ das palavras): senão vai para revisão
+          let matchesFuzzy = 0;
+          for (const pWord of pCit) {
+            if (incluiPalavra(pReal, pWord)) matchesFuzzy++;
+          }
+          const score = pCit.length > 0 ? (matchesFuzzy / pCit.length) : 0;
+          const semelhançaSuficiente = score >= 0.6;
 
           if (!semelhançaSuficiente) {
             // Requisito 2: Se tiver baixa semelhança com o versículo, registra no relatório para conferência manual
@@ -501,6 +516,29 @@ function validarRoteiroBiblico(texto, idioma = 'pt') {
               motivo: 'Texto citado possui baixa semelhança com o versículo da Almeida. Mantido para revisão manual.'
             });
           } else {
+            // ITEM 43: a citação entre aspas deve terminar no fim de uma oração do versículo
+            const fim = Citacao.analisarFimDaCitacao(realVerse, q.text);
+            if (fim.status === 'truncada') {
+              if (fim.completada) {
+                alteracoes.push({
+                  tipo: 'CITACAO_COMPLETADA',
+                  referencia: associatedRef.rawRef,
+                  textoAnterior: q.text,
+                  textoCorreto: fim.completada,
+                  motivo: 'A citação terminava no meio de uma oração; foi completada com o texto do versículo.'
+                });
+                substituicoes.push({ q, novaCitacao: q.openChar + fim.completada + q.closeChar });
+              } else {
+                alteracoes.push({
+                  tipo: 'CITACAO_SEM_ASPAS',
+                  referencia: associatedRef.rawRef,
+                  textoAnterior: q.text,
+                  motivo: `A citação terminava no meio de uma oração (faltavam ${fim.extensao} palavras): aspas removidas, o texto virou paráfrase.`
+                });
+                substituicoes.push({ q, novaCitacao: q.text });
+              }
+              continue;
+            }
             const textoSubstituto = alinharTrechoCorrespondente(realVerse, q.text, langKey);
             if (q.text !== textoSubstituto) {
               alteracoes.push({
@@ -594,7 +632,7 @@ function validarRoteiroBiblico(texto, idioma = 'pt') {
     // Ponto 3: Limpeza de pontuação duplicada imediatamente após aspas e normalização
     p = p.replace(/([.!?]["”'])\s*[.,;:]+/g, '$1');
     p = p.replace(/(["”'])\1+/g, '$1');
-    p = p.replace(/([.!?])\s*\1+/g, '$1');
+    p = p.replace(/(?<!\.)\.\.(?!\.)/g, '.').replace(/!{2,}/g, '!').replace(/\?{2,}/g, '?'); // preserva '...'
 
     paragrafos[pIdx] = p;
   }
@@ -616,13 +654,13 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { texto, idioma = 'pt' } = req.body || {};
+    const { texto, idioma = 'pt', traducao = 'arc' } = req.body || {}; // traducao é ignorada (sempre ARC)
 
     if (!texto || typeof texto !== 'string') {
       return res.status(400).json({ error: 'Parâmetro obrigatório ausente: "texto".' });
     }
 
-    const resultado = validarRoteiroBiblico(texto, idioma);
+    const resultado = validarRoteiroBiblico(texto, idioma, traducao);
     return res.status(200).json({
       sucesso: true,
       ...resultado
@@ -636,3 +674,4 @@ module.exports = async function handler(req, res) {
 module.exports.validarRoteiroBiblico = validarRoteiroBiblico;
 module.exports.loadBibles = loadBibles;
 module.exports.findBook = findBook;
+module.exports.analisarFimDaCitacao = Citacao.analisarFimDaCitacao;

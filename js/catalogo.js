@@ -24,7 +24,7 @@
     totalMax8: 2200,
     fechamentoMin: 80,
     fechamentoMax: 120,
-    palavrasPorMinuto: 180, // áudio real: ~180 palavras por minuto
+    palavrasPorMinuto: 150, // mesma estimativa do resto da ferramenta (js/narracao.js); com o áudio real o pacote usa a duração medida
     contextoAntes: 8,       // até 8 versículos antes (para situar cenário e motivação)
     contextoDepois: 4       // até 4 versículos depois (consequência imediata registrada)
   });
@@ -71,7 +71,7 @@
     'ne': 'ne', 'neemias': 'ne', 'nehemiah': 'ne',
     'et': 'et', 'ester': 'et', 'esther': 'et',
     // Poéticos
-    'job': 'job', 'jó': 'job', 'jo': 'job',
+    'job': 'jó', 'jó': 'jó', 'jb': 'jó', // nos JSONs a abreviação de Jó é 'jó' ('jo' é João)
     'sl': 'sl', 'salmo': 'sl', 'salmos': 'sl', 'psalms': 'sl', 'psalm': 'sl',
     'pv': 'pv', 'proverbio': 'pv', 'provérbio': 'pv', 'proverbios': 'pv', 'provérbios': 'pv', 'proverbs': 'pv',
     'ec': 'ec', 'eclesiastes': 'ec', 'ecclesiastes': 'ec',
@@ -99,7 +99,7 @@
     'mt': 'mt', 'mateus': 'mt', 'matthew': 'mt',
     'mc': 'mc', 'marcos': 'mc', 'mark': 'mc',
     'lc': 'lc', 'lucas': 'lc', 'luke': 'lc',
-    'joao': 'jo', 'joão': 'jo', 'john': 'jo',
+    'joao': 'jo', 'joão': 'jo', 'john': 'jo', 'jo': 'jo',
     'at': 'atos', 'atos': 'atos', 'acts': 'atos',
     // Epístolas Paulinas
     'rm': 'rm', 'romanos': 'rm', 'romans': 'rm',
@@ -132,7 +132,7 @@
     gn: 'Genesis', ex: 'Exodus', lv: 'Leviticus', nm: 'Numbers', dt: 'Deuteronomy',
     js: 'Joshua', jz: 'Judges', rt: 'Ruth', '1sm': '1 Samuel', '2sm': '2 Samuel',
     '1rs': '1 Kings', '2rs': '2 Kings', '1cr': '1 Chronicles', '2cr': '2 Chronicles',
-    ed: 'Ezra', ne: 'Nehemiah', et: 'Esther', job: 'Job', sl: 'Psalms', pv: 'Proverbs',
+    ed: 'Ezra', ne: 'Nehemiah', et: 'Esther', 'jó': 'Job', sl: 'Psalms', pv: 'Proverbs',
     ec: 'Ecclesiastes', ct: 'Song of Solomon', is: 'Isaiah', jr: 'Jeremiah', lm: 'Lamentations',
     ez: 'Ezekiel', dn: 'Daniel', os: 'Hosea', jl: 'Joel', am: 'Amos', ob: 'Obadiah',
     jn: 'Jonah', mq: 'Micah', na: 'Nahum', hc: 'Habakkuk', sf: 'Zephaniah', ag: 'Haggai',
@@ -305,12 +305,48 @@
    * Corrige a capitalização de termos sagrados (Deus, Bíblia, Senhor, Escrituras)
    * SOMENTE fora de aspas (citações literais não são alteradas).
    */
+  // Deuses de outros povos e povos pagãos: "deus" com estes nomes/contexto NÃO é o Deus de Israel (fica minúsculo)
+  const NOMES_DEUSES_FALSOS = 'Baal|Dagom|Moloque|Camos|Quemos|Astarote|Astarte|Milcom|Rimom|Nisroque|Bel|Merodaque|Berzebu|Zeus|Hermes|Ártemis|Diana|Osíris|Amom';
+  const POVOS_PAGAOS = /(?<![\p{L}])(?:filisteus|moabitas|amonitas|eg[ií]pcios|cananeus|babil[ôo]nios|ass[ií]rios|s[ií]rios|fen[ií]cios|edomitas|amorreus|heveus|hititas|id[óo]latras|pag[ãa]os?|pag[ãa]s|[ií]dolos?)(?![\p{L}])/iu;
+  const PRECEDE_OUTRO_DEUS = /(?:^|[^\p{L}])(?:um|uma|outro|outros|algum|alguns|nenhum|falso|falsos|novo|novos|qualquer|cada)\s+$/iu;
+  const PRECEDE_DONO_DEUS_PAGAO = /(?:^|[^\p{L}])(?:o|seu|seus|teu|vosso|dos?|das?|desse|daquele)\s+$/iu;
+
+  function janelaDaFrase(str, off, len) {
+    const ini = Math.max(str.lastIndexOf('.', off - 1), str.lastIndexOf('!', off - 1), str.lastIndexOf('?', off - 1), str.lastIndexOf('\n', off - 1)) + 1;
+    const cand = ['.', '!', '?', '\n'].map(ch => str.indexOf(ch, off + len)).filter(i => i >= 0);
+    const fim = cand.length ? Math.min(...cand) : str.length;
+    return str.slice(ini, fim);
+  }
+
+  /**
+   * Maiúscula em "Deus"/"Senhor" SÓ quando o texto fala do Deus de Israel.
+   * "o deus Dagom", "o seu deus" (de um povo pagão), "o senhor da casa", "meu senhor, o rei" ficam como estão.
+   */
   function corrigirCapitalizacaoSacra(texto) {
     if (!texto || typeof texto !== 'string') return '';
     return aplicarForaDeAspas(texto, parte => parte
-      .replace(/(?<!\bum\s)(?<!\boutro\s)(?<!\balgum\s)(?<!\bfalso\s)\bdeus\b/g, 'Deus')
+      .replace(/(?<![\p{L}])deus(?![\p{L}])/gu, (m, off, str) => {
+        const antes = str.slice(0, off);
+        const depois = str.slice(off + m.length);
+        if (PRECEDE_OUTRO_DEUS.test(antes)) return m;
+        if (new RegExp('^\\s+(?:d[aoe]s?\\s+)?(?:' + NOMES_DEUSES_FALSOS + ')(?![\\p{L}])', 'u').test(depois)) return m;
+        const janela = janelaDaFrase(str, off, m.length);
+        if (POVOS_PAGAOS.test(janela) && PRECEDE_DONO_DEUS_PAGAO.test(antes)) return m;
+        if (POVOS_PAGAOS.test(janela) && /^\s*,?\s*(?:dos?|das?)\s/.test(depois)) return m;
+        return 'Deus';
+      })
       .replace(/\bb[ií]blia\b/gi, 'Bíblia')
-      .replace(/\bsenhor\b/g, 'Senhor')
+      .replace(/(?<![\p{L}])senhor(?![\p{L}])/gu, (m, off, str) => {
+        const antes = str.slice(0, off);
+        const depois = str.slice(off + m.length);
+        // Senhor humano: dono, tratamento ("meu senhor, o rei"), senhor dos escravos/da casa/deles
+        if (/^\s+(?:d[aoe]s?\s+(?:casa|terra|vinha|campo|escravos?|servos?|cidade|povo|navio|na[cç][aã]o|reino|propriedade)|deles|delas|dele|dela)(?![\p{L}])/iu.test(depois)) return m;
+        if (/(?:^|[^\p{L}])(?:meu|teu|seu|vosso|nosso)\s+$/iu.test(antes) && !/^\s*,?\s*(?:e\s+(?:meu|nosso)\s+Deus|Deus|Jesus|Cristo)(?![\p{L}])/u.test(depois)) return m;
+        // Divino: "Senhor Deus/Jesus/Cristo/dos exércitos..." ou "o/ao/do/no/pelo/ó senhor", "palavra do senhor", "anjo do senhor"
+        if (/^\s+(?:Deus|Jesus|Cristo|Todo|Altíssimo|dos\s+ex[ée]rcitos)(?![\p{L}])/u.test(depois)) return 'Senhor';
+        if (/(?:^|[^\p{L}])(?:o|ao|do|no|pelo|ó|ante\s+o|perante\s+o|diante\s+do|nosso)\s+$/iu.test(antes)) return 'Senhor';
+        return m;
+      })
       .replace(/\bescrituras\b/gi, 'Escrituras')
       .replace(/\besp[ií]rito\s+santo\b/gi, 'Espírito Santo'));
   }
@@ -371,7 +407,13 @@
     { rotulo: 'ímpios', re: reProibida('ímpios|impios') },
     { rotulo: 'profanação', re: reProibida('profana[çc][ãa]o') },
     { rotulo: 'tragédia', re: reProibida('trag[ée]dias?') },
-    { rotulo: 'trágico', re: reProibida('tr[áa]gic[oa]s?') }
+    { rotulo: 'trágico', re: reProibida('tr[áa]gic[oa]s?') },
+    { rotulo: 'desvendar', re: reProibida('desvend(?:ar|ando|ado|ada|ados|adas|a|am|e|em|o|ou|aram|amos)') },
+    { rotulo: 'profundidade', re: reProibida('profundidades?') },
+    { rotulo: 'precisão cirúrgica', re: reProibida('precis[ãa]o\\s+cir[úu]rgica') },
+    { rotulo: 'Sermão da Montanha', re: reProibida('Serm[aã]o\\s+(?:da|na|no)\\s+(?:Montanha|Monte\\s+das)|Discurso\\s+da\\s+Montanha') },
+    { rotulo: 'exclusivamente', re: reProibida('exclusivamente') },
+    { rotulo: 'mergulhar fundo', re: reProibida('mergulh(?:ar|e|a|am|ando|ou|aram|amos|o)\\s+fundo') }
   ];
 
   // Jargões de "relatório" também vetados (fora de aspas)
@@ -645,8 +687,8 @@
     } else if (idioma === 'es') {
       nomeArquivo = 'es_rvr.json';
     } else {
-      // Português: 'arc' é o padrão (Almeida Revista e Corrigida); 'aa' ou 'jfa' é Almeida Atualizada
-      nomeArquivo = (vNorm === 'aa' || vNorm === 'ara' || vNorm === 'jfa') ? 'pt_jfa.json' : 'pt_arc.json';
+      // Português: SOMENTE a Almeida Revista e Corrigida (ARC). A opção 'aa'/'jfa' foi desligada (pt_jfa.json não é mais lido).
+      nomeArquivo = 'pt_arc.json';
     }
 
     if (_bibleCache[nomeArquivo]) {
@@ -705,6 +747,10 @@
    * Converte nome do livro em chave canônica
    */
   function resolverLivroCanonica(nomeLivro) {
+    // O acento decide: 'Jó'/'Job' = Jó, 'Jo' = João (normalizarTexto tira o acento e juntaria os dois)
+    const bruto = String(nomeLivro || '').trim().toLowerCase();
+    if (bruto === 'jó' || bruto === 'job') return 'jó';
+    if (bruto === 'jo') return 'jo';
     const norm = normalizarTexto(nomeLivro);
     if (LIVROS_MAP[norm]) return LIVROS_MAP[norm];
 
@@ -955,7 +1001,7 @@
   // ==========================================================================
   // PROMPTS
   // ==========================================================================
-  const LISTA_PROIBIDAS_PROMPT = 'fatal, devastadora, absoluto, pânico, gritos de desespero, soberbo, vaidoso, aduladora, fascinada, farsa, premeditado/premeditada, engano premeditado, agonia espantosa, poderoso rei, falso Deus, ímpios (fora de aspas), profanação (se não estiver nos versículos), tragédia, trágico';
+  const LISTA_PROIBIDAS_PROMPT = 'fatal, devastadora, absoluto, pânico, gritos de desespero, soberbo, vaidoso, aduladora, fascinada, farsa, premeditado/premeditada, engano premeditado, agonia espantosa, poderoso rei, falso Deus, ímpios (fora de aspas), profanação (se não estiver nos versículos), tragédia, trágico, desvendar/desvendando, profundidade, precisão cirúrgica, mergulhar fundo';
 
   const EXEMPLOS_REFERENCIA_PROMPT = `EXEMPLOS DE TOM E ESTRUTURA (aprenda a cadência e a estrutura narrativa; NÃO copie frases nem fatos):
 
@@ -969,7 +1015,7 @@ ATENÇÃO: Os exemplos acima servem EXCLUSIVAMENTE para você aprender o TOM de 
 
   function blocoRegrasNarracao(referenciaFormatada, contextoExtra = '', traducao = 'arc') {
     const refCap = referenciaCapituloFalada(referenciaFormatada, contextoExtra);
-    const nomeTraducao = (traducao === 'aa' || traducao === 'jfa') ? 'Almeida Atualizada (ARA)' : 'Almeida Revista e Corrigida (ARC)';
+    const nomeTraducao = 'Almeida Revista e Corrigida (ARC)';
     return `REGRAS DA NARRAÇÃO:
 1. ABERTURA E FONTE:
    - A passagem é dita UMA ÚNICA VEZ por item, logo depois do marcador e nome do item: "Isso está em ${refCap}."
@@ -989,7 +1035,7 @@ ATENÇÃO: Os exemplos acima servem EXCLUSIVAMENTE para você aprender o TOM de 
      * NUNCA termine com regras, leis posteriores ou comentários morais.
 3. TOM E TRADUÇÃO (${nomeTraducao}):
    - Frases curtas, diretas, voz ativa. Discurso direto quando o texto traz fala ("Quem poderia estar em pé perante o Senhor, este Deus santo?"). Fala longa vira fala indireta ("Moisés disse a Arão que...").
-   - Citação entre aspas: no máximo 1 por item, curta, e COPIADA literalmente dos versículos carregados.
+   - Citação entre aspas: no máximo 1 por item, curta, COPIADA literalmente dos VERSÍCULOS CITADOS (a passagem central), NUNCA do contexto, e terminando no fim de uma oração do versículo. Na dúvida sobre a redação exata, NÃO use aspas.
    - Nomes e grafia seguem a tradução ${nomeTraducao} dos versículos carregados (ex. ARC: Geteu, Ararate, "tribunal", "Voz de Deus, e não de homem!", "comido de bichos", "os bois a deixavam pender").
 4. ROTULAR DADOS DE FORA DA BÍBLIA:
    - Nomes históricos não presentes nos versículos DEVEM vir expressamente rotulados na narração (exemplo: "o rei Herodes, conhecido fora da Bíblia como Herodes Agripa Primeiro").
@@ -999,7 +1045,17 @@ ATENÇÃO: Os exemplos acima servem EXCLUSIVAMENTE para você aprender o TOM de 
    - PROIBIDO usar (fora de aspas): ${LISTA_PROIBIDAS_PROMPT}. Proibido também jargões de relatório ("o texto sagrado", "o relato bíblico afirma/descreve/expõe", "a narrativa bíblica limita-se", "análise documental", "sem presumir", "reflexão sóbria").
    - SEM moral no fim do item (o fecho do item deve ser um FATO curto do texto).
 6. CONTRASTE: use "não foi X, foi Y" (ou "não era X, mas Y" / "X, e não Y") SOMENTE quando X e Y estiverem nos versículos, em pelo menos 2 itens do roteiro (no meio do texto, nunca como fecho de moral).
-7. CAPITALIZAÇÃO: Deus, Bíblia, Senhor, Escrituras sempre com inicial maiúscula.`;
+7. CAPITALIZAÇÃO: Deus, Bíblia, Senhor, Escrituras sempre com inicial maiúscula.
+8. ATRIBUIÇÃO, GENERALIZAÇÃO E CITAÇÃO:
+   - Todo costume da época, explicação cultural ou interpretação DEVE vir com marcador de contexto ("na época...", "naquela cultura...", "muitos estudiosos explicam...", "segundo historiadores...", "historiadores observam..."). VARIE os marcadores (nunca o mesmo duas vezes em sequência) e use-os SOMENTE quando houver de fato interpretação ou costume, nunca em fato que o texto declara.
+   - PROIBIDO escrever "as Escrituras registram" ou "o texto diz" antes de algo que não seja citação literal do versículo ou fato que o texto declara.
+   - PROIBIDO afirmação histórica absoluta sem base no texto ("qualquer judeu podia ser...", "o gesto tinha significado uniforme").
+   - A citação entre aspas deve corresponder à cena (quem fala ou age, onde, quando) e vir com a referência. Na dúvida sobre a redação exata, NÃO use aspas.
+   - Nome fixo: escreva sempre "Sermão do Monte" (nunca "Sermão da Montanha").
+   - Nenhuma palavra em inglês ou espanhol na narração.
+   - Cronologia: PROIBIDO afirmar intervalos de tempo (anos, décadas, séculos, "anos depois") que o texto bíblico citado não traz; use "depois" ou o dado literal. Números 20 e Deuteronômio são do mesmo ano (o 40º).
+   - Cada explicação ou episódio aparece uma única vez no roteiro inteiro.
+   - Se uma palavra proibida aparecer, reescreva a frase inteira de outro modo (nunca troque só a palavra por sinônimo).`;
   }
 
   /**
@@ -1066,7 +1122,7 @@ ${contextoCapituloTexto || versiculosTexto}
 
 ${blocoRegrasNarracao(referenciaFormatada, contextoExtra, traducao)}
 
-EXTENSÃO: escreva de ${LIMITES.itemAlvoMin} a ${LIMITES.itemAlvoMax} palavras (limite absoluto: ${LIMITES.itemMin} a ${LIMITES.itemMax}). Para preencher a extensão, narre os fatos bíblicos que prepararam o evento e a sua consequência imediata registrada, com frases curtas e diretas. NUNCA use adjetivos ou moral. Conte as palavras antes de entregar e termine em frase completa.
+EXTENSÃO: escreva de ${LIMITES.itemAlvoMin} a ${LIMITES.itemAlvoMax} palavras (limite máximo: ${LIMITES.itemMin} a ${LIMITES.itemMax}). Para preencher a extensão, narre os fatos bíblicos que prepararam o evento e a sua consequência imediata registrada, com frases curtas e diretas. NUNCA use adjetivos ou moral. Conte as palavras antes de entregar e termine em frase completa.
 
 FORMATO: apenas o texto narrativo em português, em UM único parágrafo contínuo, começando com "${numeroFalado}, ${nomeItem}."`;
   }
@@ -1097,14 +1153,14 @@ ${textoItem}
 
 REGRAS DE AUDITORIA:
 1. O nome do personagem do item (ex: Senaqueribe, Herodes, Arão) e os fatos do CONTEXTO PERMITIDO fazem parte da fonte: NÃO os sinalize como contexto externo.
-2. Sinalize APENAS: (a) invenção de psicologia/intenção/motivo sem respaldo nos versículos; (b) fato que contradiz os versículos; (c) citação entre aspas que não seja literal.
+2. Sinalize APENAS: (a) invenção de psicologia/intenção/motivo sem respaldo nos versículos; (b) fato que contradiz os versículos; (c) citação entre aspas que não seja literal dos VERSÍCULOS CITADOS (o CONTEXTO PERMITIDO serve só para fatos, NÃO do contexto para aspas), que termine no meio de uma oração, ou que não corresponda à cena (quem fala/age, onde, quando); (d) costume, explicação cultural ou interpretação SEM marcador de contexto ("na época...", "muitos estudiosos explicam...", "segundo historiadores...") ou atribuída ao texto ("as Escrituras registram", "o texto diz") sem ser citação literal; (e) afirmação histórica categórica/generalização sem base nos versículos.
 3. Liste em "referencias_fora_da_passagem" os versículos do CONTEXTO PERMITIDO, FORA da passagem central, dos quais o texto usou algum fato. Use o formato "Livro cap:versículo" ou intervalo "Livro cap:v1-v2" (ex.: "Atos 12:20", "Gênesis 18:20-33"). Se nenhum, devolva lista vazia.
 
 FORMATO DE RESPOSTA (JSON PURO):
 {
   "aprovado": true ou false,
   "frases_nao_sustentadas": [
-    { "frase": "frase exata do texto", "tipo": "motivo_inventado | citacao_incorreta | fato_contraditorio", "motivo": "explicação curta" }
+    { "frase": "frase exata do texto", "tipo": "motivo_inventado | citacao_incorreta | fato_contraditorio | atribuicao_indevida | generalizacao", "motivo": "explicação curta" }
   ],
   "referencias_fora_da_passagem": ["Livro cap:v"]
 }`;
@@ -1165,7 +1221,7 @@ ${antiRepeticaoTxt}
 
 ${blocoRegrasNarracao(referenciaFormatada, contextoExtra, traducao)}${omitir}
 
-EXTENSÃO: de ${LIMITES.itemAlvoMin} a ${LIMITES.itemAlvoMax} palavras (limite absoluto: ${LIMITES.itemMin} a ${LIMITES.itemMax}). Narre os fatos preparatórios e o desfecho imediato registrado. Termine em frase completa.
+EXTENSÃO: de ${LIMITES.itemAlvoMin} a ${LIMITES.itemAlvoMax} palavras (limite máximo: ${LIMITES.itemMin} a ${LIMITES.itemMax}). Narre os fatos preparatórios e o desfecho imediato registrado. Termine em frase completa.
 
 Responda APENAS com o texto narrativo corrigido em português, em um único parágrafo, começando por "${numeroFalado}, ${nomeItem}."`;
   }
@@ -1187,6 +1243,9 @@ Responda APENAS com o texto narrativo corrigido em português, em um único par�
 
     const versiculosNorm = normalizarTexto(versiculosTexto);
     const citacoesInvalidas = [];
+    // Versículos CITADOS (um por linha: [Livro c:v] "texto"). A citação é conferida só contra eles, nunca contra o contexto.
+    const versos = String(versiculosTexto || '').split('\n').map(l => l.replace(/^\s*\[[^\]]+\]\s*"?/, '').replace(/"?\s*(?:<-.*)?$/, '').trim()).filter(Boolean);
+    const Citacao = (typeof CitacaoModule !== 'undefined') ? CitacaoModule : require('./citacao.js');
 
     for (const c of citacoes) {
       const cNorm = normalizarTexto(c);
@@ -1194,6 +1253,18 @@ Responda APENAS com o texto narrativo corrigido em português, em um único par�
         citacoesInvalidas.push({
           citacao: c,
           motivo: 'A citação entre aspas não aparece literalmente no texto dos versículos fornecidos.'
+        });
+        continue;
+      }
+      // ITEM 43: a citação tem que terminar no fim de uma oração do versículo
+      const verso = versos.find(v => normalizarTexto(v).includes(cNorm));
+      const fim = verso ? Citacao.analisarFimDaCitacao(verso, c) : { status: 'ok' };
+      if (fim.status === 'truncada') {
+        citacoesInvalidas.push({
+          citacao: c,
+          truncada: true,
+          completada: fim.completada,
+          motivo: 'A citação entre aspas termina no meio de uma oração do versículo. Termine-a no fim da oração (texto da ARC) ou retire as aspas.'
         });
       }
     }
@@ -1381,7 +1452,21 @@ Responda APENAS com o texto narrativo corrigido em português, em um único par�
       }
     }
 
-    const invalidas = problemas.filter(p => p.tipo === 'citacao_incorreta' && p.frase);
+    // Citação TRUNCADA: completa com a ARC (ou tira as aspas se faltar muito) em vez de apagar a frase inteira
+    problemas.filter(p => p.tipo === 'citacao_incorreta' && p.truncada && p.frase).forEach(p => {
+      const entre = `"${p.frase}"`;
+      if (t.includes(entre)) {
+        if (p.completada) {
+          t = t.split(entre).join(`"${p.completada}"`);
+          acoes.push({ frase: p.frase, tipo: 'citacao_incorreta', motivo: 'Citação cortada completada com o texto da ARC.', acao: 'completada' });
+        } else {
+          t = t.split(entre).join(p.frase);
+          acoes.push({ frase: p.frase, tipo: 'citacao_incorreta', motivo: 'Citação cortada: aspas removidas.', acao: 'sem_aspas' });
+        }
+      }
+    });
+
+    const invalidas = problemas.filter(p => p.tipo === 'citacao_incorreta' && p.frase && !p.truncada);
     if (invalidas.length) {
       const r = filtrarSentencas(t, s => invalidas.some(p => restaurarAspas(s, [p.frase]).includes('"')) || false);
       // fallback por conteúdo: remove sentenças cuja aspas contenham a citação inválida
@@ -1413,14 +1498,9 @@ Responda APENAS com o texto narrativo corrigido em português, em um único par�
    */
   function padronizarAspasEPontuacao(texto) {
     if (!texto || typeof texto !== 'string') return '';
-    let t = texto.replace(/[“”]/g, '"');
-    t = t.replace(/"([^"]*)"/g, (m, inner, offset, str) => {
-      const antes = offset > 0 ? str[offset - 1] : '';
-      const depois = str[offset + m.length] || '';
-      const pre = antes && !/[\s(\[¿—\-\n]/.test(antes) ? ' ' : '';
-      const pos = depois && /[\p{L}\p{N}]/u.test(depois) ? ' ' : '';
-      return pre + '"' + inner.trim() + '"' + pos;
-    });
+    // Mesma implementação do roteiro e da Narração Limpa (js/pontuacao.js)
+    const Pont = (typeof PontuacaoModule !== 'undefined') ? PontuacaoModule : require('./pontuacao.js');
+    let t = Pont.normalizarAspasEPontuacao(texto.replace(/[“”]/g, '"'));
     t = t.replace(/[^\S\r\n]{2,}/g, ' ');
     t = t.replace(/[^\S\r\n]+([,.;:!?])/g, '$1');
     return t.trim();
@@ -2205,9 +2285,13 @@ Subscribe to the channel for more Bible accounts explained from the text.`;
           motivo: 'O fecho do item tem moral/comentário. Troque por UM fato curto do texto (o que aconteceu em seguida ou a consequência registrada).'
         });
       }
+      // Regras de conteúdo em código (itens 26/27): atribuição indevida e absolutos históricos
+      const Regras = (typeof RegrasModule !== 'undefined') ? RegrasModule : require('./regras-conteudo.js');
+      Regras.detectarAtribuicaoIndevida(texto).forEach(a => problemas.push({ tipo: 'atribuicao_indevida', frase: a.frase, motivo: 'Costume ou interpretação atribuído às Escrituras ("as Escrituras registram", "o texto diz"). Reescreva a frase só com o que o texto declara ou use um marcador de contexto ("na época...", "muitos estudiosos explicam...").' }));
+      Regras.detectarAbsolutos(texto).forEach(a => problemas.push({ tipo: 'absoluto', frase: a.frase, motivo: 'Afirmação absoluta sem base no texto ("exclusivamente", "absoluto", "qualquer...", "nenhum..."). Reescreva a frase.' }));
       const cit = verificarCitacoesEmCodigo(texto, it.versiculosTexto);
       cit.citacoesInvalidas.forEach(c => {
-        problemas.push({ tipo: 'citacao_incorreta', frase: c.citacao, motivo: c.motivo + ' Use só texto literal do versículo citado ou remova as aspas.' });
+        problemas.push({ tipo: 'citacao_incorreta', frase: c.citacao, truncada: c.truncada, completada: c.completada, motivo: c.motivo + ' Use só texto literal do versículo citado ou remova as aspas.' });
       });
       const qtdCitacoesVersiculo = contarCitacoesVersiculo(texto);
       if (qtdCitacoesVersiculo > 1) {
@@ -2426,7 +2510,7 @@ Subscribe to the channel for more Bible accounts explained from the text.`;
     // Se estiver no modo parcial de itens selecionados, devolve diretamente os itens e análises
     if (Array.isArray(itensSelecionados) && itensSelecionados.length > 0) {
       updateProgress('Itens selecionados concluídos com sucesso!', 100);
-      const traducaoUsada = (traducao === 'aa' || traducao === 'jfa') ? 'Almeida Atualizada (ARA/AA)' : 'Almeida Revista e Corrigida (ARC)';
+      const traducaoUsada = 'Almeida Revista e Corrigida (ARC)';
       return {
         modoParcial: true,
         roteiro: resultadosItens.map(r => r.texto).join('\n\n'),
@@ -2494,7 +2578,7 @@ Subscribe to the channel for more Bible accounts explained from the text.`;
         updateProgress(`Ajustando extensão do Item ${r.it.numero} (${atual} -> ~${alvo} palavras)...`, 78);
         const problemasExp = [{
           tipo: 'expansao_total',
-          motivo: `O roteiro precisa de mais fatos para atingir a meta total. Reescreva o item com ${alvo - 5} a ${alvo} palavras (limite absoluto ${LIMITES.itemMax}), acrescentando SOMENTE fatos bíblicos do contexto com frases diretas; sem adjetivos, moral ou comentário.`
+          motivo: `O roteiro precisa de mais fatos para atingir a meta total. Reescreva o item com ${alvo - 5} a ${alvo} palavras (limite máximo ${LIMITES.itemMax}), acrescentando SOMENTE fatos bíblicos do contexto com frases diretas; sem adjetivos, moral ou comentário.`
         }];
         const novo = await regenerarItem(r.it, r.texto, problemasExp, resumosAnteriores);
         const an = await analisarItem(r.it, novo);
@@ -2567,7 +2651,7 @@ Responda APENAS com o texto em um único parágrafo contínuo, sem tópicos e se
     updateProgress('Validando regras estruturais...', 96);
     const validacao = validarEstrutura(roteiroCompleto, n);
 
-    const traducaoUsada = (traducao === 'aa' || traducao === 'jfa') ? 'Almeida Atualizada (ARA/AA)' : 'Almeida Revista e Corrigida (ARC)';
+    const traducaoUsada = 'Almeida Revista e Corrigida (ARC)';
 
     // DADOS DE CONFERÊNCIA (notas do auditor ficam SÓ aqui)
     const dadosConferencia = {
@@ -2607,6 +2691,7 @@ Responda APENAS com o texto em um único parágrafo contínuo, sem tópicos e se
 
   return {
     LIMITES,
+    limitesTotal,
     LIVROS_MAP,
     LIVROS_EN,
     NOMES_PT_EN,

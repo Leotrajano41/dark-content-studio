@@ -2,7 +2,7 @@
 // Serverless Function — Legendas via AssemblyAI
 //
 // POST /api/legendas
-// Body: áudio MP3 binário (Content-Type: audio/mpeg)
+// Body: UMA PARTE do áudio MP3 (Content-Type: audio/mpeg, até 4,4 MB); o front junta os SRT das partes
 // Response: conteúdo SRT como texto (text/plain; charset=utf-8)
 //
 // Fluxo:
@@ -16,7 +16,10 @@
 // LIMITE: Vercel Hobby aceita body até ~4.5 MB. Para áudios maiores (>5 min),
 // considere Vercel Pro ou dividir o áudio em segmentos no frontend.
 
+const { verificarAcesso } = require('./_seguranca.js');
+
 const ASSEMBLYAI_BASE   = 'https://api.assemblyai.com/v2';
+const MAX_BYTES_AUDIO   = 4.4 * 1024 * 1024; // limite de corpo do Vercel (4,5 MB); o front envia o áudio em PARTES
 const POLL_INTERVAL_MS  = 3000;   // 3 segundos entre cada verificação de status
 const POLL_TIMEOUT_MS   = 270000; // 270s (4.5 min) para suportar com folga áudios de 18+ min
 
@@ -211,10 +214,8 @@ function p3(n) { return String(n).padStart(3, '0'); }
 // ---------------------------------------------------------------------------
 
 module.exports = async function handler(req, res) {
-  // OPTIONS: preflight CORS já tratado pelo vercel.json
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
-  }
+  // Controle de acesso (mesma origem, código opcional, limite por IP); OPTIONS não libera CORS
+  if (!verificarAcesso(req, res, { rota: 'legendas' })) return;
 
   // 1. Validação da API Key
   const apiKey = process.env.ASSEMBLYAI_API_KEY;
@@ -224,13 +225,10 @@ module.exports = async function handler(req, res) {
     });
   }
 
-  // 2. GET: Entrega token para upload direto do áudio via navegador para a AssemblyAI (contorna limite 4.5MB da Vercel)
-  if (req.method === 'GET') {
-    return res.status(200).json({ token: apiKey });
-  }
+  // (ITEM 33) O antigo GET que devolvia a chave da AssemblyAI para o navegador foi REMOVIDO: a chave nunca sai do servidor.
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Método não permitido. Use GET ou POST.' });
+    return res.status(405).json({ error: 'Método não permitido. Use POST.' });
   }
 
   const contentType = req.headers['content-type'] || '';
@@ -238,28 +236,25 @@ module.exports = async function handler(req, res) {
   try {
     let uploadUrl = '';
 
-    // Modo 1 (Recomendado para áudios longos 18+ min): Cliente enviou JSON com { audio_url } após upload direto
+    // O envio por { audio_url } foi REMOVIDO (ITEM 33): permitia transcrever qualquer URL gastando a chave do servidor.
     if (contentType.includes('application/json')) {
-      let bodyData = req.body;
-      if (typeof bodyData === 'string') {
-        try { bodyData = JSON.parse(bodyData); } catch (e) {}
-      } else if (!bodyData) {
-        const raw = await readRawBody(req);
-        try { bodyData = JSON.parse(raw.toString('utf-8')); } catch (e) {}
-      }
+      return res.status(400).json({
+        error: 'O envio por "audio_url" não é mais aceito. Envie o áudio (Content-Type: audio/mpeg) em partes de até 4,4 MB; a ferramenta faz isso automaticamente.',
+      });
+    }
 
-      uploadUrl = bodyData?.audio_url || bodyData?.audioUrl || '';
-      if (!uploadUrl) {
-        return res.status(400).json({
-          error: 'JSON inválido: informe o campo "audio_url" retornado pelo upload da AssemblyAI.',
-        });
+    // Upload binário pelo body (cada parte do áudio tem menos de 4,4 MB)
+    if (contentType.includes('audio/')) {
+      const tamanhoDeclarado = Number(req.headers['content-length'] || 0);
+      if (tamanhoDeclarado > MAX_BYTES_AUDIO) {
+        return res.status(413).json({ error: `Áudio grande demais para uma requisição (${(tamanhoDeclarado / 1048576).toFixed(1)} MB; máximo 4,4 MB). Envie o áudio em partes.` });
       }
-      console.log('[legendas] Transcrição via URL direta de áudio recebida:', uploadUrl);
-
-    // Modo 2: Upload binário direto pelo body (áudios curtos < 4.5MB)
-    } else if (contentType.includes('audio/')) {
       console.log('[legendas] Lendo áudio do body...');
       const audioBuffer = await readRawBody(req);
+
+      if (audioBuffer && audioBuffer.length > MAX_BYTES_AUDIO) {
+        return res.status(413).json({ error: 'Áudio grande demais para uma requisição (máximo 4,4 MB). Envie o áudio em partes.' });
+      }
 
       if (!audioBuffer || audioBuffer.length === 0) {
         return res.status(400).json({
@@ -275,7 +270,7 @@ module.exports = async function handler(req, res) {
     } else {
       return res.status(400).json({
         error:
-          'Content-Type incorreto. Envie "application/json" com { "audio_url": "..." } ou áudio com "Content-Type: audio/mpeg".',
+          'Content-Type incorreto. Envie o áudio com "Content-Type: audio/mpeg" (partes de até 4,4 MB).',
       });
     }
 

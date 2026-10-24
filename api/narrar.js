@@ -9,7 +9,11 @@
 // o que equivale a aproximadamente 4-5 minutos de áudio em MP3.
 // Para roteiros completos (18-20 min), recomenda-se dividir em seções no frontend.
 
+const { verificarAcesso } = require('./_seguranca.js');
+
 const CHUNK_MAX_CHARS = 3500; // Margem de segurança abaixo do limite de 4096 da OpenAI TTS
+// ~660 palavras ≈ 4,4 min ≈ 4,2 MB a 128 kbps: abaixo do limite de resposta do Vercel (4,5 MB). O front envia partes de até 3.000.
+const MAX_CHARS_POR_REQUISICAO = 4000;
 
 // Instruções de narração por tom — em inglês para melhor aderência da OpenAI TTS
 const TOM_INSTRUCTIONS = {
@@ -133,10 +137,8 @@ function splitBySentence(text, maxChars) {
 // ---------------------------------------------------------------------------
 
 module.exports = async function handler(req, res) {
-  // OPTIONS: preflight CORS já tratado pelo vercel.json; retornamos 204 aqui por segurança
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
-  }
+  // Controle de acesso (mesma origem, código opcional, limite por IP); OPTIONS não libera CORS
+  if (!verificarAcesso(req, res, { rota: 'narrar' })) return;
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido. Use POST.' });
@@ -169,7 +171,8 @@ function limparTextoParaNarracao(texto) {
 
   // 4. Remove rótulos internos estruturais mantendo o texto que vem depois:
   // "Afirmação:", "Desenvolvimento:", "Evidências/Referências:", "Análise/Impacto:", etc.
-  limpo = limpo.replace(/(?:Afirmação|Desenvolvimento|Evidências\/Referências|Evidências|Referências|Análise\/Impacto|Análise|Impacto|Ganchos Internos|CTAs Orgânicas|Chamada para Ação|CTA)\s*:\s*/gi, '');
+  // Só no início da linha: no meio da frase "afirmação:" é palavra normal
+  limpo = limpo.replace(/^[^\S\r\n]*(?:\*{1,2})?(?:Afirmação|Desenvolvimento|Evidências\/Referências|Evidências|Referências|Análise\/Impacto|Análise|Impacto|Ganchos Internos|CTAs Orgânicas|Chamada para Ação|CTA)(?:\*{1,2})?[^\S\r\n]*:[^\S\r\n]*/gmi, '');
 
   // 5. Remove marcadores de negrito markdown (**texto** vira texto) e itálico (*texto* vira texto)
   limpo = limpo.replace(/\*\*([^*]+)\*\*/g, '$1');
@@ -209,6 +212,14 @@ function limparTextoParaNarracao(texto) {
 
   // Limpeza de texto: remove artefatos de roteiro antes de narrar
   const textoHigienizado = limparTextoParaNarracao(texto);
+
+  // ITEM 47: o Vercel não devolve respostas acima de ~4,5 MB. O front envia o roteiro em partes; se vier texto maior que
+  // uma parte, recusa com mensagem clara em vez de falhar depois, no limite da plataforma.
+  if (textoHigienizado.length > MAX_CHARS_POR_REQUISICAO) {
+    return res.status(413).json({
+      error: `Texto grande demais para uma única narração (${textoHigienizado.length} caracteres; máximo ${MAX_CHARS_POR_REQUISICAO}). Envie o roteiro em partes (a ferramenta faz isso automaticamente; recarregue a página se vir esta mensagem).`,
+    });
+  }
 
   // Vozes válidas da OpenAI TTS
   const validVoices = ['alloy', 'ash', 'coral', 'echo', 'fable', 'nova', 'onyx', 'sage', 'shimmer'];
