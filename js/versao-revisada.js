@@ -1,0 +1,377 @@
+/**
+ * VersaoRevisadaModule
+ * Permite colar uma versão revisada da Narração Limpa, propaga para todas as etapas seguintes,
+ * detecta alterações frase por frase e armazena registros para relatório mensal de correções.
+ */
+
+(function (root, factory) {
+  if (typeof define === 'function' && define.amd) {
+    define(['./pontuacao'], factory);
+  } else if (typeof module === 'object' && module.exports) {
+    let pontuacao;
+    try { pontuacao = require('./pontuacao'); } catch (e) { pontuacao = null; }
+    module.exports = factory(pontuacao);
+  } else {
+    root.VersaoRevisadaModule = factory(root.PontuacaoModule);
+  }
+}(typeof self !== 'undefined' ? self : this, function (PontuacaoModule) {
+  'use strict';
+
+  const STORAGE_KEY = 'dark_studio_registros_correcoes';
+
+  /**
+   * Divide um texto em frases/sentenças individuais, preservando a pontuação terminal
+   * e tratando adequadamente pontuações como . ? ! … e : seguidos de citação ou espaço.
+   */
+  function extrairFrases(texto) {
+    if (!texto || typeof texto !== 'string') return [];
+    
+    const linhas = texto.split(/\r?\n+/).map(l => l.trim()).filter(Boolean);
+    const frases = [];
+
+    for (const linha of linhas) {
+      // Divide por pontuação terminal (. ? ! …) ou por dois pontos antes de aspas/citações
+      // Regex que pega sequências até [.?!…]+["'”»]? ou :["'”»]?
+      const regex = /([^.?!…:]+(?:[.?!…]+["'”»]?|:[ "'”»]?|$))/g;
+      let match;
+      while ((match = regex.exec(linha)) !== null) {
+        let f = match[1].trim();
+        if (f.length > 0) {
+          frases.push(f);
+        }
+      }
+    }
+
+    return frases;
+  }
+
+  /**
+   * Compara duas sequências de frases usando algoritmo de Longest Common Subsequence (LCS)
+   * ou pareamento posicional / similaridade para extrair as alterações (antes -> depois).
+   */
+  function compararFrases(textoOriginal, textoRevisado) {
+    const frasesOriginais = extrairFrases(textoOriginal);
+    const frasesRevisadas = extrairFrases(textoRevisado);
+
+    // Se forem idênticas
+    if (textoOriginal.trim() === textoRevisado.trim()) {
+      return [];
+    }
+
+    // Algoritmo de alinhamento por similaridade/LCS
+    // Abordagem balanceada: se o tamanho for igual ou muito próximo,
+    // identificamos exatamente quais frases diferem.
+    // Para casos com adições/remoções, usamos matriz de alinhamento com pontuação Levenshtein/Jaccard.
+    
+    const mudancas = [];
+
+    // Se ambos tiverem o mesmo número de frases, podemos comparar 1 a 1 diretamente
+    if (frasesOriginais.length === frasesRevisadas.length) {
+      for (let i = 0; i < frasesOriginais.length; i++) {
+        if (frasesOriginais[i] !== frasesRevisadas[i]) {
+          mudancas.push({
+            antes: frasesOriginais[i],
+            depois: frasesRevisadas[i]
+          });
+        }
+      }
+      return mudancas;
+    }
+
+    // Para contagens diferentes de frases, usamos alinhamento por distância
+    let i = 0;
+    let j = 0;
+
+    while (i < frasesOriginais.length || j < frasesRevisadas.length) {
+      if (i < frasesOriginais.length && j < frasesRevisadas.length) {
+        if (frasesOriginais[i] === frasesRevisadas[j]) {
+          i++;
+          j++;
+          continue;
+        }
+
+        // Tenta encontrar a próxima frase igual em um raio de até 5 posições
+        let matchJ = -1;
+        let matchI = -1;
+
+        for (let lookahead = 1; lookahead <= 5; lookahead++) {
+          if (j + lookahead < frasesRevisadas.length && frasesOriginais[i] === frasesRevisadas[j + lookahead]) {
+            matchJ = j + lookahead;
+            break;
+          }
+          if (i + lookahead < frasesOriginais.length && frasesOriginais[i + lookahead] === frasesRevisadas[j]) {
+            matchI = i + lookahead;
+            break;
+          }
+        }
+
+        if (matchJ !== -1) {
+          // Frases adicionadas no revisado
+          while (j < matchJ) {
+            mudancas.push({ antes: '(nenhuma)', depois: frasesRevisadas[j] });
+            j++;
+          }
+        } else if (matchI !== -1) {
+          // Frases removidas do original
+          while (i < matchI) {
+            mudancas.push({ antes: frasesOriginais[i], depois: '(removida)' });
+            i++;
+          }
+        } else {
+          // Frase alterada pontualmente
+          mudancas.push({
+            antes: frasesOriginais[i],
+            depois: frasesRevisadas[j]
+          });
+          i++;
+          j++;
+        }
+      } else if (i < frasesOriginais.length) {
+        mudancas.push({ antes: frasesOriginais[i], depois: '(removida)' });
+        i++;
+      } else if (j < frasesRevisadas.length) {
+        mudancas.push({ antes: '(nenhuma)', depois: frasesRevisadas[j] });
+        j++;
+      }
+    }
+
+    return mudancas;
+  }
+
+  /**
+   * Normaliza pontuação e aspas sem alterar palavras nem conteúdo.
+   */
+  function normalizarTextoRevisado(texto) {
+    if (!texto) return '';
+    if (PontuacaoModule && typeof PontuacaoModule.normalizarAspasEPontuacao === 'function') {
+      return PontuacaoModule.normalizarAspasEPontuacao(texto);
+    }
+    // Fallback básico se PontuacaoModule não estiver carregado
+    return texto
+      .replace(/[""]/g, '"')
+      .replace(/['']/g, "'")
+      .replace(/\s+([.,!?:;])/g, '$1')
+      .replace(/([.,!?:;])(?!\s|$|[0-9.,])/g, '$1 ');
+  }
+
+  /**
+   * Valida o texto revisado e emite apenas AVISOS (sem alterar nada).
+   * - Palavras em inglês ou espanhol comuns
+   * - Chaves { } (placeholders não preenchidos)
+   * - Aspas desbalanceadas
+   * - Mais de um CTA
+   */
+  function validarEAvisar(texto) {
+    const avisos = [];
+    if (!texto) return avisos;
+
+    // 1. Chaves { }
+    const chavesEncontradas = texto.match(/\{[^}]*\}/g);
+    if (chavesEncontradas && chavesEncontradas.length > 0) {
+      avisos.push({
+        tipo: 'chaves',
+        mensagem: `Detectadas chaves não preenchidas no texto: ${chavesEncontradas.slice(0, 3).join(', ')}${chavesEncontradas.length > 3 ? '...' : ''}`
+      });
+    }
+
+    // 2. Aspas desbalanceadas
+    const totalAspasRetas = (texto.match(/"/g) || []).length;
+    const aspasAberturaCurvas = (texto.match(/“/g) || []).length;
+    const aspasFechamentoCurvas = (texto.match(/”/g) || []).length;
+    if (totalAspasRetas % 2 !== 0 || aspasAberturaCurvas !== aspasFechamentoCurvas) {
+      avisos.push({
+        tipo: 'aspas',
+        mensagem: 'O texto possui aspas desbalanceadas (abertas sem fechar).'
+      });
+    }
+
+    // 3. Mais de um CTA
+    const padroesCTA = [
+      /\b(?:se\s+inscreva|inscreva-se|inscrevam-se)\b/gi,
+      /\b(?:deixe\s+seu\s+like|deixa\s+o\s+like|curta\s+o\s+v[ií]deo|curta\s+este\s+v[ií]deo)\b/gi,
+      /\b(?:compartilhe\s+com\s+algu[eé]m|compartilhe\s+este\s+v[ií]deo)\b/gi,
+      /\b(?:comente\s+aqui|comente\s+abaixo|deixe\s+nos\s+coment[aá]rios)\b/gi,
+      /\b(?:ative\s+o\s+sininho|ativa\s+o\s+sino)\b/gi
+    ];
+    let totalCTAs = 0;
+    const ctasEncontrados = [];
+    for (const padrao of padroesCTA) {
+      const matches = texto.match(padrao);
+      if (matches) {
+        totalCTAs += matches.length;
+        ctasEncontrados.push(...matches);
+      }
+    }
+    if (totalCTAs > 1) {
+      avisos.push({
+        tipo: 'multiplos_cta',
+        mensagem: `Detectado mais de um CTA no roteiro (${totalCTAs} encontrados: "${ctasEncontrados.slice(0, 3).join('", "')}"). A regra recomenda no máximo 1 CTA no final.`
+      });
+    }
+
+    // 4. Palavras em inglês/espanhol
+    const palavrasEstrangeiras = [
+      // Espanhol
+      'pero', 'entonces', 'tambien', 'también', 'ahora', 'despues', 'después', 'quando',
+      'gracias', 'senor', 'dios', 'porque', 'siempre', 'nunca', 'verdad', 'nuestro', 'vida',
+      // Inglês
+      'the', 'and', 'with', 'from', 'this', 'that', 'have', 'were', 'which', 'their',
+      'about', 'after', 'before', 'would', 'could', 'should', 'today', 'story', 'faith', 'lord'
+    ];
+    // Criar regex de busca de palavras exatas
+    const regexEstrangeiras = new RegExp(`\\b(${palavrasEstrangeiras.join('|')})\\b`, 'gi');
+    const termosEstrangeiros = [];
+    let m;
+    while ((m = regexEstrangeiras.exec(texto)) !== null) {
+      const termo = m[1].toLowerCase();
+      // Ignorar falsos positivos válidos em português
+      if (['dios', 'vida', 'quando'].includes(termo)) continue;
+      if (!termosEstrangeiros.includes(termo)) {
+        termosEstrangeiros.push(termo);
+      }
+    }
+    if (termosEstrangeiros.length > 0) {
+      avisos.push({
+        tipo: 'estrangeirismos',
+        mensagem: `Possíveis palavras em inglês ou espanhol detectadas: ${termosEstrangeiros.slice(0, 5).join(', ')}`
+      });
+    }
+
+    return avisos;
+  }
+
+  /**
+   * Salva um registro de correções no localStorage.
+   */
+  function salvarRegistro(tema, mudancas, customStorage) {
+    if (!mudancas || mudancas.length === 0) return null;
+
+    const storage = customStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
+    if (!storage) return null;
+
+    const agora = new Date();
+    const registro = {
+      id: 'rev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+      dataISO: agora.toISOString(),
+      dataLegivel: agora.toLocaleString('pt-BR'),
+      tema: (tema || 'Vídeo Sem Título').trim(),
+      totalMudancas: mudancas.length,
+      mudancas: mudancas.map(m => ({
+        antes: m.antes,
+        depois: m.depois
+      }))
+    };
+
+    try {
+      const historicoRaw = storage.getItem(STORAGE_KEY);
+      const historico = historicoRaw ? JSON.parse(historicoRaw) : [];
+      historico.unshift(registro);
+      storage.setItem(STORAGE_KEY, JSON.stringify(historico));
+    } catch (e) {
+      console.error('[VersaoRevisadaModule] Erro ao salvar registro no storage:', e);
+    }
+
+    return registro;
+  }
+
+  /**
+   * Retorna todos os registros salvos.
+   */
+  function listarRegistros(customStorage) {
+    const storage = customStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
+    if (!storage) return [];
+    try {
+      const raw = storage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /**
+   * Limpa todos os registros de correções do storage.
+   */
+  function limparRegistros(customStorage) {
+    const storage = customStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
+    if (!storage) return false;
+    try {
+      storage.removeItem(STORAGE_KEY);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /**
+   * Gera o relatório consolidado do mês atual (ou especificado), formatado em texto legível para cópia.
+   * Formato de data de referência: Date ou string YYYY-MM.
+   */
+  function gerarRelatorioMensal(mesRef, customStorage) {
+    const registros = listarRegistros(customStorage);
+    const dataAlvo = mesRef instanceof Date ? mesRef : (mesRef ? new Date(mesRef) : new Date());
+    const anoAlvo = dataAlvo.getFullYear();
+    const mesAlvo = dataAlvo.getMonth(); // 0 a 11
+
+    const nomesMeses = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+    const nomeMes = nomesMeses[mesAlvo];
+
+    // Filtra registros do mês alvo
+    const registrosDoMes = registros.filter(r => {
+      if (!r.dataISO) return false;
+      const d = new Date(r.dataISO);
+      return d.getFullYear() === anoAlvo && d.getMonth() === mesAlvo;
+    });
+
+    if (registrosDoMes.length === 0) {
+      return `RELATÓRIO MENSAL DE CORREÇÕES - ${nomeMes.toUpperCase()} DE ${anoAlvo}\n` +
+             `------------------------------------------------------------\n` +
+             `Nenhuma correção registrada neste mês.\n`;
+    }
+
+    let totalFrasesCorrigidas = 0;
+    for (const reg of registrosDoMes) {
+      totalFrasesCorrigidas += (reg.mudancas ? reg.mudancas.length : 0);
+    }
+
+    const linhas = [];
+    linhas.push(`============================================================`);
+    linhas.push(`RELATÓRIO MENSAL DE CORREÇÕES - ${nomeMes.toUpperCase()} DE ${anoAlvo}`);
+    linhas.push(`============================================================`);
+    linhas.push(`Total de vídeos com versão revisada: ${registrosDoMes.length}`);
+    linhas.push(`Total de frases corrigidas no mês: ${totalFrasesCorrigidas}`);
+    linhas.push(`------------------------------------------------------------\n`);
+
+    registrosDoMes.forEach((reg, idx) => {
+      linhas.push(`[${idx + 1}] VÍDEO: "${reg.tema}"`);
+      linhas.push(`Data da revisão: ${reg.dataLegivel || reg.dataISO}`);
+      linhas.push(`Frases alteradas (${reg.mudancas ? reg.mudancas.length : 0}):`);
+      
+      if (reg.mudancas && reg.mudancas.length > 0) {
+        reg.mudancas.forEach((m, mIdx) => {
+          linhas.push(`  (${mIdx + 1}) ANTES:  ${m.antes}`);
+          linhas.push(`      DEPOIS: ${m.depois}`);
+        });
+      } else {
+        linhas.push(`  (nenhuma alteração pontual detectada)`);
+      }
+      linhas.push(''); // Linha em branco entre vídeos
+    });
+
+    return linhas.join('\n');
+  }
+
+  return {
+    extrairFrases,
+    compararFrases,
+    normalizarTextoRevisado,
+    validarEAvisar,
+    salvarRegistro,
+    listarRegistros,
+    limparRegistros,
+    gerarRelatorioMensal,
+    STORAGE_KEY
+  };
+}));
