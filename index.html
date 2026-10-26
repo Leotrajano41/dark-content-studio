@@ -8798,6 +8798,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Estado de áudio e legendas da sessão atual
   let currentAudioBlob = null;
   let currentAudioParts = []; // partes (Uint8Array) do MP3: as legendas são geradas parte a parte (cada uma < 4,4 MB)
+  let currentAudioTextParts = []; // fatias de texto da Narração Limpa correspondentes a cada parte de áudio
   let currentAudioUrl = null;
   let currentSrtContent = '';
   let audioGeneratedInSession = false;
@@ -11011,8 +11012,9 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
     if (audioLoadingNotice) audioLoadingNotice.classList.remove('hidden');
 
     try {
-      // ITEM 47: o Vercel limita a resposta a ~4,5 MB e um roteiro Longo gera um MP3 de 8 a 20 MB.
-      // O áudio é pedido em PARTES (cada uma bem abaixo do limite), em paralelo (2 por vez), e juntado aqui.
+      // ITEM 47 + Correção de Truncamento:
+      // O áudio é pedido em PARTES seguras (terminando estritamente em fim de frase),
+      // e validado contra truncamento da OpenAI TTS com calibração adaptativa da velocidade real.
       const partes = NarracaoModule.dividirTextoEmPartes(roteiro, NarracaoModule.MAX_CHARS_POR_PARTE);
       const buffers = new Array(partes.length);
       const progressoEl = document.getElementById('audio-progresso-partes');
@@ -11022,14 +11024,31 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
       };
       mostrarProgresso();
 
+      // Auxiliar para obter a duração do áudio em segundos a partir do buffer
+      const obterDuracaoMp3Buffer = (u8) => new Promise((resolve) => {
+        const blob = new Blob([u8], { type: 'audio/mpeg' });
+        const url = URL.createObjectURL(blob);
+        const a = new Audio();
+        const fim = (d) => { URL.revokeObjectURL(url); resolve(isFinite(d) && d > 0 ? d : 0); };
+        a.preload = 'metadata';
+        a.onloadedmetadata = () => fim(a.duration);
+        a.onerror = () => fim(0);
+        a.src = url;
+      });
+
+      const historicoPartesCompletas = [];
+
       const gerarParte = async (indice) => {
         let ultimoErro = null;
-        for (let tentativa = 1; tentativa <= 2; tentativa++) {
+        const textoParte = partes[indice];
+        const numPalavrasParte = NarracaoModule.contarPalavras(textoParte);
+
+        for (let tentativa = 1; tentativa <= 3; tentativa++) {
           try {
             const resp = await fetch('/api/narrar', {
               method: 'POST',
               headers: cabecalhosApi({ 'Content-Type': 'application/json' }),
-              body: JSON.stringify({ texto: partes[indice], voz, tom })
+              body: JSON.stringify({ texto: textoParte, voz, tom })
             });
             if (resp.status === 404 || resp.status === 405) {
               throw new Error('Esta funcionalidade requer que a ferramenta esteja rodando via Vercel (dark-content-studio.vercel.app). Não está disponível na versão do GitHub Pages ou local estática.');
@@ -11038,13 +11057,35 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
               const errJson = await resp.json().catch(() => ({}));
               throw new Error(errJson.error || `Erro na geração de áudio (HTTP ${resp.status})`);
             }
-            buffers[indice] = new Uint8Array(await resp.arrayBuffer());
+            const buf = new Uint8Array(await resp.arrayBuffer());
+
+            // Checagem de duração: compara com a esperada calibrada pela voz real (ex: Onyx) com tolerância mínima de 75%
+            const duracao = await obterDuracaoMp3Buffer(buf);
+            if (duracao > 0 && numPalavrasParte > 0) {
+              const ppmCalibrado = NarracaoModule.calibrarVelocidade(historicoPartesCompletas);
+              const checagem = NarracaoModule.validarDuracaoParte(duracao, textoParte, ppmCalibrado, 0.75);
+
+              if (!checagem.valida) {
+                console.warn(`[gerarParte] Parte ${indice + 1}/${partes.length} truncada pelo TTS (tentativa ${tentativa}): gerou ${duracao.toFixed(1)}s (mínimo aceitável ${checagem.minimoAceitavel.toFixed(1)}s para ${numPalavrasParte} palavras a ${ppmCalibrado.toFixed(0)} ppm).`);
+                if (tentativa < 3) {
+                  await new Promise(r => setTimeout(r, 1200));
+                  continue;
+                } else {
+                  throw new Error(`A parte ${indice + 1} de ${partes.length} foi truncada pelo serviço de voz (gerou apenas ${duracao.toFixed(1)}s para ${numPalavrasParte} palavras). A geração foi cancelada para evitar áudio incompleto.`);
+                }
+              }
+
+              historicoPartesCompletas.push({ palavras: numPalavrasParte, duracaoSegundos: duracao });
+            }
+
+            buffers[indice] = buf;
             concluidas++;
             mostrarProgresso();
             return;
           } catch (e) {
             ultimoErro = e;
             if (/requer que a ferramenta/.test(e.message)) break;
+            if (tentativa < 3) await new Promise(r => setTimeout(r, 1200));
           }
         }
         throw new Error(`Falha na parte ${indice + 1} de ${partes.length} da narração: ${ultimoErro && ultimoErro.message}`);
@@ -11062,6 +11103,7 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
       const audioBlob = new Blob([NarracaoModule.juntarMp3(buffers)], { type: 'audio/mpeg' });
       currentAudioBlob = audioBlob;
       currentAudioParts = buffers.slice();
+      currentAudioTextParts = partes.slice(); // Salva as fatias de texto da Narração Limpa para alinhamento da legenda
 
       if (currentAudioUrl) URL.revokeObjectURL(currentAudioUrl);
       currentAudioUrl = URL.createObjectURL(audioBlob);
@@ -11113,7 +11155,7 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
     UI.showToast('Download da narração (.mp3) iniciado!');
   });
 
-  // Gerar Legenda (.srt via AssemblyAI com Upload Direto para suportar 18+ minutos sem erro HTTP 413)
+  // Gerar Legenda (.srt via AssemblyAI alinhada com o texto exato da Narração Limpa)
   btnGerarLegenda.addEventListener('click', async () => {
     if (!currentAudioBlob) {
       UI.showToast('Gere o áudio da narração primeiro antes de gerar a legenda!', 'warning');
@@ -11124,8 +11166,8 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
     if (legendasLoadingNotice) legendasLoadingNotice.classList.remove('hidden');
 
     try {
-      // ITEM 33: a chave da AssemblyAI NUNCA sai do servidor. O áudio vai em PARTES (as mesmas da narração, cada uma < 4,4 MB)
-      // para /api/legendas (2 por vez) e os SRT são juntados aqui, com os tempos deslocados pela duração das partes anteriores.
+      // ITEM 33 + PROBLEMA 2: A chave da AssemblyAI NUNCA sai do servidor. O áudio vai em PARTES para /api/legendas.
+      // O texto da legenda gerada é SEMPRE o texto exato da Narração Limpa (usando da AssemblyAI apenas os tempos).
       const partesAudio = currentAudioParts;
       if (!partesAudio || partesAudio.length === 0) {
         throw new Error('As partes do áudio não estão na memória. Gere a narração de novo e depois a legenda.');
@@ -11134,7 +11176,7 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
       const progressoLegenda = document.getElementById('legendas-progresso-partes');
       let concluidasLeg = 0;
       const mostrarProgressoLeg = () => {
-        if (progressoLegenda) progressoLegenda.textContent = `Transcrevendo o áudio: parte ${concluidasLeg}/${partesAudio.length} concluída(s)... Aguarde.`;
+        if (progressoLegenda) progressoLegenda.textContent = `Transcrevendo e alinhando legenda: parte ${concluidasLeg}/${partesAudio.length} concluída(s)... Aguarde.`;
       };
       mostrarProgressoLeg();
 
@@ -11152,9 +11194,17 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
         let ultimoErro = null;
         for (let tentativa = 1; tentativa <= 2; tentativa++) {
           try {
+            const textoParteOriginal = (currentAudioTextParts && currentAudioTextParts[indice]) || '';
+            const headerTextoBase64 = textoParteOriginal
+              ? btoa(unescape(encodeURIComponent(textoParteOriginal)))
+              : '';
+
             const resp = await fetch('/api/legendas', {
               method: 'POST',
-              headers: cabecalhosApi({ 'Content-Type': 'audio/mpeg' }),
+              headers: cabecalhosApi({
+                'Content-Type': 'audio/mpeg',
+                ...(headerTextoBase64 ? { 'x-texto-limpo': headerTextoBase64 } : {})
+              }),
               body: new Blob([partesAudio[indice]], { type: 'audio/mpeg' })
             });
             if (resp.status === 404 || resp.status === 405) {
@@ -11196,7 +11246,7 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
       if (cardLegendaOutput) cardLegendaOutput.classList.remove('hidden');
 
       atualizarSeloAba(5, true);
-      UI.showToast('Legenda (.srt) sincronizada e gerada com sucesso via AssemblyAI!');
+      UI.showToast('Legenda (.srt) gerada com texto 100% alinhado à Narração Limpa!');
       AutoSave.save();
     } catch (err) {
       console.error('Erro ao gerar legenda:', err);
