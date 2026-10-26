@@ -17,6 +17,8 @@
 // considere Vercel Pro ou dividir o áudio em segmentos no frontend.
 
 const { verificarAcesso } = require('./_seguranca.js');
+let NarracaoModule;
+try { NarracaoModule = require('../js/narracao.js'); } catch (e) { NarracaoModule = null; }
 
 const ASSEMBLYAI_BASE   = 'https://api.assemblyai.com/v2';
 const MAX_BYTES_AUDIO   = 4.4 * 1024 * 1024; // limite de corpo do Vercel (4,5 MB); o front envia o áudio em PARTES
@@ -291,8 +293,30 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // 8. Gera SRT e retorna
-    const srtContent = generateSRT(transcript.words);
+    // 8. Gera SRT alinhando o texto exato da Narração Limpa com os timestamps da AssemblyAI
+    let textoLimpo = '';
+    const headerTextoLimpo = req.headers['x-texto-limpo'];
+    if (headerTextoLimpo) {
+      try {
+        textoLimpo = Buffer.from(headerTextoLimpo, 'base64').toString('utf-8');
+      } catch (e) {
+        try { textoLimpo = decodeURIComponent(headerTextoLimpo); } catch (err) {}
+      }
+    }
+
+    let srtContent = '';
+    const duracaoAprox = (transcript.words[transcript.words.length - 1]?.end || 0) / 1000;
+
+    if (textoLimpo && NarracaoModule && typeof NarracaoModule.alinharLegendaComTextoLimpo === 'function') {
+      console.log(`[legendas] Alinhando texto oficial da Narração Limpa (${textoLimpo.length} chars) com ${transcript.words.length} palavras da AssemblyAI...`);
+      srtContent = NarracaoModule.alinharLegendaComTextoLimpo(transcript.words, textoLimpo, duracaoAprox);
+    } else {
+      srtContent = generateSRT(transcript.words);
+    }
+
+    if (req.headers['x-retornar-words'] === 'true' || req.headers['accept'] === 'application/json') {
+      return res.status(200).json({ srt: srtContent, words: transcript.words });
+    }
 
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="legendas.srt"');

@@ -11,8 +11,7 @@
 
 const { verificarAcesso } = require('./_seguranca.js');
 
-const CHUNK_MAX_CHARS = 3500; // Margem de segurança abaixo do limite de 4096 da OpenAI TTS
-// ~660 palavras ≈ 4,4 min ≈ 4,2 MB a 128 kbps: abaixo do limite de resposta do Vercel (4,5 MB). O front envia partes de até 3.000.
+const CHUNK_MAX_CHARS = 1400; // Margem segura abaixo do limite de buffer de áudio da OpenAI TTS
 const MAX_CHARS_POR_REQUISICAO = 4000;
 
 // Instruções de narração por tom — em inglês para melhor aderência da OpenAI TTS
