@@ -8797,6 +8797,8 @@ function exibirAvisoTermosBastidor(falhas) {
   const listaEl = document.getElementById('alerta-termos-bastidor-lista');
   if (!container || !listaEl) return;
 
+  window._termosBastidorPendentes = Array.isArray(falhas) ? falhas.slice() : [];
+
   if (!falhas || !Array.isArray(falhas) || falhas.length === 0) {
     container.classList.add('hidden');
     listaEl.innerHTML = '';
@@ -8844,6 +8846,7 @@ function exibirAvisoTermosBastidor(falhas) {
 }
 
 function ocultarAvisoTermosBastidor() {
+  window._termosBastidorPendentes = [];
   if (typeof document === 'undefined') return;
   const container = document.getElementById('alerta-termos-bastidor');
   const listaEl = document.getElementById('alerta-termos-bastidor-lista');
@@ -8851,8 +8854,45 @@ function ocultarAvisoTermosBastidor() {
   if (listaEl) listaEl.innerHTML = '';
 }
 
+/**
+ * Bloqueio de confirmação para a narração de áudio (Etapa 5):
+ * Se houver termo de bastidor ativo/pendente na Narração Limpa, exige confirmação
+ * do usuário com opção clara de cancelar antes de gerar o áudio.
+ * NUNCA troca palavras automaticamente.
+ */
+function verificarBloqueioTermosBastidorNarracao(textoNarracao, confirmFn = (typeof confirm === 'function' ? confirm : null)) {
+  let termos = [];
+  if (Array.isArray(window._termosBastidorPendentes) && window._termosBastidorPendentes.length > 0) {
+    termos = window._termosBastidorPendentes.map(p => p.termo).filter(Boolean);
+  }
+  if (termos.length === 0 && typeof PlanoCenasModule !== 'undefined' && typeof PlanoCenasModule.detectarTermosBastidor === 'function') {
+    const suspeitas = PlanoCenasModule.detectarTermosBastidor(textoNarracao || '');
+    if (suspeitas.length > 0) {
+      termos = suspeitas.map(s => s.termo).filter(Boolean);
+    }
+  }
+
+  const alertaBastidorEl = (typeof document !== 'undefined') ? document.getElementById('alerta-termos-bastidor') : null;
+  const alertaAtivo = alertaBastidorEl && !alertaBastidorEl.classList.contains('hidden');
+
+  if (termos.length > 0 || alertaAtivo) {
+    const termosUnicos = Array.from(new Set(termos));
+    const strTermos = termosUnicos.length > 0 ? termosUnicos.join(', ') : 'termo de bastidor';
+    const msg = `Ainda há termo de bastidor na Narração Limpa: [${strTermos}] — revise antes de gerar o áudio.`;
+
+    if (typeof confirmFn === 'function') {
+      const continuar = confirmFn(`${msg}\n\nClique em OK para continuar gerando o áudio mesmo assim, ou em Cancelar para revisar a Narração Limpa.`);
+      return { bloqueado: !continuar, termos: termosUnicos, mensagem: msg };
+    }
+    return { bloqueado: true, termos: termosUnicos, mensagem: msg };
+  }
+
+  return { bloqueado: false, termos: [], mensagem: '' };
+}
+
 window.exibirAvisoTermosBastidor = exibirAvisoTermosBastidor;
 window.ocultarAvisoTermosBastidor = ocultarAvisoTermosBastidor;
+window.verificarBloqueioTermosBastidorNarracao = verificarBloqueioTermosBastidorNarracao;
 window.limparTextoParaNarracao = limparTextoParaNarracao;
 window.validarRoteiroComBiblia = validarRoteiroComBiblia;
 
@@ -11832,6 +11872,21 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
     if (!textoNarracao) {
       UI.showToast('Gere o roteiro completo na Etapa 1 ou insira o texto na Narração Limpa antes de narrar!', 'warning');
       return;
+    }
+
+    // ITEM 1: Bloqueio/confirmação na narração caso haja termos de bastidor pendentes
+    if (typeof verificarBloqueioTermosBastidorNarracao === 'function') {
+      const checkBastidor = verificarBloqueioTermosBastidorNarracao(textoNarracao);
+      if (checkBastidor.bloqueado) {
+        UI.showToast(`Geração de áudio cancelada: revise o termo de bastidor [${checkBastidor.termos.join(', ')}] na Etapa 1.`, 'warning');
+        const alertaBastidorEl = document.getElementById('alerta-termos-bastidor');
+        if (alertaBastidorEl) {
+          const tabRoteiro = document.querySelector('[data-target="sec-roteiros"]');
+          if (tabRoteiro) tabRoteiro.click();
+          alertaBastidorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+      }
     }
 
     // Remove referências bíblicas entre parênteses para síntese TTS, preservando 100% de todas as frases da narrativa

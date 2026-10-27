@@ -691,6 +691,65 @@ checar(rejGenerico.valido === false, 'Item E2d: Descrição com "solemn biblical
   checar(html.includes('function exibirAvisoTermosBastidor'), 'Item 3v: Função exibirAvisoTermosBastidor definida em index.html');
   checar(html.includes('function ocultarAvisoTermosBastidor'), 'Item 3w: Função ocultarAvisoTermosBastidor definida em index.html');
 
+  // Cenário 4: Bloqueio na narração (Etapa 5) se houver termo de bastidor pendente (Item 1 do Feedback)
+  const matchBloqueio = html.match(/function\s+verificarBloqueioTermosBastidorNarracao[\s\S]*?\n\}/);
+  checar(Boolean(matchBloqueio), 'Item 3x: Função verificarBloqueioTermosBastidorNarracao implementada em index.html');
+  const ctxBloqueio = { PlanoCenasModule, window: {} };
+  vm.createContext(ctxBloqueio);
+  vm.runInContext('var verificarBloqueioTermosBastidorNarracao = ' + matchBloqueio[0] + ';', ctxBloqueio);
+  const verificarBloqueio = ctxBloqueio.verificarBloqueioTermosBastidorNarracao;
+
+  // Quando o usuário cancela no diálogo de confirmação:
+  const resBloqueado = verificarBloqueio(fraseRealBastidor1, () => false);
+  checar(resBloqueado.bloqueado === true, 'Item 3y: Bloqueia geração de áudio quando há termo de bastidor e usuário cancela para revisar');
+  checar(resBloqueado.mensagem.includes('Ainda há termo de bastidor na Narração Limpa: [gancho]'), 'Item 3z: Mensagem do alerta informa o termo de bastidor exato');
+
+  // Quando o usuário confirma continuar:
+  const resContinuar = verificarBloqueio(fraseRealBastidor1, () => true);
+  checar(resContinuar.bloqueado === false, 'Item 3aa: Prossegue com geração de áudio se o usuário confirmar conscientemente');
+
+  // Quando a narração está limpa:
+  const resSemTermo = verificarBloqueio('Moisés proclamou a promessa da libertação com fidelidade sagrada.', () => false);
+  checar(resSemTermo.bloqueado === false, 'Item 3ab: Não bloqueia nem exibe confirmação quando a narração está limpa');
+
+  // Cenário 5: Modelo da reescrita usa estritamente o "Modelo para Roteiro" (Item 2 do Feedback)
+  checar(
+    /chamarIaBastidor[\s\S]*?modeloRoteiro/.test(html) && /const\s+modeloRoteiro\s*=\s*OpenRouterAPI\.getModelRoteiro\(\)/.test(html),
+    'Item 3ac: Reescrita de termos de bastidor usa estritamente o "Modelo para Roteiro" (getModelRoteiro)'
+  );
+
+  // Cenário 6: Etapas 2, 3, 4 e 5 usam a Narração Limpa já reescrita (Item 3 do Feedback)
+  const textoLimpoReescrito = resIaSucesso.texto;
+  checar(!textoLimpoReescrito.includes('palavras do gancho'), 'Item 3ad: Narração Limpa pós-reescrita livre de termos de bastidor');
+  checar(textoLimpoReescrito.includes('fé e autoridade'), 'Item 3ae: Narração Limpa contém frase reescrita pela IA');
+
+  // Etapa 2 (Plano de Cenas e Cenas.txt): gerado a partir de textoLimpoReescrito
+  const planoEtapa2 = PlanoCenasModule.gerarPlanoDeCenas(textoLimpoReescrito, { tema: 'Moisés' });
+  checar(
+    !planoEtapa2.cenas.some(c => c.fraseInicio.includes('palavras do gancho')),
+    'Item 3af: Etapa 2 (Plano de Cenas) usa a Narração Limpa já reescrita'
+  );
+  const cenasTxtEtapa2 = PlanoCenasModule.gerarCenasTxt(planoEtapa2.cenas, textoLimpoReescrito);
+  checar(
+    !cenasTxtEtapa2.includes('palavras do gancho') && cenasTxtEtapa2.includes('fé e autoridade'),
+    'Item 3ag: cenas.txt da Etapa 2 reflete a frase reescrita e não a original'
+  );
+
+  // Etapa 5 (Narração de áudio): recebe textoLimpoReescrito
+  checar(
+    html.includes('textareaNarracaoLimpa.value = textoLimpo') && html.includes('outputRoteiroLimpoEl.value = textoLimpo'),
+    'Item 3ah: Etapas 2 e 5 recebem textoLimpo sincronizado após a reescrita'
+  );
+
+  // Etapa 4 (SEO e Roteiro Completo): replica reescrita para evitar divergência
+  let roteiroCompletoSimulado = `[ABERTURA]\n${textoComBastidor}\n[FECHO]`;
+  for (const r of resIaSucesso.reescritas) {
+    if (roteiroCompletoSimulado.includes(r.original)) {
+      roteiroCompletoSimulado = roteiroCompletoSimulado.replace(r.original, r.corrigida);
+    }
+  }
+  checar(!roteiroCompletoSimulado.includes('palavras do gancho'), 'Item 3ai: Roteiro completo da Etapa 4 sincronizado com as frases reescritas');
+
   // ---------------------------------------------------------------------------
   // ITEM 4: PROMPTS PARECIDOS DEMAIS (VARIEDADE E VALIDADOR DE SEMELHANÇA)
   // ---------------------------------------------------------------------------
