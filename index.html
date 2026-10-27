@@ -7395,6 +7395,10 @@ MANDATORY BIBLICAL AND CONTENT RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
 7. LITERAL SCRIPTURE QUOTATIONS:
    - ${lang.citationRule}
    - When quoting scripture, quote the literal, exact text word-for-word from ${lang.bibleTranslation}.
+8. STRICT PROHIBITION OF BEHIND-THE-SCENES / PRODUCTION WORDS IN SPOKEN SCRIPT (ITEM 3):
+   - ZERO TOLERANCE: Never include video production jargon in the spoken narration: "gancho", "hook", "roteiro", "script", "seção do vídeo", "CTA", "call to action", "narrador", "thumbnail", "miniatura".
+   - The narrator must NEVER speak phrases like "as palavras do gancho", "neste roteiro", "se este roteiro fortaleceu sua fé", or "no gancho".
+   - In closing and call-to-actions, use EXCLUSIVELY "este vídeo" or "este estudo".
 
 ${instrucoesDuracaoEFormato}
 
@@ -8683,6 +8687,26 @@ function limparTextoParaNarracao(texto, estiloRoteiro = '') {
     if (/[.!?]$/.test(txt.trim())) return m;
     return txt.trim() + '.' + aspa;
   });
+
+  // 19. ITEM 3: Detector e saneamento de termos de bastidor na Narração Limpa
+  if (typeof PlanoCenasModule !== 'undefined' && typeof PlanoCenasModule.detectarTermosBastidor === 'function') {
+    const suspeitas = PlanoCenasModule.detectarTermosBastidor(limpo);
+    if (suspeitas.length > 0) {
+      for (const item of suspeitas) {
+        const substituta = item.frase
+          .replace(/as\s+palavras\s+do\s+gancho/gi, 'firmeza e autoridade')
+          .replace(/palavras\s+do\s+gancho/gi, 'palavras de fé')
+          .replace(/\bse\s+este\s+roteiro\b/gi, 'se este estudo')
+          .replace(/\beste\s+roteiro\b/gi, 'este estudo')
+          .replace(/\bneste\s+roteiro\b/gi, 'neste vídeo')
+          .replace(/\b(?:o\s+narrador|voz\s+do\s+narrador)\b/gi, 'o relato')
+          .replace(/\bhook\b/gi, 'início');
+        if (substituta !== item.frase) {
+          limpo = limpo.replace(item.frase, substituta);
+        }
+      }
+    }
+  }
 
   return limpo.trim();
 }
@@ -11229,7 +11253,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
   });
 
   // Download do Pacote Scriptorium (.zip)
-  document.getElementById('btn-download-pacote-scriptorium')?.addEventListener('click', () => {
+  document.getElementById('btn-download-pacote-scriptorium')?.addEventListener('click', async () => {
     if (!window._planoDeCenasAtual || !window._cenasTxtAtual) {
       UI.showToast('Gere o Plano de Cenas antes de baixar o pacote do Scriptorium!', 'warning');
       return;
@@ -11264,19 +11288,31 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       { nome: 'prompts.txt', conteudo: promptsTxt }
     ];
 
+    // ITEM 1: Grava os bytes binários reais do áudio MP3 (lê como ArrayBuffer)
     if (typeof currentAudioBlob !== 'undefined' && currentAudioBlob) {
-      arquivosZip.push({ nome: 'narracao.mp3', conteudo: currentAudioBlob });
+      try {
+        const audioBuffer = await currentAudioBlob.arrayBuffer();
+        arquivosZip.push({ nome: 'narracao.mp3', conteudo: new Uint8Array(audioBuffer) });
+      } catch (eBlob) {
+        console.warn('[Scriptorium] Falha ao ler bytes do áudio:', eBlob);
+        arquivosZip.push({ nome: 'narracao.mp3', conteudo: currentAudioBlob });
+      }
     }
     if (typeof currentSrtContent !== 'undefined' && currentSrtContent) {
       arquivosZip.push({ nome: 'legenda.srt', conteudo: currentSrtContent });
     }
 
-    const tema = document.getElementById('input-tema-custom')?.value?.trim() ||
-                 document.getElementById('select-tema')?.value?.trim() ||
-                 'roteiro';
-    const nomeZip = PlanoCenasModule.gerarNomeZipScriptorium(tema);
+    // ITEM 2: Nome do ZIP vem do tema do vídeo ou título da ideia escolhida, NUNCA da categoria do menu
+    const temaCustom = document.getElementById('input-tema-custom')?.value?.trim();
+    const ideiaEscolhida = document.getElementById('input-ideia-escolhida')?.value?.trim();
+    const categoriaMenu = document.getElementById('select-tema')?.value?.trim();
+    const nomeZip = PlanoCenasModule.gerarNomeZipScriptorium({
+      temaCustom,
+      ideiaEscolhida,
+      categoria: categoriaMenu
+    });
 
-    const zipBlob = PlanoCenasModule.criarZipScriptorium(arquivosZip);
+    const zipBlob = await PlanoCenasModule.criarZipScriptorium(arquivosZip);
     const url = URL.createObjectURL(zipBlob);
     const a = document.createElement('a');
     a.href = url;

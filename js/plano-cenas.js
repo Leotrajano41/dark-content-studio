@@ -78,6 +78,15 @@
     return String(hashPlano) !== gerarHashTexto(textoNarracaoAtual);
   }
 
+  const CATEGORIAS_MENU_IGNORAR = [
+    'acontecimentos-chave da biblia', 'acontecimentos-chave da bíblia',
+    'fins tragicos biblicos', 'fins trágicos bíblicos',
+    'misterios e julgamentos', 'mistérios e julgamentos',
+    'profecias e apocalipse', 'profecias e apocalipse',
+    'personagens e batalhas', 'milagres e sinais',
+    'estudos e temas gerais', 'sem-tema', 'geral', 'padrao', 'padrão'
+  ];
+
   function gerarSlug(tema) {
     if (!tema) return 'scriptorium';
     return tema
@@ -88,9 +97,130 @@
       .replace(/^-+|-+$/g, '') || 'scriptorium';
   }
 
-  function gerarNomeZipScriptorium(tema) {
-    const slug = gerarSlug(tema);
+  /**
+   * ITEM 2: Nome do .ZIP baseado exclusivamente no TEMA do vídeo ou título da ideia escolhida.
+   * NUNCA usa o nome da categoria do menu.
+   */
+  function gerarNomeZipScriptorium(temaOuOpcoes) {
+    let temaFinal = '';
+
+    if (typeof temaOuOpcoes === 'object' && temaOuOpcoes !== null) {
+      const custom = (temaOuOpcoes.temaCustom || '').trim();
+      const ideia = (temaOuOpcoes.ideiaEscolhida || '').trim();
+      const cat = (temaOuOpcoes.categoria || temaOuOpcoes.tema || '').trim();
+
+      if (custom) {
+        temaFinal = custom;
+      } else if (ideia) {
+        temaFinal = ideia;
+      } else if (cat && !CATEGORIAS_MENU_IGNORAR.some(c => c === cat.toLowerCase())) {
+        temaFinal = cat;
+      } else {
+        temaFinal = 'roteiro';
+      }
+    } else {
+      const str = String(temaOuOpcoes || '').trim();
+      const ehCategoria = CATEGORIAS_MENU_IGNORAR.some(c => c === str.toLowerCase());
+      temaFinal = (!str || ehCategoria) ? 'roteiro' : str;
+    }
+
+    const slug = gerarSlug(temaFinal);
     return `${slug}-scriptorium.zip`;
+  }
+
+  /**
+   * ITEM 3: Detector e Regenerador de Palavras de Bastidor na Narração
+   * Proíbe termos técnicos como "gancho", "hook", "roteiro", "script", "seção do vídeo", "CTA", "narrador", "thumbnail".
+   * Não confunde com usos legítimos como "cena diante do mar", "seção dos levitas" ou "ganchos de prata".
+   */
+  function detectarTermosBastidor(texto) {
+    if (!texto || typeof texto !== 'string') return [];
+    const sentencas = texto.match(/[^.!?\n]+(?:[.!?]+["'”»]?|$)/g) || [];
+    const ocorrencias = [];
+
+    const padroesBastidor = [
+      { regex: /\b(?:as\s+palavras\s+do|palavras\s+do|no|do|o|este|esse|com\s+o|com\s+as\s+palavras\s+do)\s+gancho\b/i, termo: 'gancho' },
+      { regex: /\bgancho\s+(?:inicial|de\s+abertura|do\s+v[ií]deo)\b/i, termo: 'gancho' },
+      { regex: /\bhook\b/i, termo: 'hook' },
+      { regex: /\b(?:este|esse|neste|nesse|do|o|um|nosso)\s+roteiro\b/i, termo: 'roteiro' },
+      { regex: /\broteiro\s+(?:fortaleceu|trouxe|revela|apresenta|escrito)\b/i, termo: 'roteiro' },
+      { regex: /\bscript\b/i, termo: 'script' },
+      { regex: /\b(?:seção|secao)\s+(?:do|deste|desse|neste)\s+v[ií]deo\b/i, termo: 'seção do vídeo' },
+      { regex: /\b(?:cta|call\s+to\s+action)\b/i, termo: 'cta' },
+      { regex: /\b(?:o\s+narrador|voz\s+do\s+narrador|narrador\s+diz|narrador\s+explica)\b/i, termo: 'narrador' },
+      { regex: /\b(?:thumbnails?|miniaturas?\s+do\s+v[ií]deo)\b/i, termo: 'thumbnail' }
+    ];
+
+    for (const sent of sentencas) {
+      const s = sent.trim();
+      if (!s) continue;
+
+      // Proteção de falsos positivos legítimos na Bíblia:
+      // ex: "ganchos de prata", "ganchos de ouro", "ganchos de bronze" (Tabernáculo)
+      const ehGanchoBiblico = /\bganchos?\s+de\s+(?:prata|ouro|bronze|metal|ferro)\b/i.test(s);
+
+      for (const p of padroesBastidor) {
+        if (p.termo === 'gancho' && ehGanchoBiblico) continue;
+
+        if (p.regex.test(s)) {
+          ocorrencias.push({
+            frase: s,
+            termo: p.termo,
+            trechoEncontrado: (s.match(p.regex) || [])[0] || p.termo
+          });
+          break;
+        }
+      }
+    }
+
+    return ocorrencias;
+  }
+
+  /**
+   * Regenera a frase eliminando termos de bastidor sem troca automática ingênua.
+   */
+  async function regenerarFrasesComBastidor(texto, chamarIaFn) {
+    if (!texto || typeof texto !== 'string') return { texto, reescritas: [] };
+    const suspeitas = detectarTermosBastidor(texto);
+    if (suspeitas.length === 0) return { texto, reescritas: [] };
+
+    let textoFinal = texto;
+    const reescritas = [];
+
+    for (const item of suspeitas) {
+      let novaFrase = '';
+      if (typeof chamarIaFn === 'function') {
+        const promptReescrita = `Você é um revisor de roteiros bíblicos. A frase abaixo contém um termo de produção/bastidor de vídeo ("${item.termo}") que NUNCA deve ser falado pelo narrador bíblico:
+Frase original: "${item.frase}"
+
+Reescreva a frase eliminando totalmente a menção a bastidores ou produção, mantendo a sobriedade bíblica e o sentido sagrado (ex: "Se este roteiro fortaleceu sua fé" vira "Se este estudo fortaleceu sua fé" ou "Se este vídeo fortaleceu sua fé"; frases sobre "palavras do gancho" devem ser narradas diretamente como a fala ou resposta do personagem).
+Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explicações.`;
+
+        try {
+          const resp = await chamarIaFn(promptReescrita);
+          novaFrase = (resp || '').trim().replace(/^["']|["']$/g, '').trim();
+        } catch (_) {}
+      }
+
+      // Fallback seguro de reescrita caso a IA não esteja disponível
+      if (!novaFrase) {
+        novaFrase = item.frase
+          .replace(/as\s+palavras\s+do\s+gancho/gi, 'firmeza e autoridade')
+          .replace(/palavras\s+do\s+gancho/gi, 'palavras de fé')
+          .replace(/\bse\s+este\s+roteiro\b/gi, 'se este estudo')
+          .replace(/\beste\s+roteiro\b/gi, 'este estudo')
+          .replace(/\bneste\s+roteiro\b/gi, 'neste vídeo')
+          .replace(/\b(?:o\s+narrador|voz\s+do\s+narrador)\b/gi, 'o relato')
+          .replace(/\bhook\b/gi, 'início');
+      }
+
+      if (novaFrase && novaFrase !== item.frase && textoFinal.includes(item.frase)) {
+        textoFinal = textoFinal.replace(item.frase, novaFrase);
+        reescritas.push({ original: item.frase, corrigida: novaFrase, termo: item.termo });
+      }
+    }
+
+    return { texto: textoFinal, reescritas };
   }
 
   /**
@@ -113,11 +243,48 @@
   }
 
   /**
+   * ITEM 6: Detecta transição de acontecimento principal, sujeito dramático ou local
+   * entre as frases acumuladas na cena atual e a próxima frase.
+   */
+  function detectarTransicaoAcontecimento(frasesCenaAtual, proximaFrase) {
+    if (!frasesCenaAtual || frasesCenaAtual.length === 0 || !proximaFrase) return false;
+    const textoCena = frasesCenaAtual.join(' ').toLowerCase();
+    const prox = proximaFrase.toLowerCase();
+
+    // 1. Mudança de polo dramático (ex: Inimigos/Egito/Carros vs Israel/Moisés/Povo)
+    const cenaFalaDeInimigo = /\b(?:fara[oó]|eg[ií]pcio|carros?\s+de\s+fara[oó]|cavaleiros?|ex[eé]rcito\s+de\s+fara[oó]|perseguidores?)\b/i.test(textoCena);
+    const proxFalaDeIsrael = /\b(?:israel\s+acampou|israel|filhos\s+de\s+israel|povo|hebreus?|moys[eé]s|ar[aã]o|acampamento|tendas?)\b/i.test(prox);
+    if (cenaFalaDeInimigo && proxFalaDeIsrael) return true;
+
+    const cenaFalaDeIsrael = /\b(?:israel|hebreus?|filhos\s+de\s+israel|povo|congrega[cç][aã]o)\b/i.test(textoCena);
+    const proxFalaDeInimigo = /\b(?:fara[oó]|eg[ií]pcios?|cavaleiros?|ex[eé]rcito\s+inimigo)\b/i.test(prox);
+    if (cenaFalaDeIsrael && proxFalaDeInimigo) return true;
+
+    // 2. Mudança explícita de local ou marco geográfico
+    const marcadoresMudancaLugar = [
+      /\bacampou\s+junto\s+ao\s+mar\b/i,
+      /\bchegando\s+a\b/i,
+      /\bpartiram\s+de\b/i,
+      /\bno\s+cume\s+do\s+monte\b/i,
+      /\bdiante\s+da\s+rocha\b/i,
+      /\bna\s+tenda\s+da\s+congrega[cç][aã]o\b/i,
+      /\bjunto\s+[aà]s\s+[aá]guas\b/i
+    ];
+    for (const reg of marcadoresMudancaLugar) {
+      if (reg.test(prox) && !reg.test(textoCena)) return true;
+    }
+
+    return false;
+  }
+
+  /**
    * Agrupa as frases em cenas com base no tempo acumulado e nas 3 faixas de ritmo:
    * 1) 0s - 30s: 4 a 6s por cena (~10 a 15 palavras)
    * 2) 30s - 180s (3min): 12 a 18s por cena (~30 a 45 palavras)
    * 3) > 180s (3min): 18 a 28s por cena (~45 a 70 palavras)
    * Cortes somente no começo de frase.
+   * ITEM 6: Quando houver transição de acontecimento e a cena atual já atingiu meta.min,
+   * prefere cortar na fronteira entre os acontecimentos.
    */
   function agruparFrasesEmCenas(frases, textoCompleto) {
     const cenas = [];
@@ -166,11 +333,16 @@
       const duracaoAtualCena = palavrasCenaAtual / 2.5;
       const meta = obterMetaSegundos(tempoAcumuladoTotal);
 
+      // ITEM 6: Se a cena atual já atingiu meta.min e a próxima frase muda de acontecimento/sujeito/lugar,
+      // prefere cortar na fronteira para a imagem não sobrar no assunto seguinte.
+      const transicaoAcontecimento = detectarTransicaoAcontecimento(cenaAtualFrases, frase);
+      const podeCortarPorTransicao = transicaoAcontecimento && duracaoAtualCena >= meta.min;
+
       const ehMuitoCurta = duracaoAtualCena < 4;
       const cabeNaMeta = (duracaoAtualCena + duracaoFrase) <= meta.max;
       const naoEstouraTeto = (duracaoAtualCena + duracaoFrase) <= 30;
 
-      if ((ehMuitoCurta || cabeNaMeta) && naoEstouraTeto) {
+      if (!podeCortarPorTransicao && (ehMuitoCurta || cabeNaMeta) && naoEstouraTeto) {
         cenaAtualFrases.push(frase);
         palavrasCenaAtual += qtdPalavras;
       } else {
@@ -227,24 +399,80 @@
   // GERAÇÃO DE DESCRIÇÕES VISUAIS COM IA (EM LOTES DE 10 CENAS)
   // ---------------------------------------------------------------------------
 
+  const STOPWORDS_EN = new Set([
+    'a', 'an', 'the', 'in', 'on', 'at', 'and', 'or', 'of', 'with', 'to', 'from',
+    'by', 'as', 'for', 'is', 'are', 'was', 'were', 'it', 'its', 'under', 'over',
+    'into', 'upon', 'before', 'behind', 'beside', 'between', 'through', 'above',
+    'below', 'around', 'near', 'scene', 'depicting', 'showing', 'image', 'illustration',
+    'biblical', 'ancient', 'historical'
+  ]);
+
+  function extrairPalavrasImportantes(texto) {
+    if (!texto || typeof texto !== 'string') return [];
+    return (texto.toLowerCase().match(/\b[a-z]{3,}\b/g) || []).filter(w => !STOPWORDS_EN.has(w));
+  }
+
+  /**
+   * ITEM 4: Calcula semelhança entre duas descrições visuais com base nas palavras importantes (Jaccard).
+   */
+  function calcularSemelhancaDescricoes(descA, descB) {
+    const palavrasA = extrairPalavrasImportantes(descA);
+    const palavrasB = extrairPalavrasImportantes(descB);
+    if (palavrasA.length === 0 || palavrasB.length === 0) return 0;
+
+    const setA = new Set(palavrasA);
+    const setB = new Set(palavrasB);
+    let comuns = 0;
+    for (const w of setA) {
+      if (setB.has(w)) comuns++;
+    }
+    const uniao = new Set([...setA, ...setB]).size;
+    if (uniao === 0) return 0;
+    return Number((comuns / uniao).toFixed(2));
+  }
+
   /**
    * Constrói o prompt de comando para a IA gerar descrições visuais em lotes de até 10 cenas.
+   * ITEM 4 e 5: Exige variedade de enquadramento, proíbe ação antecipada e referências a público.
    */
-  function construirPromptIaLoteCenas(loteCenas) {
+  function construirPromptIaLoteCenas(loteCenas, contexto = {}) {
     const cenasFormatadas = loteCenas.map(c => `[Cena ${c.numero}]: "${c.trecho.replace(/\s+/g, ' ').trim()}"`).join('\n\n');
+    const descricoesAnteriores = contexto.descricoesAnteriores || [];
+
+    let blocoAnteriores = '';
+    if (descricoesAnteriores.length > 0) {
+      const ultimas = descricoesAnteriores.slice(-8);
+      blocoAnteriores = `\nPREVIOUSLY USED SCENE DESCRIPTIONS (DO NOT REPEAT THESE COMPOSITIONS, FRAMINGS OR MOTIFS):\n${ultimas.map((d, i) => `- Previous: "${d}"`).join('\n')}\n`;
+    }
 
     return `You are an expert biblical art director creating visual image descriptions for dramatic historical illustrations.
 For each narration excerpt below, write ONE concise, vivid visual description in English describing strictly what is seen in that specific scene.
 
 CRITICAL RULES:
-1. Describe ONLY what happens in the given excerpt (visible people, concrete actions, physical environment, objects).
-2. FORBIDDEN to include elements from other biblical events or stories (e.g., NEVER include sea, ocean waves, or shore if the text is about a desert, rock, camp, or mountain).
-3. Use strictly biblical English names: Moses, Aaron, Miriam, Joshua, Eleazar, Pharaoh; Meribah, Kadesh, Mount Hor, Mount Nebo, Mount Sinai, Jordan River, Canaan.
-4. FORBIDDEN to depict God as a human figure, face, or humanoid shadow. Depict divine presence through glorious radiant celestial light, glowing illumination, pillar of cloud or fire.
-5. Do NOT include Portuguese words.
-6. Do NOT use generic placeholders like "biblical tableau", "artistic depiction" or "scene representing". Describe the physical concrete action.
-7. Output EXCLUSIVELY a valid JSON array of objects with "numero" and "descricaoVisual".
-
+1. Describe ONLY what physically happens within the given excerpt (visible people, concrete actions, physical environment, objects).
+2. MANDATORY FRAMING VARIETY (NEVER REPEAT SIMILAR FRAMINGS):
+   - You MUST vary the camera angle/framing between consecutive scenes:
+     * Wide panoramic landscape shot (vast desert, expansive camp, towering mountains)
+     * Medium character action shot (waist-up, figures interacting)
+     * Dramatic close-up on face, eyes, and solemn facial expression
+     * Macro detail shot on hands, rustic wooden staff, cracked rock, parchment, feet on dusty path
+     * High-angle aerial perspective looking down at the camp or terrain
+   - Consecutive scenes MUST have completely different compositions and focal points.
+3. STRICT CHRONOLOGICAL ISOLATION (NO PREMATURE ACTION):
+   - Illustrate ONLY the specific action mentioned in this scene's excerpt.
+   - NEVER illustrate actions that only happen in subsequent excerpts (e.g. if raising the staff or striking the rock is only narrated in a later scene, DO NOT depict it in earlier scenes).
+4. NO AUDIENCE, CHANNEL OR PRODUCTION REFERENCES:
+   - FORBIDDEN to mention 'viewers', 'audience', 'subscribe', 'channel', 'video', 'followers', or 'strengthen faith'.
+   - For call-to-action or conclusion excerpts, depict a concrete historical object/setting (e.g. an ancient illuminated parchment scroll unrolled on a rustic cedar table beside a glowing bronze oil lamp, or serene twilight horizon over the desert).
+5. DOMINANT EVENT RULE:
+   - If an excerpt contains more than one action or subject, depict the primary event that occupies the majority of the text.
+6. FORBIDDEN to include elements from other biblical events or stories (e.g., NEVER include sea, ocean waves, or shore if the text is about a desert, rock, camp, or mountain).
+7. Use strictly biblical English names: Moses, Aaron, Miriam, Joshua, Eleazar, Pharaoh; Meribah, Kadesh, Mount Hor, Mount Nebo, Mount Sinai, Jordan River, Canaan.
+8. FORBIDDEN to depict God as a human figure, face, or humanoid shadow. Depict divine presence through glorious radiant celestial light, glowing illumination, pillar of cloud or fire.
+9. Do NOT include Portuguese words.
+10. Do NOT use generic placeholders like "biblical tableau", "artistic depiction" or "scene representing". Describe the physical concrete action.
+11. Output EXCLUSIVELY a valid JSON array of objects with "numero" and "descricaoVisual".
+${blocoAnteriores}
 INPUT SCENES:
 ${cenasFormatadas}
 
@@ -287,8 +515,10 @@ OUTPUT FORMAT (JSON only):
    * 1. Contiver "sea" ou "waters" sem o trecho em português falar de água/mar.
    * 2. Contiver palavras em português.
    * 3. For genérico ("solemn biblical historical tableau", etc.).
+   * 4. Contiver termos de audiência / bastidor ("viewers", "audience", "subscribe", "channel").
+   * 5. For excessivamente semelhante a cenas anteriores (semelhança >= 60% de palavras importantes).
    */
-  function validarDescricaoVisualCena(descricaoVisual, trechoPt) {
+  function validarDescricaoVisualCena(descricaoVisual, trechoPt, contexto = {}) {
     if (!descricaoVisual || typeof descricaoVisual !== 'string') {
       return { valido: false, motivo: 'Descrição visual vazia.' };
     }
@@ -323,9 +553,28 @@ OUTPUT FORMAT (JSON only):
       return { valido: false, motivo: 'Contém termos genéricos proibidos ("tableau depicting").' };
     }
 
-    // 4. Detecção de representação humana de Deus
+    // 4. Detecção de termos de audiência / bastidor no prompt (ITEM 5)
+    if (/\b(?:viewers?|audience|subscribers?|subscribe|channel|video|followers?|encouraging\s+viewers)\b/i.test(desc)) {
+      return { valido: false, motivo: 'Contém termos de audiência ou bastidor proibidos no prompt visual ("viewers"/"audience"/"subscribe"/"channel").' };
+    }
+
+    // 5. Detecção de representação humana de Deus
     if (/\b(?:face of God|figure of God|God as an old man|God's body|human form of God)\b/i.test(desc)) {
       return { valido: false, motivo: 'Representação antropomórfica indevida da figura de Deus.' };
+    }
+
+    // 6. Detecção de semelhança excessiva com cenas anteriores (ITEM 4)
+    if (contexto && Array.isArray(contexto.descricoesAnteriores) && contexto.descricoesAnteriores.length > 0) {
+      for (const ant of contexto.descricoesAnteriores) {
+        if (!ant) continue;
+        const taxa = calcularSemelhancaDescricoes(desc, ant);
+        if (taxa >= 0.60) {
+          return {
+            valido: false,
+            motivo: `Semelhança excessiva com cena anterior (${Math.round(taxa * 100)}% de termos coincidentes). Exige variedade de enquadramento e composição.`
+          };
+        }
+      }
     }
 
     if (contarPalavras(desc) < 4) {
@@ -446,7 +695,15 @@ OUTPUT FORMAT (JSON only):
         trecho: c.frases.join(' ')
       }));
 
-      const promptLote = construirPromptIaLoteCenas(payloadLote);
+      // Extrai as descrições das cenas já concluídas anteriormente
+      const descricoesAcumuladas = cenas
+        .filter(c => c.status === 'CONCLUIDA' && c.descricaoVisual)
+        .map(c => c.descricaoVisual);
+
+      const promptLote = construirPromptIaLoteCenas(payloadLote, {
+        ...contexto,
+        descricoesAnteriores: descricoesAcumuladas
+      });
       let itensLote = [];
 
       if (typeof chamarIaFn === 'function') {
@@ -466,19 +723,23 @@ OUTPUT FORMAT (JSON only):
           : null;
 
         let descVisual = itemIa ? (itemIa.descricaoVisual || itemIa.descricao || '') : '';
-        let validacao = validarDescricaoVisualCena(descVisual, trechoPt);
+        const contextoValidacao = {
+          ...contexto,
+          descricoesAnteriores: descricoesAcumuladas
+        };
+        let validacao = validarDescricaoVisualCena(descVisual, trechoPt, contextoValidacao);
 
         // Se a validação falhar ou estiver vazia, tenta regenerar a cena se houver callback de IA
         if (!validacao.valido && typeof chamarIaFn === 'function' && itemIa) {
           try {
             const promptCorrecao = `The previous visual description for Scene ${c.numero} was rejected because: ${validacao.motivo}.
 Excerpt: "${trechoPt}"
-Write a corrected, strictly factual visual description in English adhering to all rules. Output JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
+Write a corrected, strictly factual visual description in English adhering to all rules (alternate camera framing, no viewers/audience/channel terms). Output JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
             const respCorrigida = await chamarIaFn(promptCorrecao);
             const itensCorrigidos = extrairJsonLote(respCorrigida);
             if (itensCorrigidos && itensCorrigidos[0]?.descricaoVisual) {
               const novaDesc = itensCorrigidos[0].descricaoVisual;
-              const novaVal = validarDescricaoVisualCena(novaDesc, trechoPt);
+              const novaVal = validarDescricaoVisualCena(novaDesc, trechoPt, contextoValidacao);
               if (novaVal.valido) {
                 descVisual = novaDesc;
                 validacao = novaVal;
@@ -493,6 +754,7 @@ Write a corrected, strictly factual visual description in English adhering to al
           c.motivoPendente = '';
           c.descricaoVisual = descVisual;
           c.promptIngles = montarPromptFinalCena(descVisual, trechoPt, contexto);
+          descricoesAcumuladas.push(descVisual);
         } else {
           // NÃO USAR FALLBACK EM SILÊNCIO: Marca como PENDENTE
           c.status = 'PENDENTE';
@@ -517,6 +779,10 @@ Write a corrected, strictly factual visual description in English adhering to al
       return { cenas, pendentesRestantes: [] };
     }
 
+    const descricoesConcluidas = cenas
+      .filter(c => c.status === 'CONCLUIDA' && c.descricaoVisual)
+      .map(c => c.descricaoVisual);
+
     const tamanhoLote = 10;
     const lotes = [];
     for (let i = 0; i < pendentes.length; i += tamanhoLote) {
@@ -529,7 +795,10 @@ Write a corrected, strictly factual visual description in English adhering to al
         trecho: c.frases.join(' ')
       }));
 
-      const promptLote = construirPromptIaLoteCenas(payloadLote);
+      const promptLote = construirPromptIaLoteCenas(payloadLote, {
+        ...contexto,
+        descricoesAnteriores: descricoesConcluidas
+      });
       let itensLote = [];
       if (typeof chamarIaFn === 'function') {
         try {
@@ -547,13 +816,18 @@ Write a corrected, strictly factual visual description in English adhering to al
           : null;
 
         const descVisual = itemIa ? (itemIa.descricaoVisual || itemIa.descricao || '') : '';
-        const validacao = validarDescricaoVisualCena(descVisual, trechoPt);
+        const contextoValidacao = {
+          ...contexto,
+          descricoesAnteriores: descricoesConcluidas
+        };
+        const validacao = validarDescricaoVisualCena(descVisual, trechoPt, contextoValidacao);
 
         if (validacao.valido) {
           c.status = 'CONCLUIDA';
           c.motivoPendente = '';
           c.descricaoVisual = descVisual;
           c.promptIngles = montarPromptFinalCena(descVisual, trechoPt, contexto);
+          descricoesConcluidas.push(descVisual);
         } else {
           c.status = 'PENDENTE';
           c.motivoPendente = validacao.motivo || 'Descrição rejeitada na regeneração';
@@ -770,9 +1044,10 @@ Write a corrected, strictly factual visual description in English adhering to al
   }
 
   /**
-   * Gera um Blob ou Uint8Array de arquivo ZIP puro (Store) compatível nativamente com macOS e Windows.
+   * ITEM 1: Gera um Blob ou Uint8Array de arquivo ZIP puro (Store) compatível nativamente com macOS e Windows.
+   * Suporta arquivos binários reais (MP3, WAV, etc.) a partir de Blob, ArrayBuffer, Uint8Array ou Buffer do Node.
    */
-  function criarZipScriptorium(arquivos) {
+  async function criarZipScriptorium(arquivos) {
     const encoder = new TextEncoder();
     const partes = [];
     const entradas = [];
@@ -781,9 +1056,19 @@ Write a corrected, strictly factual visual description in English adhering to al
     for (const arq of arquivos) {
       const nomeBytes = encoder.encode(arq.nome);
       let dados = arq.conteudo;
+
+      // Lê Blob ou Promise de ArrayBuffer se fornecido
+      if (dados && typeof dados.arrayBuffer === 'function') {
+        dados = new Uint8Array(await dados.arrayBuffer());
+      } else if (dados && typeof dados.then === 'function') {
+        dados = await dados;
+      }
+
       if (typeof dados === 'string') {
         dados = encoder.encode(dados);
       } else if (dados instanceof ArrayBuffer) {
+        dados = new Uint8Array(dados);
+      } else if (typeof Buffer !== 'undefined' && Buffer.isBuffer(dados)) {
         dados = new Uint8Array(dados);
       } else if (!(dados instanceof Uint8Array)) {
         dados = encoder.encode(String(dados || ''));
@@ -867,12 +1152,68 @@ Write a corrected, strictly factual visual description in English adhering to al
       : zipFinal;
   }
 
+  /**
+   * Descompactador ZIP Store puro (sem compressão externa) para testes e validação de integridade.
+   */
+  async function lerArquivosDeZip(zipEntrada) {
+    let bytes;
+    if (zipEntrada && typeof zipEntrada.arrayBuffer === 'function') {
+      bytes = new Uint8Array(await zipEntrada.arrayBuffer());
+    } else if (zipEntrada instanceof ArrayBuffer) {
+      bytes = new Uint8Array(zipEntrada);
+    } else if (typeof Buffer !== 'undefined' && Buffer.isBuffer(zipEntrada)) {
+      bytes = new Uint8Array(zipEntrada);
+    } else if (zipEntrada instanceof Uint8Array) {
+      bytes = zipEntrada;
+    } else {
+      throw new Error('Entrada de ZIP inválida para descompactação.');
+    }
+
+    const arquivosLidos = [];
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const decoder = new TextDecoder();
+    let pos = 0;
+
+    while (pos + 30 <= bytes.length) {
+      const sig = view.getUint32(pos, true);
+      if (sig !== 0x04034b50) break; // fim dos headers de arquivos locais
+
+      const tamCrc = view.getUint32(pos + 14, true);
+      const tamComp = view.getUint32(pos + 18, true);
+      const tamOriginal = view.getUint32(pos + 22, true);
+      const nomeTam = view.getUint16(pos + 26, true);
+      const extraTam = view.getUint16(pos + 28, true);
+
+      const nomeBytes = bytes.slice(pos + 30, pos + 30 + nomeTam);
+      const nome = decoder.decode(nomeBytes);
+
+      const dataOffset = pos + 30 + nomeTam + extraTam;
+      const conteudoBytes = bytes.slice(dataOffset, dataOffset + tamComp);
+
+      arquivosLidos.push({
+        nome,
+        tamanho: tamOriginal,
+        bytes: conteudoBytes,
+        crc: tamCrc
+      });
+
+      pos = dataOffset + tamComp;
+    }
+
+    return arquivosLidos;
+  }
+
   return {
     NOMES_ARQUIVOS_FIXOS,
     PREFIXO_ESTILO_CANAL,
     FICHAS_PERSONAGENS,
     DICIONARIO_TOPONIMOS,
     SUFIXO_ESTILO_SEM_MOLDURA,
+    CATEGORIAS_MENU_IGNORAR,
+    detectarTermosBastidor,
+    regenerarFrasesComBastidor,
+    detectarTransicaoAcontecimento,
+    calcularSemelhancaDescricoes,
     dividirEmFrases,
     agruparFrasesEmCenas,
     construirPromptIaLoteCenas,
@@ -893,6 +1234,7 @@ Write a corrected, strictly factual visual description in English adhering to al
     gerarSlug,
     gerarNomeZipScriptorium,
     validarPacoteScriptorium,
-    criarZipScriptorium
+    criarZipScriptorium,
+    lerArquivosDeZip
   };
 });

@@ -328,12 +328,24 @@ checar(rejGenerico.valido === false, 'Item E2d: Descrição com "solemn biblical
     checar(/You are an expert biblical art director/i.test(promptLote), `Item E3a: Chamada de lote ${chamadasLoteIa} envia prompt com regras artísticas estritas`);
     checar(/FORBIDDEN to include elements from other biblical events/i.test(promptLote), 'Item E3b: Regras proíbem elementos de outros episódios');
     
-    // Retorna JSON válido com 10 cenas simuladas
+    // Retorna JSON válido com 10 cenas simuladas com enquadramentos variados
+    const descricoesVariadas = [
+      'Dramatic close-up of Moses with long beard and determined eyes looking forward under bright sun',
+      'Wide panoramic view of the dry desert canyon in Kadesh with thousands of nomadic Hebrew tents',
+      'Detail shot of the weathered wooden staff striking against the cracked limestone boulder',
+      'Medium shot of Aaron high priest in white linen standing solemnly beside the tabernacle tent',
+      'High-angle perspective looking down at thirsty Hebrew families gathering near the dry rock',
+      'Grounded view of dusty sandals and garments of Hebrew elders moving across the stony ground',
+      'Radiant celestial beam of golden glory descending over the sanctuary entrance curtains',
+      'Elders of Israel murmuring with worried hand gestures in the parched wilderness heat',
+      'Vast open sky above Mount Hor with distant rocky desert horizon stretching outward',
+      'Ancient weathered stone altar resting quietly in the arid valley under evening twilight'
+    ];
     const arraySimulado = [];
     for (let i = 1; i <= 10; i++) {
       arraySimulado.push({
         numero: String(i).padStart(2, '0'),
-        descricaoVisual: `Moses raising wooden staff before dry desert boulder at Kadesh scene ${i}`
+        descricaoVisual: descricoesVariadas[i - 1]
       });
     }
     return JSON.stringify(arraySimulado);
@@ -407,6 +419,11 @@ checar(rejGenerico.valido === false, 'Item E2d: Descrição com "solemn biblical
 
   // Simulação de IA falhando em exatamente 3 cenas (ex: 02, 05 e 08)
   const cenasTesteFalha = JSON.parse(JSON.stringify(planoReal.cenas.slice(0, 10)));
+  for (const c of cenasTesteFalha) {
+    delete c.status;
+    delete c.motivoPendente;
+    delete c.descricaoVisual;
+  }
   const stubIaFalhandoEm3 = async (promptLote) => {
     // Se for uma tentativa de correção de uma das cenas que falharam, a IA persiste na falha
     if (promptLote.includes('Scene 02') || promptLote.includes('Scene 05') || promptLote.includes('Scene 08')) {
@@ -434,10 +451,19 @@ checar(rejGenerico.valido === false, 'Item E2d: Descrição com "solemn biblical
           descricaoVisual: 'solemn biblical historical tableau depicting biblical figures'
         });
       } else {
-        // Cenas válidas
+        // Cenas válidas com descrições e enquadramentos variados
+        const descricoesVariadasF1 = {
+          1: 'Extreme close-up on Moses holding a rustic wooden staff under the blazing sun',
+          3: 'Wide panoramic view of thousands of Hebrew tents pitched in the dry canyon of Kadesh',
+          4: 'Medium shot of Aaron high priest in clean white linen vestments standing by the sanctuary tent',
+          6: 'High-angle aerial perspective looking down at parched limestone cliffs and stony ravines',
+          7: 'Detail shot of dusty sandals and rough linen hem of an elder stepping across stony desert path',
+          9: 'Vast open sky above Mount Hor with distant jagged desert mountain ridges at sundown',
+          10: 'Ancient bronze oil lamp resting quietly on an earthen pedestal beside woven tent fabrics'
+        };
         arraySimulado.push({
           numero: numStr,
-          descricaoVisual: `Biblical desert landscape with ancient Hebrew encampment scene ${numStr}`
+          descricaoVisual: descricoesVariadasF1[i] || `Unique biblical composition of arid desert valley scene ${numStr}`
         });
       }
     }
@@ -515,6 +541,165 @@ checar(rejGenerico.valido === false, 'Item E2d: Descrição com "solemn biblical
     cenas: cenasTesteFalha
   });
   checar(validacaoPosRegen.valido === true, 'Item F4: Validador do pacote Scriptorium aprova 100% o pacote após a regeneração das pendentes');
+
+  // ===========================================================================
+  // GRUPO G: REFINAMENTOS DE PRODUÇÃO REAL (6 ITENS NOVOS)
+  // ===========================================================================
+  console.log('\n--- GRUPO G: Refinamentos de Produção Real (Itens 1 a 6) ---');
+
+  // ---------------------------------------------------------------------------
+  // ITEM 1: MP3 REAL NO .ZIP (SEM "[object Blob]")
+  // ---------------------------------------------------------------------------
+  console.log('📋 Teste Item 1: MP3 gravado em bytes binários reais no ZIP');
+  // Cria um buffer simulado de MP3 de 32 bytes (com header ID3 real)
+  const bytesMp3Simulado = new Uint8Array(32);
+  bytesMp3Simulado[0] = 0x49; // 'I'
+  bytesMp3Simulado[1] = 0x44; // 'D'
+  bytesMp3Simulado[2] = 0x33; // '3'
+  for (let b = 3; b < 32; b++) bytesMp3Simulado[b] = (b * 7) % 256;
+
+  // Simula um Blob em Node com .arrayBuffer()
+  const blobMp3Simulado = {
+    size: bytesMp3Simulado.length,
+    type: 'audio/mp3',
+    arrayBuffer: async () => bytesMp3Simulado.buffer.slice(bytesMp3Simulado.byteOffset, bytesMp3Simulado.byteOffset + bytesMp3Simulado.byteLength)
+  };
+
+  const arquivosParaZip = [
+    { nome: 'cenas.txt', conteudo: '01 | A vara ergueu-se no ar Moisés feriu a rocha' },
+    { nome: 'descricoes.txt', conteudo: '01 | Moses striking boulder' },
+    { nome: 'prompts.txt', conteudo: '01. Moses striking boulder' },
+    { nome: 'narracao.mp3', conteudo: blobMp3Simulado }
+  ];
+
+  const zipGerado = await PlanoCenasModule.criarZipScriptorium(arquivosParaZip);
+  checar(zipGerado !== null && zipGerado !== undefined, 'Item 1a: criarZipScriptorium gera o pacote ZIP com sucesso');
+
+  const arquivosDescompactados = await PlanoCenasModule.lerArquivosDeZip(zipGerado);
+  const entradaMp3 = arquivosDescompactados.find(a => a.nome === 'narracao.mp3');
+
+  checar(Boolean(entradaMp3), 'Item 1b: Arquivo narracao.mp3 está presente dentro do ZIP gerado');
+  checar(entradaMp3.tamanho === 32, `Item 1c: narracao.mp3 tem exatamente 32 bytes reais (recebido: ${entradaMp3.tamanho} bytes, não 13 bytes)`);
+  checar(
+    entradaMp3.bytes[0] === 0x49 && entradaMp3.bytes[1] === 0x44 && entradaMp3.bytes[2] === 0x33,
+    'Item 1d: Bytes iniciais do MP3 preservam a assinatura binária ID3'
+  );
+  const textoMp3 = new TextDecoder().decode(entradaMp3.bytes);
+  checar(!textoMp3.includes('[object Blob]'), 'Item 1e: narracao.mp3 NÃO foi gravado como a string "[object Blob]"');
+
+  // ---------------------------------------------------------------------------
+  // ITEM 2: NOME DO .ZIP (SLUG VEM DO TEMA, NUNCA DA CATEGORIA DO MENU)
+  // ---------------------------------------------------------------------------
+  console.log('\n📋 Teste Item 2: Nome do .ZIP baseado exclusivamente no tema do vídeo');
+  const nomeZip1 = PlanoCenasModule.gerarNomeZipScriptorium({
+    categoria: 'Acontecimentos-chave da Bíblia',
+    temaCustom: 'Mar Vermelho'
+  });
+  checar(nomeZip1 === 'mar-vermelho-scriptorium.zip', `Item 2a: Slug gerado a partir de temaCustom ("${nomeZip1}")`);
+
+  const nomeZip2 = PlanoCenasModule.gerarNomeZipScriptorium({
+    categoria: 'Fins Trágicos Bíblicos',
+    ideiaEscolhida: 'O Trágico Fim de Judas Iscariotes'
+  });
+  checar(nomeZip2 === 'o-tragico-fim-de-judas-iscariotes-scriptorium.zip', `Item 2b: Slug gerado a partir de ideiaEscolhida ("${nomeZip2}")`);
+
+  const nomeZip3 = PlanoCenasModule.gerarNomeZipScriptorium({
+    categoria: 'Acontecimentos-chave da Bíblia',
+    temaCustom: '',
+    ideiaEscolhida: ''
+  });
+  checar(nomeZip3 === 'roteiro-scriptorium.zip', `Item 2c: Categoria do menu é ignorada gerando fallback seguro ("${nomeZip3}")`);
+  checar(!nomeZip3.includes('acontecimentos-chave'), 'Item 2d: O nome do ZIP nunca contém o nome da categoria do menu');
+
+  // ---------------------------------------------------------------------------
+  // ITEM 3: TERMOS DE BASTIDOR NA NARRAÇÃO
+  // ---------------------------------------------------------------------------
+  console.log('\n📋 Teste Item 3: Detecção e eliminação de termos de bastidor na narração');
+  checar(
+    html.includes('STRICT PROHIBITION OF BEHIND-THE-SCENES') || html.includes('PROIBIÇÃO DE TERMOS DE BASTIDOR'),
+    'Item 3a: Prompt do roteiro em index.html proíbe termos de bastidor no texto narrado'
+  );
+
+  const fraseRealBastidor1 = 'Moisés respondeu com as palavras do gancho diante de todo o acampamento reunido.';
+  const fraseRealBastidor2 = 'Se este roteiro fortaleceu sua fé, guarde as palavras das Escrituras em seu coração.';
+  const fraseLegitimaCena = 'A cena diante do mar impressionou profundamente os filhos de Israel.';
+  const fraseLegitimaSecao = 'A seção dos sacerdotes levitas avançou solenemente pelo leito seco.';
+  const fraseLegitimaGanchos = 'Fizeram também ganchos de prata para suspender as cortinas sagradas.';
+
+  const suspeitas1 = PlanoCenasModule.detectarTermosBastidor(fraseRealBastidor1);
+  checar(suspeitas1.length === 1 && suspeitas1[0].termo === 'gancho', 'Item 3b: Detecta "palavras do gancho" como termo de bastidor');
+
+  const suspeitas2 = PlanoCenasModule.detectarTermosBastidor(fraseRealBastidor2);
+  checar(suspeitas2.length === 1 && suspeitas2[0].termo === 'roteiro', 'Item 3c: Detecta "este roteiro" como termo de bastidor');
+
+  checar(PlanoCenasModule.detectarTermosBastidor(fraseLegitimaCena).length === 0, 'Item 3d: Não gera falso positivo para "cena" em contexto bíblico');
+  checar(PlanoCenasModule.detectarTermosBastidor(fraseLegitimaSecao).length === 0, 'Item 3e: Não gera falso positivo para "seção" em contexto bíblico');
+  checar(PlanoCenasModule.detectarTermosBastidor(fraseLegitimaGanchos).length === 0, 'Item 3f: Não gera falso positivo para "ganchos de prata" do Tabernáculo');
+
+  const resReescrita = await PlanoCenasModule.regenerarFrasesComBastidor(
+    `${fraseRealBastidor1} ${fraseRealBastidor2}`
+  );
+  checar(!resReescrita.texto.includes('palavras do gancho'), 'Item 3g: Regeneração elimina "palavras do gancho"');
+  checar(!resReescrita.texto.includes('este roteiro'), 'Item 3h: Regeneração elimina "este roteiro"');
+  checar(resReescrita.reescritas.length === 2, 'Item 3i: Ambas as frases com termos de bastidor foram saneadas');
+
+  // ---------------------------------------------------------------------------
+  // ITEM 4: PROMPTS PARECIDOS DEMAIS (VARIEDADE E VALIDADOR DE SEMELHANÇA)
+  // ---------------------------------------------------------------------------
+  console.log('\n📋 Teste Item 4: Variedade obrigatória e validador de semelhança entre cenas');
+  const descCenaA = 'Moses standing with wooden staff before the Hebrew people in Kadesh under parched desert sun';
+  const descCenaB_QuaseIgual = 'Moses standing with wooden staff before the Hebrew crowd in Kadesh under desert sun';
+  const descCenaC_Variada = 'High-angle wide panoramic shot of the parched desert canyon of Kadesh, distant rocky plateau at twilight';
+
+  const taxaSemelhancaAlta = PlanoCenasModule.calcularSemelhancaDescricoes(descCenaA, descCenaB_QuaseIgual);
+  checar(taxaSemelhancaAlta >= 0.60, `Item 4a: Calcula semelhança alta entre prompts repetitivos (${Math.round(taxaSemelhancaAlta * 100)}% >= 60%)`);
+
+  const validacaoRepetida = PlanoCenasModule.validarDescricaoVisualCena(descCenaB_QuaseIgual, 'Moisés diante do povo', {
+    descricoesAnteriores: [descCenaA]
+  });
+  checar(validacaoRepetida.valido === false, 'Item 4b: Validador rejeita cena por semelhança excessiva (> 60%) com cena anterior');
+  checar(validacaoRepetida.motivo.includes('Semelhança excessiva'), 'Item 4c: Motivo indica semelhança excessiva e exigência de variedade');
+
+  const validacaoVariada = PlanoCenasModule.validarDescricaoVisualCena(descCenaC_Variada, 'Visão do deserto', {
+    descricoesAnteriores: [descCenaA]
+  });
+  checar(validacaoVariada.valido === true, 'Item 4d: Validador aprova cena com enquadramento e composição variados');
+
+  // ---------------------------------------------------------------------------
+  // ITEM 5: AÇÃO ANTECIPADA E FRASE DE BASTIDOR NO PROMPT
+  // ---------------------------------------------------------------------------
+  console.log('\n📋 Teste Item 5: Rejeição de frases de audiência e bastidor no prompt');
+  const promptAudience1 = 'Moses looking at the sky, encouraging viewers to strengthen their faith';
+  const promptAudience2 = 'Sacred parchment scroll with text urging audience to subscribe to the channel';
+  const promptValidoCta = 'Ancient illuminated parchment scroll resting on rustic cedar desk beside an antique brass oil lamp glowing warm in evening twilight';
+
+  const valAudience1 = PlanoCenasModule.validarDescricaoVisualCena(promptAudience1, 'Olhou para o céu');
+  checar(valAudience1.valido === false, 'Item 5a: Validador rejeita prompt com "encouraging viewers"');
+  checar(valAudience1.motivo.includes('viewers') || valAudience1.motivo.includes('audiência'), 'Item 5b: Motivo acusa termos de audiência proibidos');
+
+  const valAudience2 = PlanoCenasModule.validarDescricaoVisualCena(promptAudience2, 'Inscreva-se no canal');
+  checar(valAudience2.valido === false, 'Item 5c: Validador rejeita prompt com "audience" e "subscribe"');
+
+  const valCtaValido = PlanoCenasModule.validarDescricaoVisualCena(promptValidoCta, 'Inscreva-se no canal e ative as notificações');
+  checar(valCtaValido.valido === true, 'Item 5d: Validador aceita prompt de fechamento com objeto histórico concreto');
+
+  // ---------------------------------------------------------------------------
+  // ITEM 6: IMAGEM QUE 'SOBRA' (CORTE EM TRANSIÇÃO DE ACONTECIMENTO)
+  // ---------------------------------------------------------------------------
+  console.log('\n📋 Teste Item 6: Preferência de corte em transição de acontecimento');
+  const fraseCarrosFarao = 'Os seiscentos carros escolhidos de Faraó avançavam velozmente com ferozes cavaleiros armados.'; // 12 palavras = 4.8s (>= 4s meta.min)
+  const fraseAcampamentoIsrael = 'Israel acampou junto ao mar em frente a Baal-Zefom ao pôr do sol.'; // 13 palavras = 5.2s
+
+  const ehTransicao = PlanoCenasModule.detectarTransicaoAcontecimento([fraseCarrosFarao], fraseAcampamentoIsrael);
+  checar(ehTransicao === true, 'Item 6a: detectarTransicaoAcontecimento detecta transição de carros de Faraó para Israel acampando');
+
+  const narracaoTransicao = `${fraseCarrosFarao} ${fraseAcampamentoIsrael}`;
+  const frasesTransicao = PlanoCenasModule.dividirEmFrases(narracaoTransicao);
+  const planoTransicao = PlanoCenasModule.agruparFrasesEmCenas(frasesTransicao, narracaoTransicao);
+
+  checar(planoTransicao.cenas.length === 2, `Item 6b: Divide em 2 cenas distintas na fronteira de acontecimento (cenas geradas: ${planoTransicao.cenas.length})`);
+  checar(planoTransicao.cenas[0].fraseInicio.includes('Faraó'), 'Item 6c: Cena 1 concentra o trecho dos carros de Faraó');
+  checar(planoTransicao.cenas[1].fraseInicio.includes('Israel acampou'), 'Item 6d: Cena 2 inicia exatamente na transição "Israel acampou junto ao mar"');
 
   console.log(`\n🎉 ESTRUTURA DE TESTES OFFLINE DO LOTE 02 PASSOU COM SUCESSO (${totalAsserts} verificações)!`);
 })().catch(e => {
