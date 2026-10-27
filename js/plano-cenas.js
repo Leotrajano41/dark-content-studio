@@ -177,15 +177,18 @@
   }
 
   /**
-   * Regenera a frase eliminando termos de bastidor sem troca automática ingênua.
+   * Regenera a frase eliminando termos de bastidor via IA (sem troca automática de palavras).
+   * Se a IA falhar ou não estiver disponível, a frase original é mantida 100% INTACTA
+   * e a ocorrência é anotada em falhas/avisos para decisão manual do usuário.
    */
   async function regenerarFrasesComBastidor(texto, chamarIaFn) {
-    if (!texto || typeof texto !== 'string') return { texto, reescritas: [] };
+    if (!texto || typeof texto !== 'string') return { texto, reescritas: [], falhas: [], avisos: [] };
     const suspeitas = detectarTermosBastidor(texto);
-    if (suspeitas.length === 0) return { texto, reescritas: [] };
+    if (suspeitas.length === 0) return { texto, reescritas: [], falhas: [], avisos: [] };
 
     let textoFinal = texto;
     const reescritas = [];
+    const falhas = [];
 
     for (const item of suspeitas) {
       let novaFrase = '';
@@ -194,33 +197,34 @@
 Frase original: "${item.frase}"
 
 Reescreva a frase eliminando totalmente a menção a bastidores ou produção, mantendo a sobriedade bíblica e o sentido sagrado (ex: "Se este roteiro fortaleceu sua fé" vira "Se este estudo fortaleceu sua fé" ou "Se este vídeo fortaleceu sua fé"; frases sobre "palavras do gancho" devem ser narradas diretamente como a fala ou resposta do personagem).
+NUNCA faça trocas mecânicas genéricas. Mantenha o estilo e a fidelidade ao contexto bíblico.
 Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explicações.`;
 
         try {
           const resp = await chamarIaFn(promptReescrita);
-          novaFrase = (resp || '').trim().replace(/^["']|["']$/g, '').trim();
+          const candidata = (resp || '').trim().replace(/^["']|["']$/g, '').trim();
+          if (candidata && candidata !== item.frase) {
+            // Confere se a nova frase realmente não contém mais nenhum termo de bastidor
+            const sobrou = detectarTermosBastidor(candidata);
+            if (sobrou.length === 0) {
+              novaFrase = candidata;
+            }
+          }
         } catch (_) {}
       }
 
-      // Fallback seguro de reescrita caso a IA não esteja disponível
-      if (!novaFrase) {
-        novaFrase = item.frase
-          .replace(/as\s+palavras\s+do\s+gancho/gi, 'firmeza e autoridade')
-          .replace(/palavras\s+do\s+gancho/gi, 'palavras de fé')
-          .replace(/\bse\s+este\s+roteiro\b/gi, 'se este estudo')
-          .replace(/\beste\s+roteiro\b/gi, 'este estudo')
-          .replace(/\bneste\s+roteiro\b/gi, 'neste vídeo')
-          .replace(/\b(?:o\s+narrador|voz\s+do\s+narrador)\b/gi, 'o relato')
-          .replace(/\bhook\b/gi, 'início');
-      }
-
-      if (novaFrase && novaFrase !== item.frase && textoFinal.includes(item.frase)) {
+      // Se a IA reescreveu com sucesso e sem termos de bastidor, aplica
+      if (novaFrase && textoFinal.includes(item.frase)) {
         textoFinal = textoFinal.replace(item.frase, novaFrase);
         reescritas.push({ original: item.frase, corrigida: novaFrase, termo: item.termo });
+      } else {
+        // Se a IA falhou (ou não foi fornecida), a regra do projeto proíbe troca automática.
+        // A frase original é MANTIDA INTACTA e o aviso é registrado para decisão manual.
+        falhas.push({ frase: item.frase, termo: item.termo });
       }
     }
 
-    return { texto: textoFinal, reescritas };
+    return { texto: textoFinal, reescritas, falhas, avisos: falhas };
   }
 
   /**

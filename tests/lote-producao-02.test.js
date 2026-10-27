@@ -636,12 +636,60 @@ checar(rejGenerico.valido === false, 'Item E2d: Descrição com "solemn biblical
   checar(PlanoCenasModule.detectarTermosBastidor(fraseLegitimaSecao).length === 0, 'Item 3e: Não gera falso positivo para "seção" em contexto bíblico');
   checar(PlanoCenasModule.detectarTermosBastidor(fraseLegitimaGanchos).length === 0, 'Item 3f: Não gera falso positivo para "ganchos de prata" do Tabernáculo');
 
-  const resReescrita = await PlanoCenasModule.regenerarFrasesComBastidor(
-    `${fraseRealBastidor1} ${fraseRealBastidor2}`
+  // Regra de Ouro do Projeto: NUNCA trocar palavras automaticamente na limpeza
+  const limpoSemTroca = limparTextoParaNarracao(fraseRealBastidor1);
+  checar(
+    limpoSemTroca.includes('palavras do gancho'),
+    'Item 3g: limparTextoParaNarracao NUNCA troca palavras automaticamente (frase permanece intacta na limpeza)'
   );
-  checar(!resReescrita.texto.includes('palavras do gancho'), 'Item 3g: Regeneração elimina "palavras do gancho"');
-  checar(!resReescrita.texto.includes('este roteiro'), 'Item 3h: Regeneração elimina "este roteiro"');
-  checar(resReescrita.reescritas.length === 2, 'Item 3i: Ambas as frases com termos de bastidor foram saneadas');
+
+  // Cenário 1: IA simulada reescreve a frase -> reescrita aceita e aplicada
+  const chamarIaSimulada = async (prompt) => {
+    if (prompt.includes('palavras do gancho')) {
+      return 'Moisés respondeu com fé e autoridade diante de todo o acampamento reunido.';
+    }
+    if (prompt.includes('este roteiro')) {
+      return 'Se esta palavra sagrada fortaleceu sua fé, guarde as palavras das Escrituras em seu coração.';
+    }
+    return null;
+  };
+
+  const resIaSucesso = await PlanoCenasModule.regenerarFrasesComBastidor(
+    `${fraseRealBastidor1} ${fraseRealBastidor2}`,
+    chamarIaSimulada
+  );
+  checar(!resIaSucesso.texto.includes('palavras do gancho'), 'Item 3h: IA simulada elimina "palavras do gancho"');
+  checar(!resIaSucesso.texto.includes('este roteiro'), 'Item 3i: IA simulada elimina "este roteiro"');
+  checar(resIaSucesso.texto.includes('fé e autoridade'), 'Item 3j: Texto final contém a nova frase reescrita pela IA');
+  checar(resIaSucesso.reescritas.length === 2, 'Item 3k: Ambas as frases foram reescritas com sucesso pela IA');
+  checar(resIaSucesso.falhas.length === 0, 'Item 3l: Zero falhas quando a IA reescreve com sucesso');
+
+  // Cenário 2: IA falhando (lança erro / sem chave / nula) -> frase permanece 100% INTACTA + aviso registrado
+  const chamarIaFalha = async () => {
+    throw new Error('OpenRouter offline ou cota indisponível');
+  };
+
+  const textoComBastidor = `${fraseRealBastidor1} ${fraseRealBastidor2}`;
+  const resIaFalha = await PlanoCenasModule.regenerarFrasesComBastidor(
+    textoComBastidor,
+    chamarIaFalha
+  );
+  checar(
+    resIaFalha.texto === textoComBastidor,
+    'Item 3m: Quando a IA falha, a frase permanece 100% INTACTA (sem troca automática)'
+  );
+  checar(resIaFalha.texto.includes('palavras do gancho'), 'Item 3n: Frase original 1 preservada intacta');
+  checar(resIaFalha.texto.includes('este roteiro'), 'Item 3o: Frase original 2 preservada intacta');
+  checar(resIaFalha.reescritas.length === 0, 'Item 3p: Nenhuma reescrita é forçada mecanicamente');
+  checar(resIaFalha.falhas.length === 2, 'Item 3q: Registra as 2 frases com falha para decisão manual do usuário');
+  checar(resIaFalha.falhas[0].termo === 'gancho' && resIaFalha.falhas[0].frase === fraseRealBastidor1, 'Item 3r: Falha 1 contém termo "gancho" e frase exata');
+  checar(resIaFalha.falhas[1].termo === 'roteiro' && resIaFalha.falhas[1].frase === fraseRealBastidor2, 'Item 3s: Falha 2 contém termo "roteiro" e frase exata');
+
+  // Cenário 3: Interface no index.html possui aviso destacado e atalho para versão revisada
+  checar(html.includes('id="alerta-termos-bastidor"'), 'Item 3t: Elemento de alerta destacado id="alerta-termos-bastidor" presente em index.html');
+  checar(html.includes('id="btn-alerta-abrir-revisao"'), 'Item 3u: Botão de atalho para "Usar versão revisada" presente no alerta');
+  checar(html.includes('function exibirAvisoTermosBastidor'), 'Item 3v: Função exibirAvisoTermosBastidor definida em index.html');
+  checar(html.includes('function ocultarAvisoTermosBastidor'), 'Item 3w: Função ocultarAvisoTermosBastidor definida em index.html');
 
   // ---------------------------------------------------------------------------
   // ITEM 4: PROMPTS PARECIDOS DEMAIS (VARIEDADE E VALIDADOR DE SEMELHANÇA)

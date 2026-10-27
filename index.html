@@ -1783,6 +1783,25 @@ textarea.h-180 {
             </div>
           </div>
 
+          <!-- Alerta Destacado: Termos de Bastidor Detectados (Sem Alteração Automática) -->
+          <div id="alerta-termos-bastidor" class="hidden" style="margin: 12px 0; padding: 14px 18px; background: rgba(239, 68, 68, 0.14); border: 2px solid #ef4444; border-radius: 8px; color: #fecaca;">
+            <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 260px;">
+                <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.98rem; color: #f87171;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                  <span>⚠️ Termos de Bastidor Detectados na Narração (Não alterados automaticamente)</span>
+                </div>
+                <p style="margin: 6px 0 10px 0; font-size: 0.88rem; color: #fed7aa; line-height: 1.4;">
+                  A IA não reescreveu esta frase e a regra do projeto proíbe qualquer troca automática de palavras. A frase original foi <strong>mantida 100% intacta</strong> para sua decisão:
+                </p>
+                <div id="alerta-termos-bastidor-lista" style="display: flex; flex-direction: column; gap: 8px;"></div>
+              </div>
+              <button type="button" id="btn-alerta-abrir-revisao" class="btn btn-warning btn-sm" style="background: #f59e0b; color: #000; font-weight: 700; padding: 8px 14px; border-radius: 6px; border: none; cursor: pointer; white-space: nowrap; margin-top: 4px;">
+                ✍️ Usar versão revisada
+              </button>
+            </div>
+          </div>
+
           <!-- Selo Versão Revisada Aplicada -->
           <div id="badge-versao-revisada" style="display: none; margin: 10px 0; padding: 10px 14px; background: rgba(16, 185, 129, 0.12); border: 1px solid #10b981; border-radius: 8px; color: #10b981; font-weight: 500; font-size: 0.9rem; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -8688,26 +8707,6 @@ function limparTextoParaNarracao(texto, estiloRoteiro = '') {
     return txt.trim() + '.' + aspa;
   });
 
-  // 19. ITEM 3: Detector e saneamento de termos de bastidor na Narração Limpa
-  if (typeof PlanoCenasModule !== 'undefined' && typeof PlanoCenasModule.detectarTermosBastidor === 'function') {
-    const suspeitas = PlanoCenasModule.detectarTermosBastidor(limpo);
-    if (suspeitas.length > 0) {
-      for (const item of suspeitas) {
-        const substituta = item.frase
-          .replace(/as\s+palavras\s+do\s+gancho/gi, 'firmeza e autoridade')
-          .replace(/palavras\s+do\s+gancho/gi, 'palavras de fé')
-          .replace(/\bse\s+este\s+roteiro\b/gi, 'se este estudo')
-          .replace(/\beste\s+roteiro\b/gi, 'este estudo')
-          .replace(/\bneste\s+roteiro\b/gi, 'neste vídeo')
-          .replace(/\b(?:o\s+narrador|voz\s+do\s+narrador)\b/gi, 'o relato')
-          .replace(/\bhook\b/gi, 'início');
-        if (substituta !== item.frase) {
-          limpo = limpo.replace(item.frase, substituta);
-        }
-      }
-    }
-  }
-
   return limpo.trim();
 }
 
@@ -8787,6 +8786,73 @@ function aplicarValidacaoBiblicaOffline(texto, idioma) {
   return resultado;
 }
 
+/**
+ * Exibe aviso destacado na interface caso frases com termos de bastidor não tenham sido reescritas pela IA.
+ * Em conformidade com a regra do projeto (NUNCA trocar palavras automaticamente), a frase original
+ * é mantida 100% intacta e exposta aqui para decisão do usuário, com opção de usar a "Versão Revisada".
+ */
+function exibirAvisoTermosBastidor(falhas) {
+  if (typeof document === 'undefined') return;
+  const container = document.getElementById('alerta-termos-bastidor');
+  const listaEl = document.getElementById('alerta-termos-bastidor-lista');
+  if (!container || !listaEl) return;
+
+  if (!falhas || !Array.isArray(falhas) || falhas.length === 0) {
+    container.classList.add('hidden');
+    listaEl.innerHTML = '';
+    return;
+  }
+
+  const escapeFn = (typeof escaparHtml === 'function')
+    ? escaparHtml
+    : (str => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'));
+
+  let itensHtml = '';
+  for (const item of falhas) {
+    const termoEsc = escapeFn(item.termo || '');
+    const fraseEsc = escapeFn(item.frase || '');
+    itensHtml += `
+      <div style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(239, 68, 68, 0.45); padding: 8px 12px; border-radius: 6px; font-size: 0.88rem; line-height: 1.45;">
+        <div><strong style="color: #fca5a5;">Termo de bastidor detectado:</strong> <code style="background: rgba(239, 68, 68, 0.25); color: #fee2e2; padding: 2px 6px; border-radius: 4px; font-weight: 600;">"${termoEsc}"</code></div>
+        <div style="margin-top: 5px;"><strong style="color: #e2e8f0;">Frase mantida intacta:</strong> <em style="color: #fef08a;">"${fraseEsc}"</em></div>
+      </div>
+    `;
+  }
+
+  listaEl.innerHTML = itensHtml;
+  container.classList.remove('hidden');
+
+  const btnRevisao = document.getElementById('btn-alerta-abrir-revisao');
+  if (btnRevisao && !btnRevisao.__listenerAtivo) {
+    btnRevisao.__listenerAtivo = true;
+    btnRevisao.addEventListener('click', () => {
+      const btnAbrir = document.getElementById('btn-abrir-versao-revisada');
+      if (btnAbrir) {
+        btnAbrir.click();
+      } else {
+        const painel = document.getElementById('painel-versao-revisada');
+        if (painel) painel.style.display = 'block';
+      }
+      const painel = document.getElementById('painel-versao-revisada');
+      if (painel) {
+        painel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const ta = document.getElementById('textarea-colar-versao-revisada');
+        if (ta) ta.focus();
+      }
+    });
+  }
+}
+
+function ocultarAvisoTermosBastidor() {
+  if (typeof document === 'undefined') return;
+  const container = document.getElementById('alerta-termos-bastidor');
+  const listaEl = document.getElementById('alerta-termos-bastidor-lista');
+  if (container) container.classList.add('hidden');
+  if (listaEl) listaEl.innerHTML = '';
+}
+
+window.exibirAvisoTermosBastidor = exibirAvisoTermosBastidor;
+window.ocultarAvisoTermosBastidor = ocultarAvisoTermosBastidor;
 window.limparTextoParaNarracao = limparTextoParaNarracao;
 window.validarRoteiroComBiblia = validarRoteiroComBiblia;
 
@@ -8796,6 +8862,7 @@ window.validarRoteiroComBiblia = validarRoteiroComBiblia;
  * mantendo integralmente preservados os "Temas Salvos" (histórico).
  */
 function limparEstadoTemaAnterior() {
+  ocultarAvisoTermosBastidor();
   window._planoDeCenasAtual = null;
   window._hashNarracaoPlanoCenas = null;
   if (typeof currentAudioBlob !== 'undefined') currentAudioBlob = null;
@@ -10540,6 +10607,9 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
 
     // Requisito 11: Limpa as caixas de resultado das etapas 2 a 5 para não exibir dados do vídeo anterior
     limparResultadosEtapasPosteriores();
+    if (typeof ocultarAvisoTermosBastidor === 'function') {
+      ocultarAvisoTermosBastidor();
+    }
     globalThis.__avisosPosProcessamento = [];
     globalThis.__frasesRemovidas = [];
     globalThis.__ancoraSecao7 = '';
@@ -10850,6 +10920,51 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
           }
         } catch (eGram) {
           console.warn('[Revisão Gramatical] Falha ao revisar a Narração Limpa:', eGram);
+        }
+      }
+
+      // ITEM 3: Saneamento de termos de bastidor na Narração Limpa via IA (NUNCA troca automática)
+      if (typeof PlanoCenasModule !== 'undefined' && typeof PlanoCenasModule.regenerarFrasesComBastidor === 'function') {
+        try {
+          const chamarIaBastidor = async (promptBastidor) => {
+            if (!hasApiKey) throw new Error('API key não configurada');
+            return await OpenRouterAPI.generateContent(
+              promptBastidor,
+              modeloRoteiro,
+              'Você é um revisor de roteiros bíblicos. Corrija a frase eliminando termos de produção ou bastidor sem trocar outras palavras e mantendo a reverência bíblica. Responda apenas com a frase reescrita corrigida.',
+              { temperature: 0.2 }
+            );
+          };
+
+          const bastidorRes = await PlanoCenasModule.regenerarFrasesComBastidor(
+            textoLimpo,
+            hasApiKey ? chamarIaBastidor : null
+          );
+
+          if (bastidorRes && bastidorRes.reescritas && bastidorRes.reescritas.length > 0) {
+            textoLimpo = bastidorRes.texto;
+            // Replica as frases reescritas no Roteiro Completo para não divergir
+            for (const r of bastidorRes.reescritas) {
+              if (r.original && r.corrigida && resultText.includes(r.original)) {
+                resultText = resultText.replace(r.original, r.corrigida);
+              }
+            }
+            if (outputRoteiroEl) outputRoteiroEl.value = resultText;
+            UI.showToast(`Termos de bastidor: ${bastidorRes.reescritas.length} frase(s) reescrita(s) pela IA com sucesso.`);
+          }
+
+          if (bastidorRes && bastidorRes.falhas && bastidorRes.falhas.length > 0) {
+            // Se a IA falhar (ou sem chave), NÃO altera a frase: exibe aviso destacado com a frase e o termo
+            if (typeof exibirAvisoTermosBastidor === 'function') {
+              exibirAvisoTermosBastidor(bastidorRes.falhas);
+            }
+          } else {
+            if (typeof ocultarAvisoTermosBastidor === 'function') {
+              ocultarAvisoTermosBastidor();
+            }
+          }
+        } catch (eBastidor) {
+          console.warn('[Termos de Bastidor] Falha ao regenerar frases com bastidor:', eBastidor);
         }
       }
 
