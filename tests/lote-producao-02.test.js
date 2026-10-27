@@ -275,4 +275,128 @@ checar(
   'Item 19b: limparClichésDeterministicamente foi completamente removido de index.html'
 );
 
-console.log(`\n🎉 ESTRUTURA DE TESTES OFFLINE DO LOTE 02 PASSOU COM SUCESSO (${totalAsserts} verificações)!`);
+// ---------------------------------------------------------------------------
+// GRUPO E: TESTES COM ROTEIRO REAL DO MOISÉS (testes-reais/moises-f8b5f2a.txt)
+// ---------------------------------------------------------------------------
+console.log('\n--- GRUPO E: Testes com o Roteiro Real do Moisés (Itens 1, 2 e 3 do Feedback) ---');
+
+const caminhoMoisesReal = path.join(raiz, 'testes-reais', 'moises-f8b5f2a.txt');
+checar(fs.existsSync(caminhoMoisesReal), 'Item E0: Arquivo testes-reais/moises-f8b5f2a.txt existe');
+
+const narracaoMoisesReal = fs.readFileSync(caminhoMoisesReal, 'utf8');
+const planoReal = PlanoCenasModule.gerarPlanoDeCenas(narracaoMoisesReal, {
+  tema: 'Moisés em Meribá',
+  personagemPrincipal: 'Moisés'
+});
+
+checar(planoReal.cenas.length === 54, `Item E1: Roteiro real do Moisés agrupado em 54 cenas (obtido: ${planoReal.cenas.length})`);
+
+// 1. Validador de Descrições Visuais:
+// Rejeita falso mar em trecho sem mar
+const rejFalsoMar = PlanoCenasModule.validarDescricaoVisualCena(
+  'stretching forth rustic wooden staff over the roaring waters of the sea',
+  'A vara ergueu-se no ar. Moisés feriu a rocha. Uma vez. Duas vezes.'
+);
+checar(rejFalsoMar.valido === false, 'Item E2a: Descrição com "sea" é rejeitada quando o trecho não fala de mar');
+
+// Aceita água legítima quando o trecho fala de água
+const aceitaAgua = PlanoCenasModule.validarDescricaoVisualCena(
+  'fresh water gushing forth from the cracked desert boulder as Hebrew people drink',
+  'A água jorrou com abundância da rocha ferida no deserto de Cades.'
+);
+checar(aceitaAgua.valido === true, 'Item E2b: Descrição com "water" é aceita quando o trecho fala de água');
+
+// Rejeita palavras em português
+const rejPt = PlanoCenasModule.validarDescricaoVisualCena(
+  'Moses striking the rocha no deserto diante do povo',
+  'Moisés feriu a rocha diante do povo'
+);
+checar(rejPt.valido === false, 'Item E2c: Descrição com palavras em português é rejeitada');
+
+// Rejeita clichê genérico vazio
+const rejGenerico = PlanoCenasModule.validarDescricaoVisualCena(
+  'solemn biblical historical tableau depicting moises em meriba',
+  'Moisés em Meribá'
+);
+checar(rejGenerico.valido === false, 'Item E2d: Descrição com "solemn biblical historical tableau" é rejeitada');
+
+// 2. Teste do gerador com respostas simuladas da IA em lotes de 10 cenas:
+(async () => {
+  let chamadasLoteIa = 0;
+  const stubIa = async (promptLote) => {
+    chamadasLoteIa++;
+    checar(/You are an expert biblical art director/i.test(promptLote), `Item E3a: Chamada de lote ${chamadasLoteIa} envia prompt com regras artísticas estritas`);
+    checar(/FORBIDDEN to include elements from other biblical events/i.test(promptLote), 'Item E3b: Regras proíbem elementos de outros episódios');
+    
+    // Retorna JSON válido com 10 cenas simuladas
+    const arraySimulado = [];
+    for (let i = 1; i <= 10; i++) {
+      arraySimulado.push({
+        numero: String(i).padStart(2, '0'),
+        descricaoVisual: `Moses raising wooden staff before dry desert boulder at Kadesh scene ${i}`
+      });
+    }
+    return JSON.stringify(arraySimulado);
+  };
+
+  const cenasAmostra = planoReal.cenas.slice(0, 10);
+  await PlanoCenasModule.gerarDescricoesVisuaisComIa(cenasAmostra, narracaoMoisesReal, stubIa, { tema: 'Moisés' });
+  checar(chamadasLoteIa === 1, 'Item E3c: IA acionada em lote de 10 cenas por chamada');
+  checar(cenasAmostra[0].promptIngles.includes('elderly man, long white beard'), 'Item E3d: Pós-processamento injetou ficha canônica de Moisés');
+  checar(cenasAmostra[0].promptIngles.endsWith('Full bleed image, no border, no frame, no decorative corners. No text.'), 'Item E3e: Pós-processamento injetou sufixo fixo oficial');
+  
+  // 3. Verificação de pureza no roteiro real do Moisés (SEM falso mar e SEM "tableau"):
+  for (const c of planoReal.cenas) {
+    const trechoPt = c.frases.join(' ');
+    if (!/\b(?:mar|oceano)\b/i.test(trechoPt)) {
+      checar(!/\b(?:sea|ocean)\b/i.test(c.promptIngles), `Item E4a: Cena ${c.numero} não contém mar indevido`);
+    }
+    checar(!c.promptIngles.includes('solemn biblical historical tableau'), `Item E4b: Cena ${c.numero} não usa template genérico`);
+  }
+
+  // 4. Item 2 do Feedback: Validador do Pacote com o arquivo real (54 cenas consistentes)
+  const cenasTxtReal = PlanoCenasModule.gerarCenasTxt(planoReal.cenas, narracaoMoisesReal);
+  const descricoesTxtReal = PlanoCenasModule.gerarDescricoesTxt(planoReal.cenas);
+  const promptsTxtReal = PlanoCenasModule.gerarPromptsTxt(planoReal.cenas);
+
+  const linhasCenasReal = cenasTxtReal.split('\n');
+  const linhasDescReal = descricoesTxtReal.split('\n');
+  const blocosPromptsReal = promptsTxtReal.split(/\n\s*\n/);
+
+  checar(linhasCenasReal.length === 54, `Item E5a: cenas.txt tem exatamente 54 linhas (obtido: ${linhasCenasReal.length})`);
+  checar(linhasDescReal.length === 54, `Item E5b: descricoes.txt tem exatamente 54 linhas (obtido: ${linhasDescReal.length})`);
+  checar(blocosPromptsReal.length === 54, `Item E5c: prompts.txt tem exatamente 54 blocos (obtido: ${blocosPromptsReal.length})`);
+
+  const validacaoMoisesReal = PlanoCenasModule.validarPacoteScriptorium({
+    cenasTxt: cenasTxtReal,
+    descricoesTxt: descricoesTxtReal,
+    promptsTxt: promptsTxtReal,
+    narracaoLimpa: narracaoMoisesReal,
+    cenas: planoReal.cenas
+  });
+  checar(validacaoMoisesReal.valido === true && validacaoMoisesReal.erros.length === 0, `Item E5d: validarPacoteScriptorium aprova 100% o pacote real do Moisés (${validacaoMoisesReal.erros.join(', ') || 'sem erros'})`);
+
+  // 5. Item 3 do Feedback: TODAS as linhas do cenas.txt com >= 5 palavras
+  let totalComMenosDe5 = 0;
+  for (const l of linhasCenasReal) {
+    const trecho = (l.split('|')[1] || '').trim();
+    const countPalavras = (trecho.match(/\S+/g) || []).length;
+    if (countPalavras < 5) {
+      totalComMenosDe5++;
+    }
+  }
+  checar(totalComMenosDe5 === 0, `Item E6a: Nenhuma das 54 linhas do cenas.txt tem menos de 5 palavras (encontradas com falha: ${totalComMenosDe5})`);
+
+  // Linha 35 específica ("A sentença era irrevogável.")
+  const linha35 = linhasCenasReal[34];
+  checar(linha35.startsWith('35 | A sentença era irrevogável.'), `Item E6b: Linha 35 começa com a frase completa ("${linha35.slice(0, 40)}...")`);
+  const palavrasLinha35 = (linha35.split('|')[1].trim().match(/\S+/g) || []).length;
+  checar(palavrasLinha35 >= 5, `Item E6c: Linha 35 expandida possui >= 5 palavras (total: ${palavrasLinha35} palavras: "${linha35.split('|')[1].trim()}")`);
+  checar(!linha35.includes('\n'), 'Item E6d: Linha 35 não contém quebras de linha');
+
+  console.log(`\n🎉 ESTRUTURA DE TESTES OFFLINE DO LOTE 02 PASSOU COM SUCESSO (${totalAsserts} verificações)!`);
+})().catch(e => {
+  console.error(e);
+  process.exit(1);
+});
+

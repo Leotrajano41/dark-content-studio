@@ -10995,6 +10995,27 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
         personagemPrincipal: personagem
       });
 
+      const hasKey = typeof OpenRouterAPI !== 'undefined' && Boolean(OpenRouterAPI.getApiKey());
+      if (hasKey) {
+        const modeloPrompts = typeof OpenRouterAPI.getModelMediaPrompts === 'function'
+          ? OpenRouterAPI.getModelMediaPrompts()
+          : (typeof OpenRouterAPI.getModelIdeas === 'function' ? OpenRouterAPI.getModelIdeas() : 'google/gemini-2.0-flash-001');
+
+        const totalLotes = Math.ceil(plano.cenas.length / 10);
+        let loteIndex = 0;
+
+        await PlanoCenasModule.gerarDescricoesVisuaisComIa(
+          plano.cenas,
+          narracaoLimpa,
+          async (promptLote) => {
+            loteIndex++;
+            UI.showToast(`IA gerando imagens: lote ${loteIndex} de ${totalLotes}...`);
+            return await OpenRouterAPI.generateContent(promptLote, modeloPrompts);
+          },
+          { tema: inputTema, personagemPrincipal: personagem }
+        );
+      }
+
       window._planoDeCenasAtual = plano;
       window._hashNarracaoPlanoCenas = PlanoCenasModule.gerarHashTexto(narracaoLimpa);
 
