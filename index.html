@@ -1844,37 +1844,101 @@ textarea.h-180 {
           </div>
         </details>
 
-        <div class="form-group form-group-full">
-          <label for="textarea-roteiro-gerado">
-            Roteiro Gerado
-            <span class="tooltip-wrapper" data-tooltip="O roteiro do seu vídeo será usado para gerar as palavras-chave e prompts visuais.">?</span>
-          </label>
-          <p class="field-hint">Texto base do roteiro: sincronizado da Etapa 1 para extração de cenas, objetos e termos de busca.</p>
-          <textarea id="textarea-roteiro-gerado" class="form-control h-180" placeholder="Cole aqui o roteiro completo ou ele será preenchido automaticamente ao gerar na Seção 1."></textarea>
+        <!-- Alerta destacado de Plano de Cenas desatualizado (Item 8) -->
+        <div id="alerta-plano-cenas-desatualizado" class="hidden" style="margin-bottom: 16px; padding: 14px 18px; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; border-radius: var(--radius-md); color: #fca5a5; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #f87171;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            <div>
+              <strong>Atenção: A Narração Limpa foi modificada!</strong>
+              <div style="font-size: 0.85rem; opacity: 0.9;">O Plano de Cenas atual não corresponde à versão mais recente da narração.</div>
+            </div>
+          </div>
+          <button id="btn-regenerar-plano-cenas" class="btn btn-sm btn-primary" style="background: #ef4444; border-color: #dc2626;">
+            ↻ Regenerar Plano de Cenas
+          </button>
         </div>
 
-        <div class="button-group">
+        <!-- Painel de Pré-visualização de Cadência antes da Geração (Ajuste 1) -->
+        <div id="preview-cadencia-cenas" class="hidden" style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(99, 102, 241, 0.35); border-radius: 8px; padding: 14px 18px; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #a5b4fc;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
+              <span>Estimativa de Cenas para o Scriptorium (Ritmo: 2,5 palavras/s)</span>
+            </div>
+            <span id="badge-total-cenas-estimadas" style="background: rgba(99, 102, 241, 0.2); border: 1px solid #6366f1; color: #c7d2fe; font-size: 0.8rem; font-weight: 700; padding: 3px 8px; border-radius: 4px;">0 imagens</span>
+          </div>
+          <p id="texto-resumo-cadencia" class="field-hint" style="color: #cbd5e1; margin-top: 6px; margin-bottom: 8px; font-size: 0.86rem;"></p>
+          <div id="lista-previa-cenas" style="max-height: 180px; overflow-y: auto; font-size: 0.82rem; font-family: var(--font-mono); color: #94a3b8; background: rgba(15, 23, 42, 0.6); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06);"></div>
+        </div>
+
+        <div class="form-group form-group-full">
+          <label for="textarea-roteiro-gerado">
+            Narração Limpa Ativa (Base do Plano de Cenas)
+            <span class="tooltip-wrapper" data-tooltip="O Plano de Cenas é gerado a partir da Narração Limpa final (incluindo a versão revisada, se houver).">?</span>
+          </label>
+          <p class="field-hint">Texto base do roteiro: sincronizado da Narração Limpa para fatiamento exato em cenas e geração de prompts.</p>
+          <textarea id="textarea-roteiro-gerado" class="form-control h-180" placeholder="A Narração Limpa aparecerá aqui automaticamente após a etapa 1 ou ao aplicar a versão revisada."></textarea>
+        </div>
+
+        <div class="button-group" style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <button id="btn-gerar-plano-cenas" class="btn btn-primary">
+            <span class="spinner hidden"></span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+              <line x1="7" y1="2" x2="7" y2="22"></line>
+              <line x1="17" y1="2" x2="17" y2="22"></line>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+            </svg>
+            <span class="btn-text">🎬 Gerar Plano de Cenas (Scriptorium)</span>
+          </button>
+
           <button id="btn-gerar-prompt-keywords" class="btn btn-secondary">
             <span class="spinner hidden"></span>
-            <svg width="18" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8"></circle>
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
-            <span class="btn-text">Gerar Keywords de Mídia com IA</span>
-          </button>
-
-          <button id="btn-gerar-prompt-imagens-ia" class="btn btn-primary">
-            <span class="spinner hidden"></span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-              <circle cx="8.5" cy="8.5" r="1.5"></circle>
-              <polyline points="21 15 16 10 5 21"></polyline>
-            </svg>
-            <span class="btn-text">Gerar Prompts para Imagens/Vídeos com IA</span>
+            <span class="btn-text">Keywords de Mídia</span>
           </button>
         </div>
 
-        <!-- Output 3: Keywords -->
+        <!-- Painel de Exportação e Arquivos para o Scriptorium (Itens 9 a 14) -->
+        <div id="card-plano-cenas" class="output-card mt-4 hidden">
+          <div class="output-header" style="flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="output-title">📦 Arquivos do Scriptorium (Plano de Cenas)</span>
+              <span id="badge-contagem-cenas" style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #6ee7b7; font-size: 0.76rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;"></span>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button id="btn-download-cenas-txt" class="btn btn-secondary btn-sm" title="Baixar cenas.txt">
+                📄 cenas.txt
+              </button>
+              <button id="btn-download-descricoes-txt" class="btn btn-secondary btn-sm" title="Baixar descricoes.txt">
+                📄 descricoes.txt
+              </button>
+              <button id="btn-download-prompts-txt" class="btn btn-secondary btn-sm" title="Baixar prompts.txt">
+                📄 prompts.txt
+              </button>
+              <button id="btn-download-pacote-scriptorium" class="btn btn-accent btn-sm" style="font-weight: 700;" title="Baixar Pacote Scriptorium Completo (.zip)">
+                📦 Pacote Scriptorium (.zip)
+              </button>
+            </div>
+          </div>
+          <p class="field-hint" style="margin-bottom: 10px;">Arquivos prontos para o Scriptorium: <code>cenas.txt</code> (marcações de início de cena na narração), <code>descricoes.txt</code> (prompts por cena) e <code>prompts.txt</code> (prompts numerados para copiar).</p>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+            <div>
+              <label style="font-size: 0.8rem; font-weight: 600; color: #a5b4fc; margin-bottom: 4px; display: block;">cenas.txt (Inícios de Frase para Sincronização):</label>
+              <textarea id="output-cenas-txt" class="form-control prompt-output" readonly style="min-height: 200px; font-family: var(--font-mono); font-size: 0.8rem;" placeholder="01 | Trecho inicial da narração..."></textarea>
+            </div>
+            <div>
+              <label style="font-size: 0.8rem; font-weight: 600; color: #a5b4fc; margin-bottom: 4px; display: block;">prompts.txt (Prompts de Imagem Prontos para Gerador):</label>
+              <textarea id="output-prompts-txt" class="form-control prompt-output" readonly style="min-height: 200px; font-family: var(--font-mono); font-size: 0.8rem;" placeholder="01. Prompt detalhado..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Output 3: Keywords (bancos de imagem adicionais) -->
         <div class="output-card mt-4">
           <div class="output-header">
             <span class="output-title">Keywords de Mídia Segmentadas (Pixabay / Pexels / Envato)</span>
@@ -1888,22 +1952,6 @@ textarea.h-180 {
           </div>
           <p class="field-hint" style="margin-bottom: 8px;">Palavras-chave em inglês: termos visuais prontos para copiar e colar em bancos de vídeo e fotos.</p>
           <textarea id="output-prompt-keywords" class="form-control prompt-output" readonly placeholder="A lista de keywords de mídia gerada pela IA aparecerá aqui..."></textarea>
-        </div>
-
-        <!-- Output 4: Prompts IA Visual -->
-        <div class="output-card mt-4">
-          <div class="output-header">
-            <span class="output-title">Prompts Detalhados para IA Visual (Midjourney / DALL-E / Runway)</span>
-            <button class="btn btn-copy" data-clipboard-target="output-prompt-imagens-ia">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-              </svg>
-              Copiar Prompts Visuais
-            </button>
-          </div>
-          <p class="field-hint" style="margin-bottom: 8px;">Prompts para imagens: descrições no estilo manuscrito iluminado para colar em ferramentas de IA visual.</p>
-          <textarea id="output-prompt-imagens-ia" class="form-control prompt-output" readonly placeholder="Os prompts em inglês para IA de criação visual aparecerão aqui..."></textarea>
         </div>
       </section>
 
@@ -3122,6 +3170,7 @@ textarea.h-180 {
   <script src="js/catalogo.js"></script>
   <script src="js/narracao.js"></script>
   <script src="js/versao-revisada.js"></script>
+  <script src="js/plano-cenas.js"></script>
 
   <!-- Scripts Incorporados para Máxima Compatibilidade no GitHub Pages -->
   <script>
@@ -4738,38 +4787,15 @@ Output EXCLUSIVELY the line above.`;
 }
 
 /**
- * ITEM 13, 14 & 15: Valida e regenera termos proibidos em todo o pacote SEO (títulos, descrição e tags).
- * Se a IA falhar ou mantiver o clichê, aplica substituição determinística para garantir que ZERO termos vazem.
- * Filtra tags fora do tema bíblico e garante conformidade de citações bíblicas em inglês com a KJV.
+ * ITEM 19: Valida e regenera termos proibidos em todo o pacote SEO (títulos, descrição e tags).
+ * Regra estrita: NUNCA troca palavras automaticamente por sinônimos.
+ * Se um termo proibido aparecer, regenera a frase com a IA (até 2 tentativas).
+ * Se ainda persistir, NÃO altera o texto e registra aviso destacado com a frase e o termo para decisão do usuário.
  */
 async function validarERegenerarDescricaoSeo(textoSeo, tema, modelo) {
   if (!textoSeo || typeof textoSeo !== 'string') return textoSeo;
 
-  const MAPA_FALLBACK_CLICHES = [
-    { pattern: /\bserve[sd]?\s+as\s+a\s+(?:sobering\s+)?reminder\b/gi, rep: 'demonstrates the sobering reality' },
-    { pattern: /\bsobering\s+reminder\b/gi, rep: 'sobering truth' },
-    { pattern: /\bstark\s+reminder\b/gi, rep: 'clear sign' },
-    { pattern: /\bdelv(?:e|es|ing|ed)?(?:\s+into)?\b/gi, rep: 'examine' },
-    { pattern: /\bdive\s+deep(?:er)?(?:\s+into)?\b/gi, rep: 'examine' },
-    { pattern: /\bdive\s+into\b/gi, rep: 'explore' },
-    { pattern: /\bprofound(?:ly)?\b/gi, rep: 'enduring' },
-    { pattern: /\bmeticulous(?:ly)?\b/gi, rep: 'carefully' },
-    { pattern: /\bunpack(?:s|ing|ed)?\b/gi, rep: 'reveal' },
-    { pattern: /\bthe\s+very\s+fabric\b/gi, rep: 'the core' },
-    { pattern: /\bfabric\b/gi, rep: 'structure' },
-    { pattern: /\bshrouded\s+in\s+mystery\b/gi, rep: 'unrecorded' },
-    { pattern: /\bin\s+the\s+annals\b/gi, rep: 'in the biblical record' },
-    { pattern: /\bannals\b/gi, rep: 'records' }
-  ];
-
-  const limparClichésDeterministicamente = (str) => {
-    let s = str;
-    for (const item of MAPA_FALLBACK_CLICHES) {
-      s = s.replace(item.pattern, item.rep);
-    }
-    return s;
-  };
-
+  window._avisosTermosProibidosSeo = [];
   const descMatch = textoSeo.match(/(?:Descrição|Description)[\s\S]*?(?=(?:Tags|Search Tags|Hashtags|Palavras-chave|\[\[|$))/i);
   let resultadoSeo = textoSeo;
 
@@ -4788,43 +4814,47 @@ async function validarERegenerarDescricaoSeo(textoSeo, tema, modelo) {
         const nomes = termosEncontrados.map(t => `"${t.term}"`).join(', ');
         console.log(`[SEO] Termo proibido na descrição: ${nomes} -> "${fraseTrim}"`);
 
-        try {
-          const promptFraseSeo = `Act as an expert YouTube SEO copywriter for our biblical documentary channel.
-Rewrite the following single sentence from a video description about "${tema}" to completely eliminate the forbidden cliché(s): ${nomes} (especially terms like "delve", "profound", "meticulously", "unpack", "serves as a reminder", "serves as a sobering reminder").
+        let fraseSubstituta = null;
+        // Até 2 tentativas com IA para regenerar a frase sem o clichê
+        for (let tentativa = 1; tentativa <= 2; tentativa++) {
+          try {
+            const promptFraseSeo = `Act as an expert YouTube SEO copywriter for our biblical documentary channel.
+Rewrite the following single sentence from a video description about "${tema}" to completely eliminate the forbidden cliché(s): ${nomes} (never use terms like "delve", "profound", "meticulously", "unpack", "serves as a reminder", "serves as a sobering reminder").
 Original sentence: """${fraseTrim}"""
 
 RULES:
 - Preserve solemn biblical narrative tone and clarity.
 - Output ONLY the single rewritten sentence in English, without quotes, without preamble.`;
 
-          const novaFraseRaw = await OpenRouterAPI.generateContent(promptFraseSeo, modelo || OpenRouterAPI.getModelIdeas());
-          if (novaFraseRaw && novaFraseRaw.trim()) {
-            let novaFrase = novaFraseRaw.trim().replace(/^["']|["']$/g, '');
-            const termosRestantes = FORBIDDEN_TERMS.filter(f => f.pattern.test(novaFrase));
-            if (termosRestantes.length === 0) {
-              textoDescricaoModificado = textoDescricaoModificado.replace(fraseTrim, novaFrase);
-            } else {
-              // Aplica substituição determinística limpa para garantir que zero clichês persistam
-              const fraseLimpa = limparClichésDeterministicamente(novaFrase);
-              textoDescricaoModificado = textoDescricaoModificado.replace(fraseTrim, fraseLimpa);
+            const novaFraseRaw = await OpenRouterAPI.generateContent(promptFraseSeo, modelo || OpenRouterAPI.getModelIdeas());
+            if (novaFraseRaw && novaFraseRaw.trim()) {
+              let novaFrase = novaFraseRaw.trim().replace(/^["']|["']$/g, '');
+              const termosRestantes = FORBIDDEN_TERMS.filter(f => f.pattern.test(novaFrase));
+              if (termosRestantes.length === 0) {
+                fraseSubstituta = novaFrase;
+                break;
+              }
             }
-          } else {
-            const fraseLimpa = limparClichésDeterministicamente(fraseTrim);
-            textoDescricaoModificado = textoDescricaoModificado.replace(fraseTrim, fraseLimpa);
+          } catch (errFrase) {
+            console.warn(`[SEO] Tentativa ${tentativa} de regenerar frase falhou:`, errFrase);
           }
-        } catch (errFrase) {
-          console.warn('[SEO] Erro ao regenerar frase da descrição, aplicando fallback limpo:', errFrase);
-          const fraseLimpa = limparClichésDeterministicamente(fraseTrim);
-          textoDescricaoModificado = textoDescricaoModificado.replace(fraseTrim, fraseLimpa);
+        }
+
+        if (fraseSubstituta) {
+          textoDescricaoModificado = textoDescricaoModificado.replace(fraseTrim, fraseSubstituta);
+        } else {
+          // Se ainda persistir após 2 tentativas, NUNCA altera o texto automaticamente: exibe aviso destacado
+          window._avisosTermosProibidosSeo.push({ frase: fraseTrim, termos: nomes });
+          console.warn(`[SEO] Termo ${nomes} persistiu. O texto NÃO foi alterado; revise manualmente: "${fraseTrim}"`);
+          if (typeof UI !== 'undefined' && UI.showToast) {
+            UI.showToast(`Aviso de SEO: Termo proibido ${nomes} detectado na descrição para conferência manual.`, 'warning');
+          }
         }
       }
     }
 
     resultadoSeo = resultadoSeo.replace(textoDescricao, textoDescricaoModificado);
   }
-
-  // Sanitização determinística final em todo o pacote para garantir que nenhum termo proibido vaze
-  resultadoSeo = limparClichésDeterministicamente(resultadoSeo);
 
   // Item 15: Filtro de tags fora do tema bíblico
   const tagsMatch = resultadoSeo.match(/(?:Tags|Search Tags|Palavras-chave)\s*:\s*([\s\S]*?)(?=(?:Hashtags|\[\[|$))/i);
@@ -5778,8 +5808,6 @@ function garantirCtaNoUltimoParagrafo(texto, idioma = 'pt', estiloRoteiro = '') 
                    String(estiloRoteiro).includes('3 minutos') ||
                    (totalPalavrasTexto < 350));
 
-  const ctaSentenceRegex = /(?:^|[.!?]\s*)(?:[^.!?\n]*\b(?:subscrib(?:e|ing)|inscreva-se|inscrever|join\s+(?:this\s+)?channel|follow\s+(?:this\s+)?channel|acompanhe\s+este\s+canal|suscr[ií]bete|suscribir|vamos\s+em\s+frente|let\x27?s\s+move\s+on)\b[^.!?\n]*[.!?]?)/gi;
-
   const id = (idioma || '').toLowerCase();
 
   const ctaCurto = id.includes('ingl') || id.includes('en')
@@ -5798,6 +5826,12 @@ function garantirCtaNoUltimoParagrafo(texto, idioma = 'pt', estiloRoteiro = '') 
 
   let paragrafos = limpo.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
   if (paragrafos.length === 0) return ctaPadrao;
+
+  // Regex para identificar sentença de CTA ou convite intermediário
+  const ctaSentenceRegex = /(?:^|[.!?]\s*)(?:[^.!?\n]*\b(?:subscrib(?:e|ing)|inscreva-se|se\s+inscreva|inscrev(?:a|er)\s+(?:no|neste)\s+canal|join\s+(?:this\s+)?channel|follow\s+(?:this\s+)?channel|acompanhe\s+(?:este|o)\s+canal|suscr[ií]bete|suscribir|ative\s+o\s+sino|vamos\s+em\s+frente|let\x27?s\s+move\s+on)\b[^.!?\n]*[.!?]?)/gi;
+
+  const REGEX_CTA_DETECTOR = /(?<![\p{L}])(?:inscreva-se|se\s+inscreva|inscrev(?:a|er)\s+(?:no|neste)\s+canal|subscribe|acompanhe\s+(?:este|o)\s+canal|suscr[ií]bete|ative\s+o\s+sino)(?![\p{L}])/iu;
+  const ehCta = (p) => REGEX_CTA_DETECTOR.test(p || '');
 
   if (isCatalogo) {
     // No Catálogo: preserva o pedido de inscrição de 2 frases localizado entre o Item 2 e o Item 3
@@ -5845,36 +5879,62 @@ function garantirCtaNoUltimoParagrafo(texto, idioma = 'pt', estiloRoteiro = '') 
       return pLimpo;
     }).filter(Boolean);
 
-    const ultimoP = paragrafos[paragrafos.length - 1] || '';
-    if (ultimoP.toLowerCase() !== ctaPadrao.toLowerCase() && !/\b(?:inscreva-se|inscrever|subscribe|acompanhe\s+este\s+canal)\b/i.test(ultimoP)) {
-      paragrafos.push(ctaPadrao);
+    while (paragrafos.length >= 2 && ehCta(paragrafos[paragrafos.length - 1]) && ehCta(paragrafos[paragrafos.length - 2])
+           && (paragrafos[paragrafos.length - 2].match(/\S+/g) || []).length <= 45) {
+      paragrafos.splice(paragrafos.length - 2, 1);
     }
+
+    const ultimoP = paragrafos[paragrafos.length - 1] || '';
+    if (ultimoP.toLowerCase() === ctaPadrao.toLowerCase() || ehCta(ultimoP)) {
+      return paragrafos.join('\n\n');
+    }
+    paragrafos.push(ctaPadrao);
     return paragrafos.join('\n\n');
   }
 
-  // Comportamento padrão para outros estilos
-  paragrafos = paragrafos.map((p, idx) => {
-    if (idx === paragrafos.length - 1) return p;
-    let pLimpo = p.replace(ctaSentenceRegex, (match) => {
+  // Para estilos Longo, Shorts e outros (não-Catálogo):
+  // 1. Remove qualquer CTA intermediário no miolo do roteiro
+  for (let i = 0; i < paragrafos.length - 1; i++) {
+    let p = paragrafos[i];
+    if (ehCta(p) && (/\b(?:vamos\s+em\s+frente|let\'?s\s+move\s+on|youtube)\b/i.test(p) || (p.match(/\S+/g) || []).length <= 40)) {
+      paragrafos[i] = '';
+      continue;
+    }
+    p = p.replace(/\b(?:vamos\s+em\s+frente|let\'?s\s+move\s+on)\b[.!?]?/gi, '');
+    p = p.replace(ctaSentenceRegex, (match) => {
       const leadingPunct = match.match(/^[.!?]/);
       return leadingPunct ? leadingPunct[0] : '';
     }).trim();
-    pLimpo = pLimpo.replace(/\s+([.,;:!?])/g, '$1').replace(/[^\S\r\n]{2,}/g, ' ');
-    return pLimpo;
-  }).filter(Boolean);
+    p = p.replace(/\s+([.,;:!?])/g, '$1').replace(/[^\S\r\n]{2,}/g, ' ');
+    paragrafos[i] = p;
+  }
+  paragrafos = paragrafos.filter(Boolean);
 
-  // Um único CTA no fim: se o último parágrafo já é um convite de inscrição (escrito pelo modelo ou o fixo),
-  // NÃO acrescenta outro. Se sobraram dois CTAs seguidos, mantém só o último.
-  // Convite de inscrição já presente (limite Unicode: o \b do JavaScript não entende acentos)
-  const REGEX_CTA_INSCRICAO = /(?<![\p{L}])(?:inscreva-se|se\s+inscreva|inscrev(?:a|er)\s+(?:no|neste)\s+canal|subscribe|acompanhe\s+(?:este|o)\s+canal|suscr[ií]bete|ative\s+o\s+sino)(?![\p{L}])/iu;
-  const ehCta = (p) => REGEX_CTA_INSCRICAO.test(p || '');
+  // 2. Se houver 2 parágrafos de CTA seguidos no final, remove o penúltimo
   while (paragrafos.length >= 2 && ehCta(paragrafos[paragrafos.length - 1]) && ehCta(paragrafos[paragrafos.length - 2])
          && (paragrafos[paragrafos.length - 2].match(/\S+/g) || []).length <= 45) {
     paragrafos.splice(paragrafos.length - 2, 1);
   }
 
-  const ultimoP = paragrafos[paragrafos.length - 1] || '';
-  if (ultimoP.toLowerCase() === ctaPadrao.toLowerCase() || ehCta(ultimoP)) {
+  // 3. No último parágrafo: se houver 2 frases quase idênticas de CTA, unifica na primeira
+  let ultimo = paragrafos[paragrafos.length - 1] || '';
+  const frasesUltimo = ultimo.match(/[^.!?\n]+[.!?]*/g) || [ultimo];
+  let ctaEncontradoNoUltimo = false;
+  let frasesAjustadas = [];
+  for (const f of frasesUltimo) {
+    if (ehCta(f)) {
+      if (!ctaEncontradoNoUltimo) {
+        frasesAjustadas.push(f.trim());
+        ctaEncontradoNoUltimo = true;
+      }
+    } else {
+      frasesAjustadas.push(f.trim());
+    }
+  }
+  ultimo = frasesAjustadas.join(' ').replace(/\s+([.,;:!?])/g, '$1').trim();
+  paragrafos[paragrafos.length - 1] = ultimo;
+
+  if (ehCta(ultimo) || ultimo.toLowerCase() === ctaPadrao.toLowerCase()) {
     return paragrafos.join('\n\n');
   }
 
@@ -8476,11 +8536,27 @@ function limparTextoParaNarracao(texto, estiloRoteiro = '') {
   let limpo = texto;
 
   // 1. Remove linhas de título ("Title: ...", "Título: ...", "# ...", "## ...", "### ...")
-  limpo = limpo.replace(/^\s*(?:Title|Título|Titulo)\s*:[^\n]*/gmi, '');
-  limpo = limpo.replace(/^\s*#+\s*[^\n]*/gm, '');
+  // ITEM 15: Nunca apaga linha que contém citação bíblica (entre aspas) ou frase narrativa; remove apenas o rótulo inicial
+  limpo = limpo.replace(/^\s*(?:Title|Título|Titulo)\s*:\s*(.*)$/gmi, (match, resto) => {
+    if (/(["“«])([^"”»]{5,})(["”»])/.test(resto)) {
+      return resto;
+    }
+    return '';
+  });
+  limpo = limpo.replace(/^\s*#+\s*(.*)$/gm, (match, resto) => {
+    if (/(["“«])([^"”»]{5,})(["”»])/.test(resto)) {
+      return resto;
+    }
+    return '';
+  });
 
   // 2. Remove linhas completas de cabeçalho de seção em negrito (ex: "**1. The Ancient Kingdom...**", "**Immersive Introduction (0-45s):**")
-  limpo = limpo.replace(/^\s*\*{2}(?:\d+[\.:\s]+)?[A-ZÀ-Ú][^\n*]+\*{2}\s*:?\s*$/gm, '');
+  limpo = limpo.replace(/^\s*\*{2}(?:\d+[\.:\s]+)?([A-ZÀ-Ú"“«][^\n*]+)\*{2}\s*:?\s*$/gm, (match, conteudo) => {
+    if (/(["“«])([^"”»]{5,})(["”»])/.test(conteudo)) {
+      return conteudo;
+    }
+    return '';
+  });
 
   // 3. Remove separadores horizontais markdown (---, ***, ___)
   limpo = limpo.replace(/^\s*[-*_]{3,}\s*$/gm, '');
@@ -8658,6 +8734,59 @@ function aplicarValidacaoBiblicaOffline(texto, idioma) {
 
 window.limparTextoParaNarracao = limparTextoParaNarracao;
 window.validarRoteiroComBiblia = validarRoteiroComBiblia;
+
+/**
+ * ITEM 18: Limpeza de todo o estado do tema anterior ao trocar de tema ou gerar novas ideias
+ * Limpa campos de saída, nomes de arquivo, áudios gerados em memória, legendas e plano de cenas,
+ * mantendo integralmente preservados os "Temas Salvos" (histórico).
+ */
+function limparEstadoTemaAnterior() {
+  window._planoDeCenasAtual = null;
+  window._hashNarracaoPlanoCenas = null;
+  if (typeof currentAudioBlob !== 'undefined') currentAudioBlob = null;
+  if (typeof currentAudioParts !== 'undefined') currentAudioParts = [];
+  if (typeof currentSrtContent !== 'undefined') currentSrtContent = '';
+
+  if (typeof document !== 'undefined') {
+    const cardPlanoCenas = document.getElementById('card-plano-cenas');
+    if (cardPlanoCenas) cardPlanoCenas.classList.add('hidden');
+    const alertDesatualizado = document.getElementById('alerta-plano-cenas-desatualizado');
+    if (alertDesatualizado) alertDesatualizado.classList.add('hidden');
+
+    const cardAudioPlayer = document.getElementById('card-audio-player');
+    if (cardAudioPlayer) cardAudioPlayer.classList.add('hidden');
+    const audioEl = document.getElementById('audio-player-element');
+    if (audioEl) audioEl.src = '';
+
+    const cardLegenda = document.getElementById('card-legenda-output');
+    if (cardLegenda) cardLegenda.classList.add('hidden');
+    const outputLegenda = document.getElementById('output-legenda-srt');
+    if (outputLegenda) outputLegenda.value = '';
+
+    const outKeywords = document.getElementById('output-prompt-keywords');
+    if (outKeywords) outKeywords.value = '';
+    const outImagensIa = document.getElementById('output-prompt-imagens-ia');
+    if (outImagensIa) outImagensIa.value = '';
+
+    const thumbA = document.getElementById('output-thumb-a');
+    if (thumbA) thumbA.value = '';
+    const thumbB = document.getElementById('output-thumb-b');
+    if (thumbB) thumbB.value = '';
+    const thumbC = document.getElementById('output-thumb-c');
+    if (thumbC) thumbC.value = '';
+
+    const inputTemaThumb = document.getElementById('input-tema-thumb');
+    if (inputTemaThumb) inputTemaThumb.value = '';
+    const inputTemaSeo = document.getElementById('input-tema-seo');
+    if (inputTemaSeo) inputTemaSeo.value = '';
+
+    const outputSeo = document.getElementById('output-prompt-seo');
+    if (outputSeo) outputSeo.value = '';
+  }
+
+  console.log('[Estado] Estado do tema anterior limpo com sucesso (Temas Salvos preservados).');
+}
+if (typeof window !== 'undefined') window.limparEstadoTemaAnterior = limparEstadoTemaAnterior;
 
 /**
  * ITEM 0: Leitura e Preenchimento Automático de ?tema=, ?titulo=, ?estilo= e ?itens= da URL (Radar de Conteúdo)
@@ -9131,6 +9260,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const conteudoAvaliador = document.getElementById('conteudo-avaliador-ideias');
     if (conteudoAvaliador) conteudoAvaliador.innerHTML = '';
     window._ultimaAvaliacaoIdeias = null;
+
+    // ITEM 18: Ao trocar de tema ou gerar novas ideias, limpa todo o estado do tema anterior
+    if (typeof limparEstadoTemaAnterior === 'function') {
+      limparEstadoTemaAnterior();
+    }
 
     // 4) Quando clicar em "Gerar Ideias de Vídeo com IA", limpa o campo "Ideia de Vídeo Escolhida", destaque e correções
     const inputIdeia = document.getElementById('input-ideia-escolhida');
@@ -10778,6 +10912,222 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
     });
   }
 
+  // ITEM 1-14: Integração do Plano de Cenas e Exportação para o Scriptorium
+  function atualizarPreviewCadenciaCenas() {
+    const texto = (document.getElementById('textarea-roteiro-gerado')?.value || '').trim();
+    const painelPreview = document.getElementById('preview-cadencia-cenas');
+    const badgeTotal = document.getElementById('badge-total-cenas-estimadas');
+    const textoResumo = document.getElementById('texto-resumo-cadencia');
+    const listaCenas = document.getElementById('lista-previa-cenas');
+    if (!painelPreview || !badgeTotal || !textoResumo || !listaCenas) return;
+
+    if (!texto) {
+      painelPreview.classList.add('hidden');
+      return;
+    }
+
+    if (typeof PlanoCenasModule !== 'undefined' && typeof PlanoCenasModule.agruparFrasesEmCenas === 'function') {
+      const frases = PlanoCenasModule.dividirEmFrases(texto);
+      if (frases.length === 0) {
+        painelPreview.classList.add('hidden');
+        return;
+      }
+      const agrupamento = PlanoCenasModule.agruparFrasesEmCenas(frases);
+      const totalCenas = agrupamento.cenas.length;
+      const totalSegundos = agrupamento.duracaoTotalSegundos;
+      const minutos = Math.floor(totalSegundos / 60);
+      const segundos = Math.round(totalSegundos % 60);
+
+      painelPreview.classList.remove('hidden');
+      badgeTotal.textContent = `${totalCenas} imagens (~${minutos}m${segundos}s)`;
+      textoResumo.textContent = `Cadência estimada: ${totalCenas} imagens para ~${minutos}m${segundos}s de narração. Cortes estritamente no início de frase.`;
+
+      function escapeHtml(str) {
+        return (str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+      }
+
+      listaCenas.innerHTML = agrupamento.cenas.map(c => {
+        const seg = Math.round(c.duracaoEstimadaSegundos);
+        const aviso = c.duracaoEstimadaSegundos > 30.5 ? ' ⚠️ (frase longa única > 30s)' : '';
+        return `<div><strong>Cena ${c.numero}</strong> (~${seg}s)${aviso}: ${escapeHtml(c.fraseInicio.slice(0, 65))}...</div>`;
+      }).join('');
+    }
+  }
+
+  function verificarAlertaDesatualizacaoCenas() {
+    const textoAtual = (document.getElementById('textarea-roteiro-gerado')?.value || '').trim();
+    const alerta = document.getElementById('alerta-plano-cenas-desatualizado');
+    if (!alerta) return;
+    if (window._hashNarracaoPlanoCenas && typeof PlanoCenasModule !== 'undefined') {
+      const desatualizado = PlanoCenasModule.verificarDesatualizacao(window._hashNarracaoPlanoCenas, textoAtual);
+      if (desatualizado) {
+        alerta.classList.remove('hidden');
+      } else {
+        alerta.classList.add('hidden');
+      }
+    }
+  }
+
+  async function executarGeracaoPlanoCenas() {
+    const textareaRoteiro = document.getElementById('textarea-roteiro-gerado');
+    const narracaoLimpa = (textareaRoteiro?.value || '').trim();
+    if (!narracaoLimpa) {
+      UI.showToast('Gere ou cole a Narração Limpa no campo acima primeiro!', 'warning');
+      return;
+    }
+
+    if (typeof PlanoCenasModule === 'undefined') {
+      UI.showToast('Módulo PlanoCenasModule não carregado.', 'error');
+      return;
+    }
+
+    const btnGerar = document.getElementById('btn-gerar-plano-cenas');
+    UI.setButtonLoading(btnGerar, true);
+
+    try {
+      const inputTema = document.getElementById('input-tema-custom')?.value?.trim() ||
+                        document.getElementById('select-tema')?.value?.trim() ||
+                        'Tema Bíblico';
+      const personagem = document.getElementById('input-personagem-principal')?.value?.trim() || inputTema;
+
+      const plano = PlanoCenasModule.gerarPlanoDeCenas(narracaoLimpa, {
+        tema: inputTema,
+        personagemPrincipal: personagem
+      });
+
+      window._planoDeCenasAtual = plano;
+      window._hashNarracaoPlanoCenas = PlanoCenasModule.gerarHashTexto(narracaoLimpa);
+
+      const cenasTxt = PlanoCenasModule.gerarCenasTxt(plano.cenas, narracaoLimpa);
+      const descricoesTxt = PlanoCenasModule.gerarDescricoesTxt(plano.cenas);
+      const promptsTxt = PlanoCenasModule.gerarPromptsTxt(plano.cenas);
+
+      window._cenasTxtAtual = cenasTxt;
+      window._descricoesTxtAtual = descricoesTxt;
+      window._promptsTxtAtual = promptsTxt;
+
+      const outCenas = document.getElementById('output-cenas-txt');
+      const outPrompts = document.getElementById('output-prompts-txt');
+      if (outCenas) outCenas.value = cenasTxt;
+      if (outPrompts) outPrompts.value = promptsTxt;
+
+      const cardPlano = document.getElementById('card-plano-cenas');
+      if (cardPlano) cardPlano.classList.remove('hidden');
+
+      const badge = document.getElementById('badge-contagem-cenas');
+      if (badge) badge.textContent = `${plano.cenas.length} cenas prontas`;
+
+      const alerta = document.getElementById('alerta-plano-cenas-desatualizado');
+      if (alerta) alerta.classList.add('hidden');
+
+      atualizarSeloAba(2, true);
+
+      if (plano.avisos && plano.avisos.length > 0) {
+        UI.showToast(`Atenção: ${plano.avisos[0]}`, 'warning');
+      } else {
+        UI.showToast(`Plano de Cenas gerado com sucesso: ${plano.cenas.length} imagens!`);
+      }
+    } catch (err) {
+      console.error(err);
+      UI.showToast(`Erro ao gerar Plano de Cenas: ${err.message}`, 'error');
+    } finally {
+      UI.setButtonLoading(btnGerar, false);
+    }
+  }
+
+  // Eventos de clique do Plano de Cenas
+  const btnGerarPlano = document.getElementById('btn-gerar-plano-cenas');
+  if (btnGerarPlano) btnGerarPlano.addEventListener('click', executarGeracaoPlanoCenas);
+
+  const btnRegenerarPlano = document.getElementById('btn-regenerar-plano-cenas');
+  if (btnRegenerarPlano) btnRegenerarPlano.addEventListener('click', executarGeracaoPlanoCenas);
+
+  // Downloads avulsos
+  function dispararDownloadTexto(nomeArquivo, conteudo) {
+    if (!conteudo) {
+      UI.showToast(`Gere o Plano de Cenas antes de baixar ${nomeArquivo}.`, 'warning');
+      return;
+    }
+    const blob = new Blob([conteudo], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nomeArquivo;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  document.getElementById('btn-download-cenas-txt')?.addEventListener('click', () => {
+    dispararDownloadTexto('cenas.txt', window._cenasTxtAtual || document.getElementById('output-cenas-txt')?.value);
+  });
+
+  document.getElementById('btn-download-descricoes-txt')?.addEventListener('click', () => {
+    dispararDownloadTexto('descricoes.txt', window._descricoesTxtAtual || (window._planoDeCenasAtual ? PlanoCenasModule.gerarDescricoesTxt(window._planoDeCenasAtual.cenas) : ''));
+  });
+
+  document.getElementById('btn-download-prompts-txt')?.addEventListener('click', () => {
+    dispararDownloadTexto('prompts.txt', window._promptsTxtAtual || document.getElementById('output-prompts-txt')?.value);
+  });
+
+  // Download do Pacote Scriptorium (.zip)
+  document.getElementById('btn-download-pacote-scriptorium')?.addEventListener('click', () => {
+    if (!window._planoDeCenasAtual || !window._cenasTxtAtual) {
+      UI.showToast('Gere o Plano de Cenas antes de baixar o pacote do Scriptorium!', 'warning');
+      return;
+    }
+
+    const narracaoLimpa = (document.getElementById('textarea-roteiro-gerado')?.value || '').trim();
+    const cenasTxt = window._cenasTxtAtual;
+    const descricoesTxt = window._descricoesTxtAtual || PlanoCenasModule.gerarDescricoesTxt(window._planoDeCenasAtual.cenas);
+    const promptsTxt = window._promptsTxtAtual || PlanoCenasModule.gerarPromptsTxt(window._planoDeCenasAtual.cenas);
+
+    // Validador estrito antes de exportar (Item 14)
+    const validacao = PlanoCenasModule.validarPacoteScriptorium({
+      cenasTxt,
+      descricoesTxt,
+      promptsTxt,
+      narracaoLimpa,
+      cenas: window._planoDeCenasAtual.cenas
+    });
+
+    if (!validacao.valido) {
+      const msg = validacao.erros.join('; ');
+      console.warn('[Scriptorium] Falha na validação do pacote:', validacao.erros);
+      UI.showToast(`Aviso de validação: ${msg}`, 'warning');
+    }
+
+    const arquivosZip = [
+      { nome: 'cenas.txt', conteudo: cenasTxt },
+      { nome: 'descricoes.txt', conteudo: descricoesTxt },
+      { nome: 'prompts.txt', conteudo: promptsTxt }
+    ];
+
+    if (typeof currentAudioBlob !== 'undefined' && currentAudioBlob) {
+      arquivosZip.push({ nome: 'narracao.mp3', conteudo: currentAudioBlob });
+    }
+    if (typeof currentSrtContent !== 'undefined' && currentSrtContent) {
+      arquivosZip.push({ nome: 'legenda.srt', conteudo: currentSrtContent });
+    }
+
+    const tema = document.getElementById('input-tema-custom')?.value?.trim() ||
+                 document.getElementById('select-tema')?.value?.trim() ||
+                 'roteiro';
+    const nomeZip = PlanoCenasModule.gerarNomeZipScriptorium(tema);
+
+    const zipBlob = PlanoCenasModule.criarZipScriptorium(arquivosZip);
+    const url = URL.createObjectURL(zipBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nomeZip;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    UI.showToast(`Pacote ${nomeZip} exportado com sucesso!`);
+  });
+
   document.getElementById('btn-gerar-prompt-keywords').addEventListener('click', async () => {
     const roteiro = textareaRoteiroGerado.value.trim();
     if (!roteiro) {
@@ -11330,7 +11680,7 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
     const url = URL.createObjectURL(currentAudioBlob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `dark-studio_narracao_${slug}_${dateStr}.mp3`;
+    a.download = 'narracao.mp3';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -11462,7 +11812,7 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `dark-studio_legendas_${slug}_${dateStr}.srt`;
+    a.download = 'legenda.srt';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
