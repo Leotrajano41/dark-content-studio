@@ -76,12 +76,39 @@
       .replace(/[^\S\r\n]+([.,;:!?])(?=[^\S\r\n]|$|["”»])/g, '$1');
   }
 
+  /** Converte maiúscula indevida após vírgula (ex: "Depois da sentença..., A geração" -> "... a geração") */
+  function corrigirMaiusculaAposVirgula(texto) {
+    const termosMinusculos = new Set([
+      'a', 'o', 'as', 'os', 'um', 'uma', 'uns', 'umas',
+      'e', 'mas', 'porém', 'porem', 'contudo', 'todavia', 'entretanto', 'pois', 'porque',
+      'que', 'quando', 'onde', 'como', 'se', 'enquanto', 'logo', 'assim', 'portanto', 'embora',
+      'de', 'do', 'da', 'dos', 'das', 'em', 'no', 'na', 'nos', 'nas', 'por', 'pelo', 'pela', 'pelos', 'pelas',
+      'para', 'com', 'sem', 'sob', 'sobre', 'geração', 'geracao'
+    ]);
+
+    // 1) Caso reticências + vírgula (ex: "Depois da sentença..., A geração" -> "... a geração")
+    let res = texto.replace(/(\.\.\.,\s*)([A-ZÀ-ÖØ][a-zà-öø-ÿ]*)\b/g, (match, sep, pal) => {
+      return sep + pal.charAt(0).toLowerCase() + pal.slice(1);
+    });
+
+    // 2) Vírgula comum seguida de palavra funcional
+    res = res.replace(/(,\s*)([A-ZÀ-ÖØ][a-zà-öø-ÿ]*)\b/g, (match, sep, pal) => {
+      if (termosMinusculos.has(pal.toLowerCase())) {
+        return sep + pal.charAt(0).toLowerCase() + pal.slice(1);
+      }
+      return match;
+    });
+
+    return res;
+  }
+
   function normalizarAspasEPontuacao(texto) {
     if (!texto || typeof texto !== 'string') return texto;
     const comAspas = texto.split('\n').map(normalizarEspacosDeAspas).join('\n');
     // duas passadas: uma regra pode expor outra (ex.: '" . . e' -> '". e' -> '" e')
-    return limparPontuacaoSolta(limparPontuacaoSolta(comAspas));
+    const limpo = limparPontuacaoSolta(limparPontuacaoSolta(comAspas));
+    return corrigirMaiusculaAposVirgula(limpo);
   }
 
-  return { normalizarAspasEPontuacao, normalizarEspacosDeAspas, limparPontuacaoSolta };
+  return { normalizarAspasEPontuacao, normalizarEspacosDeAspas, limparPontuacaoSolta, corrigirMaiusculaAposVirgula };
 });

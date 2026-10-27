@@ -491,7 +491,7 @@ function validarRoteiroBiblico(texto, idioma = 'pt', traducao = 'arc') {
       }
 
       if (associatedRef) {
-        const realVerse = getVerseText(currentBible, associatedRef.bookCan, associatedRef.chap, associatedRef.vStart, associatedRef.vEnd);
+        let realVerse = getVerseText(currentBible, associatedRef.bookCan, associatedRef.chap, associatedRef.vStart, associatedRef.vEnd);
         if (realVerse) {
           const pCit = limparP(q.text);
           const pReal = limparP(realVerse);
@@ -505,9 +505,78 @@ function validarRoteiroBiblico(texto, idioma = 'pt', traducao = 'arc') {
             if (incluiPalavra(pReal, pWord)) matchesFuzzy++;
           }
           const score = pCit.length > 0 ? (matchesFuzzy / pCit.length) : 0;
-          const semelhançaSuficiente = score >= 0.6;
 
-          if (!semelhançaSuficiente) {
+          // ITEM 19: Conferir a referência pela redação da citação se houver divergência (score < 0.95)
+          let melhorRefAlternativa = null;
+          if (score < 0.95) {
+            const bookEntry = currentBible.find(b => {
+              const nameNorm = normalizeStr(b.name || '');
+              return nameNorm === normalizeStr(associatedRef.bookCan.pt) ||
+                     nameNorm === normalizeStr(associatedRef.bookCan.en) ||
+                     nameNorm === normalizeStr(associatedRef.bookCan.es);
+            });
+
+            if (bookEntry && bookEntry.chapters) {
+              for (let cIdx = 0; cIdx < bookEntry.chapters.length; cIdx++) {
+                const verses = bookEntry.chapters[cIdx];
+                for (let vIdx = 0; vIdx < verses.length; vIdx++) {
+                  const v1 = verses[vIdx];
+                  const pV1 = limparP(v1);
+                  let m1 = 0;
+                  for (const w of pCit) { if (incluiPalavra(pV1, w)) m1++; }
+                  let sc1 = pCit.length > 0 ? (m1 / pCit.length) : 0;
+                  if (sc1 >= 0.65 && (!melhorRefAlternativa || sc1 > melhorRefAlternativa.score)) {
+                    melhorRefAlternativa = {
+                      bookCan: associatedRef.bookCan,
+                      chap: cIdx + 1,
+                      vStart: vIdx + 1,
+                      vEnd: null,
+                      refFormatada: `${associatedRef.bookCan[langKey] || associatedRef.bookCan.pt} ${cIdx + 1}:${vIdx + 1}`,
+                      score: sc1,
+                      realText: v1
+                    };
+                  }
+                  if (vIdx + 1 < verses.length) {
+                    const vPair = v1 + ' ' + verses[vIdx + 1];
+                    const pPair = limparP(vPair);
+                    let mPair = 0;
+                    for (const w of pCit) { if (incluiPalavra(pPair, w)) mPair++; }
+                    let scPair = pCit.length > 0 ? (mPair / pCit.length) : 0;
+                    if (scPair >= 0.65 && (!melhorRefAlternativa || scPair > melhorRefAlternativa.score)) {
+                      melhorRefAlternativa = {
+                        bookCan: associatedRef.bookCan,
+                        chap: cIdx + 1,
+                        vStart: vIdx + 1,
+                        vEnd: vIdx + 2,
+                        refFormatada: `${associatedRef.bookCan[langKey] || associatedRef.bookCan.pt} ${cIdx + 1}:${vIdx + 1}-${vIdx + 2}`,
+                        score: scPair,
+                        realText: vPair
+                      };
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          if (melhorRefAlternativa && melhorRefAlternativa.score >= 0.88 && pCit.length >= 10 && melhorRefAlternativa.score > score + 0.2) {
+            alteracoes.push({
+              tipo: 'REFERENCIA_CORRIGIDA',
+              referenciaAnterior: associatedRef.rawRef,
+              referenciaCorreta: melhorRefAlternativa.refFormatada,
+              motivo: `Referência corrigida de ${associatedRef.rawRef} para ${melhorRefAlternativa.refFormatada} com base na redação exata da citação.`
+            });
+            substituicoes.push({
+              start: associatedRef.index,
+              end: associatedRef.endIndex,
+              novoTexto: melhorRefAlternativa.refFormatada
+            });
+            associatedRef.rawRef = melhorRefAlternativa.refFormatada;
+            associatedRef.chap = melhorRefAlternativa.chap;
+            associatedRef.vStart = melhorRefAlternativa.vStart;
+            associatedRef.vEnd = melhorRefAlternativa.vEnd;
+            realVerse = melhorRefAlternativa.realText;
+          } else if (score < 0.6) {
             // Requisito 2: Se tiver baixa semelhança com o versículo, registra no relatório para conferência manual
             alteracoes.push({
               tipo: 'CITACAO_PARA_REVISAO',
@@ -515,41 +584,54 @@ function validarRoteiroBiblico(texto, idioma = 'pt', traducao = 'arc') {
               textoCitado: q.text,
               motivo: 'Texto citado possui baixa semelhança com o versículo da Almeida. Mantido para revisão manual.'
             });
-          } else {
-            // ITEM 43: a citação entre aspas deve terminar no fim de uma oração do versículo
-            const fim = Citacao.analisarFimDaCitacao(realVerse, q.text);
-            if (fim.status === 'truncada') {
-              if (fim.completada) {
-                alteracoes.push({
-                  tipo: 'CITACAO_COMPLETADA',
-                  referencia: associatedRef.rawRef,
-                  textoAnterior: q.text,
-                  textoCorreto: fim.completada,
-                  motivo: 'A citação terminava no meio de uma oração; foi completada com o texto do versículo.'
-                });
-                substituicoes.push({ q, novaCitacao: q.openChar + fim.completada + q.closeChar });
-              } else {
-                alteracoes.push({
-                  tipo: 'CITACAO_SEM_ASPAS',
-                  referencia: associatedRef.rawRef,
-                  textoAnterior: q.text,
-                  motivo: `A citação terminava no meio de uma oração (faltavam ${fim.extensao} palavras): aspas removidas, o texto virou paráfrase.`
-                });
-                substituicoes.push({ q, novaCitacao: q.text });
-              }
-              continue;
-            }
-            const textoSubstituto = alinharTrechoCorrespondente(realVerse, q.text, langKey);
-            if (q.text !== textoSubstituto) {
+            continue;
+          }
+
+          // ITEM 43: a citação entre aspas deve terminar no fim de uma oração do versículo
+          const fim = Citacao.analisarFimDaCitacao(realVerse, q.text);
+          if (fim.status === 'truncada') {
+            if (fim.completada) {
               alteracoes.push({
-                tipo: 'CITACAO_CORRIGIDA',
+                tipo: 'CITACAO_COMPLETADA',
                 referencia: associatedRef.rawRef,
                 textoAnterior: q.text,
-                textoCorreto: textoSubstituto
+                textoCorreto: fim.completada,
+                motivo: 'A citação terminava no meio de uma oração; foi completada com o texto do versículo.'
               });
-              const novaCitacao = q.openChar + textoSubstituto + q.closeChar;
-              substituicoes.push({ q, novaCitacao });
+              substituicoes.push({
+                start: q.index,
+                end: q.endIndex,
+                novoTexto: q.openChar + fim.completada + q.closeChar
+              });
+            } else {
+              alteracoes.push({
+                tipo: 'CITACAO_SEM_ASPAS',
+                referencia: associatedRef.rawRef,
+                textoAnterior: q.text,
+                motivo: `A citação terminava no meio de uma oração (faltavam ${fim.extensao} palavras): aspas removidas, o texto virou paráfrase.`
+              });
+              substituicoes.push({
+                start: q.index,
+                end: q.endIndex,
+                novoTexto: q.text
+              });
             }
+            continue;
+          }
+          const textoSubstituto = alinharTrechoCorrespondente(realVerse, q.text, langKey);
+          if (q.text !== textoSubstituto) {
+            alteracoes.push({
+              tipo: 'CITACAO_CORRIGIDA',
+              referencia: associatedRef.rawRef,
+              textoAnterior: q.text,
+              textoCorreto: textoSubstituto
+            });
+            const novaCitacao = q.openChar + textoSubstituto + q.closeChar;
+            substituicoes.push({
+              start: q.index,
+              end: q.endIndex,
+              novoTexto: novaCitacao
+            });
           }
         }
       } else {
@@ -624,9 +706,9 @@ function validarRoteiroBiblico(texto, idioma = 'pt', traducao = 'arc') {
     }
 
     // Aplica as substituições em ordem reversa para garantir a exatidão milimétrica dos offsets
-    substituicoes.sort((a, b) => b.q.index - a.q.index);
+    substituicoes.sort((a, b) => b.start - a.start);
     for (const sub of substituicoes) {
-      p = p.slice(0, sub.q.index) + sub.novaCitacao + p.slice(sub.q.endIndex);
+      p = p.slice(0, sub.start) + sub.novoTexto + p.slice(sub.end);
     }
 
     // Ponto 3: Limpeza de pontuação duplicada imediatamente após aspas e normalização
