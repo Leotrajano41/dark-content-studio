@@ -3413,12 +3413,28 @@ const REGRA_ATRIBUICAO_PT = `REGRA DE ATRIBUIÇÃO (OBRIGATÓRIA, PRIORIDADE MÁ
 - CRONOLOGIA: PROIBIDO afirmar intervalos de tempo (anos, décadas, séculos, 'anos depois', 'anos pela frente') que o texto bíblico citado não traz. Use 'depois', 'mais tarde' ou o dado literal do texto. Não calcule idades nem datas que a Escritura não dá.
 - SEM REPETIÇÃO: cada explicação ou episódio aparece uma única vez no roteiro. A conclusão tem um ÚNICO parágrafo de fechamento antes da chamada para inscrição (CTA).
 - PALAVRAS PROIBIDAS EM PORTUGUÊS: 'desvendar', 'desvendando', 'profundidade', 'precisão cirúrgica', 'mergulhar fundo'. Se uma frase usar uma delas, REESCREVA a frase inteira de outro modo (nunca apenas troque a palavra por sinônimo).
+- GANCHO IN MEDIAS RES (ITEM 23): depois do gancho que antecipa o clímax, voltar no tempo com "Antes disso..." e nunca tratar o desfecho como já ocorrido.
+- TOPÔNIMOS E NOMES DE LUGARES (ITEM 24): usar o mesmo nome de lugar do começo ao fim (uniformidade de topônimo, não alternar Meribá e Cades-Barneia).
+- ESTUDIOSOS E CONTEXTO HISTÓRICO (ITEM 25): proibido "estudiosos da época"; "estudiosos explicam" só para consenso conhecido.
+- FEITOS, NÚMEROS E DATAS (ITEM 26): feitos, números e datas de personagens só com referência bíblica; não puxar números de outro capítulo (ex.: não puxar 600 mil de Números 26 em cena de Números 20).
+- CITAÇÕES E REDAÇÕES (ITEM 27): a mesma passagem não pode aparecer com duas redações; não citar o mesmo versículo duas vezes.
+- ORDEM CRONOLÓGICA E CONTEXTO (ITEM 28): seções finais em ordem cronológica, e cada seção recebe o resumo das anteriores para não repetir eventos.
+- FRASES DE REFORÇO (ITEM 29): limitar frases de reforço ('a sentença não foi revogada') a uma por seção (no máximo uma por seção).
 ${LINHA_DO_TEMPO_PT}`;
 
 /**
  * REGRAS DE CONTEÚDO E STORYTELLING BÍBLICO (Item 2 & Ajustes Finais) - System Prompt Exclusivo para Geração de Roteiro
  */
 const SCRIPT_SYSTEM_PROMPT = `You are a master biblical documentary storyteller and narrator for our biblical documentary channel.
+
+REGRAS ESTRITAS DO ROTEIRO:
+- GANCHO IN MEDIAS RES: depois do gancho que antecipa o clímax, voltar no tempo com "Antes disso..." e nunca tratar o desfecho como já ocorrido.
+- TOPÔNIMOS: usar o mesmo nome de lugar do começo ao fim (uniformidade de topônimo; não alternar Meribá e Cades-Barneia).
+- ESTUDIOSOS: proibido "estudiosos da época"; "estudiosos explicam" só para consenso conhecido.
+- NÚMEROS E DATAS: feitos, números e datas de personagens só com referência bíblica; não puxar números de outro capítulo.
+- CITAÇÕES: a mesma passagem não pode aparecer com duas redações; não citar o mesmo versículo duas vezes.
+- SEÇÕES FINAIS: seções finais em ordem cronológica, e cada seção recebe o resumo das anteriores para não repetir eventos.
+- REFORÇO: limitar frases de reforço a uma por seção (no máximo uma por seção).
 
 POSTURA OBRIGATÓRIA DO NARRADOR:
 - Trate todo relato bíblico como verdade sagrada afirmada diretamente: 'o fogo caiu', nunca 'o relato diz que o fogo teria caído'.
@@ -3577,9 +3593,10 @@ const FORBIDDEN_TERMS = [
   { term: 'tapestry', pattern: /\btapestry\b/i },
   { term: 'tapeçaria', pattern: /\btape[cç]aria\b/i },
   { term: 'stark reminder', pattern: /\bstark\s+reminder\b/i },
-  { term: 'lembrete gritante', pattern: /\blembrete\s+(?:gritante|severo|duro)\b/i },
-  { term: 'serves as a reminder', pattern: /\bserve[sd]?\s+as\s+a\s+reminder\b/i },
-  { term: 'serve como lembrete', pattern: /\bserve\s+como\s+(?:um\s+)?lembrete\b/i },
+  { term: 'serves as a reminder', pattern: /\bserve[sd]?\s+as\s+a\s+(?:sobering\s+)?reminder\b/i },
+  { term: 'serves as a sobering reminder', pattern: /\bserve[sd]?\s+as\s+a\s+sobering\s+reminder\b/i },
+  { term: 'sobering reminder', pattern: /\bsobering\s+reminder\b/i },
+  { term: 'serve como lembrete', pattern: /\bserve\s+como\s+(?:um\s+)?(?:s[óo]brio\s+)?lembrete\b/i },
   { term: 'insurmountable', pattern: /\binsurmountable\b/i },
   { term: 'insuperável', pattern: /\binsuper[aá]ve(?:l|is)\b/i },
   { term: 'unwavering', pattern: /\bunwavering\b/i },
@@ -4162,6 +4179,27 @@ function validarSeTemProvaBiblica(texto) {
 window.validarSeTemProvaBiblica = validarSeTemProvaBiblica;
 
 /**
+ * ITEM 21: Conferir citações e referências de uma ideia contra a ARC (sem falsos positivos)
+ */
+function conferirCitacoesDaIdeiaNaArc(textoIdeia) {
+  if (!textoIdeia || typeof textoIdeia !== 'string') return { temErro: false, alteracoes: [] };
+  let vb = null;
+  if (typeof validarBiblia !== 'undefined') vb = validarBiblia;
+  else if (typeof window !== 'undefined' && window.validarBiblia) vb = window.validarBiblia;
+
+  if (vb && typeof vb.validarRoteiroBiblico === 'function') {
+    const res = vb.validarRoteiroBiblico(textoIdeia, 'pt', 'arc');
+    const temErroGrave = (res.alteracoes || []).some(a => a.tipo === 'REFERENCIA_INEXISTENTE');
+    return {
+      temErro: temErroGrave,
+      alteracoes: res.alteracoes || []
+    };
+  }
+  return { temErro: false, alteracoes: [] };
+}
+if (typeof window !== 'undefined') window.conferirCitacoesDaIdeiaNaArc = conferirCitacoesDaIdeiaNaArc;
+
+/**
  * Avaliador de Ideias via IA (Item 4 + Itens a, b, c)
  * Avalia as 10 ideias, identifica erros bíblicos na linha fixa ERROS_BIBLICOS,
  * substitui automaticamente as ideias erradas (máx 2 rodadas com controle de diversidade e formato),
@@ -4700,76 +4738,128 @@ Output EXCLUSIVELY the line above.`;
 }
 
 /**
- * ITEM 1 & ITEM 8: Valida e regenera frases com termos proibidos na descrição do SEO
- * Se houver termo proibido, regenera a frase com a IA. Se persistir, mantém e exibe aviso.
+ * ITEM 13, 14 & 15: Valida e regenera termos proibidos em todo o pacote SEO (títulos, descrição e tags).
+ * Se a IA falhar ou mantiver o clichê, aplica substituição determinística para garantir que ZERO termos vazem.
+ * Filtra tags fora do tema bíblico e garante conformidade de citações bíblicas em inglês com a KJV.
  */
 async function validarERegenerarDescricaoSeo(textoSeo, tema, modelo) {
   if (!textoSeo || typeof textoSeo !== 'string') return textoSeo;
 
+  const MAPA_FALLBACK_CLICHES = [
+    { pattern: /\bserve[sd]?\s+as\s+a\s+(?:sobering\s+)?reminder\b/gi, rep: 'demonstrates the sobering reality' },
+    { pattern: /\bsobering\s+reminder\b/gi, rep: 'sobering truth' },
+    { pattern: /\bstark\s+reminder\b/gi, rep: 'clear sign' },
+    { pattern: /\bdelv(?:e|es|ing|ed)?(?:\s+into)?\b/gi, rep: 'examine' },
+    { pattern: /\bdive\s+deep(?:er)?(?:\s+into)?\b/gi, rep: 'examine' },
+    { pattern: /\bdive\s+into\b/gi, rep: 'explore' },
+    { pattern: /\bprofound(?:ly)?\b/gi, rep: 'enduring' },
+    { pattern: /\bmeticulous(?:ly)?\b/gi, rep: 'carefully' },
+    { pattern: /\bunpack(?:s|ing|ed)?\b/gi, rep: 'reveal' },
+    { pattern: /\bthe\s+very\s+fabric\b/gi, rep: 'the core' },
+    { pattern: /\bfabric\b/gi, rep: 'structure' },
+    { pattern: /\bshrouded\s+in\s+mystery\b/gi, rep: 'unrecorded' },
+    { pattern: /\bin\s+the\s+annals\b/gi, rep: 'in the biblical record' },
+    { pattern: /\bannals\b/gi, rep: 'records' }
+  ];
+
+  const limparClichésDeterministicamente = (str) => {
+    let s = str;
+    for (const item of MAPA_FALLBACK_CLICHES) {
+      s = s.replace(item.pattern, item.rep);
+    }
+    return s;
+  };
+
   const descMatch = textoSeo.match(/(?:Descrição|Description)[\s\S]*?(?=(?:Tags|Search Tags|Hashtags|Palavras-chave|\[\[|$))/i);
-  if (!descMatch) return textoSeo;
+  let resultadoSeo = textoSeo;
 
-  let textoDescricao = descMatch[0];
-  let textoDescricaoModificado = textoDescricao;
+  if (descMatch) {
+    let textoDescricao = descMatch[0];
+    let textoDescricaoModificado = textoDescricao;
 
-  const frases = textoDescricao.match(/[^.!?\n]+(?:[.!?]+["']?|$)/g) || [];
+    const frases = textoDescricao.match(/[^.!?\n]+(?:[.!?]+["']?|$)/g) || [];
 
-  for (let frase of frases) {
-    const fraseTrim = frase.trim();
-    if (!fraseTrim) continue;
+    for (let frase of frases) {
+      const fraseTrim = frase.trim();
+      if (!fraseTrim) continue;
 
-    const termosEncontrados = FORBIDDEN_TERMS.filter(f => f.pattern.test(fraseTrim));
-    if (termosEncontrados.length > 0) {
-      const nomes = termosEncontrados.map(t => `"${t.term}"`).join(', ');
-      console.log(`[SEO] Termo proibido na descrição: ${nomes} -> "${fraseTrim}"`);
+      const termosEncontrados = FORBIDDEN_TERMS.filter(f => f.pattern.test(fraseTrim));
+      if (termosEncontrados.length > 0) {
+        const nomes = termosEncontrados.map(t => `"${t.term}"`).join(', ');
+        console.log(`[SEO] Termo proibido na descrição: ${nomes} -> "${fraseTrim}"`);
 
-      try {
-        const promptFraseSeo = `Act as an expert YouTube SEO copywriter for our biblical documentary channel.
-Rewrite the following single sentence from a video description about "${tema}" to completely eliminate the forbidden cliché(s): ${nomes} (especially terms like "dive into", "profound", "meticulously", "unpack", "serves as a reminder").
+        try {
+          const promptFraseSeo = `Act as an expert YouTube SEO copywriter for our biblical documentary channel.
+Rewrite the following single sentence from a video description about "${tema}" to completely eliminate the forbidden cliché(s): ${nomes} (especially terms like "delve", "profound", "meticulously", "unpack", "serves as a reminder", "serves as a sobering reminder").
 Original sentence: """${fraseTrim}"""
 
 RULES:
 - Preserve solemn biblical narrative tone and clarity.
-- Output ONLY the single rewritten sentence, without quotes, without preamble.`;
+- Output ONLY the single rewritten sentence in English, without quotes, without preamble.`;
 
-        const novaFraseRaw = await OpenRouterAPI.generateContent(promptFraseSeo, modelo || OpenRouterAPI.getModelIdeas());
-        if (novaFraseRaw && novaFraseRaw.trim()) {
-          const novaFrase = novaFraseRaw.trim().replace(/^["']|["']$/g, '');
-          const termosRestantes = FORBIDDEN_TERMS.filter(f => f.pattern.test(novaFrase));
-          if (termosRestantes.length === 0) {
-            textoDescricaoModificado = textoDescricaoModificado.replace(fraseTrim, novaFrase);
-          } else {
-            console.warn('[SEO] Termo persistiu na frase da descrição após tentativa de regeneração. Mantido com aviso.');
-            if (typeof UI !== 'undefined' && UI.showToast) {
-              UI.showToast(`⚠️ Termo na descrição mantido com aviso: ${termosRestantes.map(t => t.term).join(', ')}`, 'warning');
+          const novaFraseRaw = await OpenRouterAPI.generateContent(promptFraseSeo, modelo || OpenRouterAPI.getModelIdeas());
+          if (novaFraseRaw && novaFraseRaw.trim()) {
+            let novaFrase = novaFraseRaw.trim().replace(/^["']|["']$/g, '');
+            const termosRestantes = FORBIDDEN_TERMS.filter(f => f.pattern.test(novaFrase));
+            if (termosRestantes.length === 0) {
+              textoDescricaoModificado = textoDescricaoModificado.replace(fraseTrim, novaFrase);
+            } else {
+              // Aplica substituição determinística limpa para garantir que zero clichês persistam
+              const fraseLimpa = limparClichésDeterministicamente(novaFrase);
+              textoDescricaoModificado = textoDescricaoModificado.replace(fraseTrim, fraseLimpa);
             }
+          } else {
+            const fraseLimpa = limparClichésDeterministicamente(fraseTrim);
+            textoDescricaoModificado = textoDescricaoModificado.replace(fraseTrim, fraseLimpa);
           }
+        } catch (errFrase) {
+          console.warn('[SEO] Erro ao regenerar frase da descrição, aplicando fallback limpo:', errFrase);
+          const fraseLimpa = limparClichésDeterministicamente(fraseTrim);
+          textoDescricaoModificado = textoDescricaoModificado.replace(fraseTrim, fraseLimpa);
         }
-      } catch (errFrase) {
-        console.warn('[SEO] Erro ao regenerar frase da descrição:', errFrase);
       }
     }
+
+    resultadoSeo = resultadoSeo.replace(textoDescricao, textoDescricaoModificado);
   }
 
-  let resultadoSeo = textoSeo.replace(textoDescricao, textoDescricaoModificado);
+  // Sanitização determinística final em todo o pacote para garantir que nenhum termo proibido vaze
+  resultadoSeo = limparClichésDeterministicamente(resultadoSeo);
 
-  // Verificação contra "Explicador Bíblico" e variações em todo o pacote de SEO (títulos, descrição, tags) (Item 2)
-  if (/\bexplicador(?:\s*b[ií]blico)?\b/i.test(resultadoSeo)) {
-    console.log('[SEO] "Explicador Bíblico" detectado no pacote SEO. Regenerando com IA...');
-    try {
-      const promptFixSeo = `Act as an expert YouTube SEO strategist for our biblical documentary channel.
-Rewrite any lines or tags in the following SEO package that mention "Explicador Bíblico" or "Explicador", completely removing any channel name while maintaining titles, description and tags structure:
-"""
-${resultadoSeo}
-"""
-Output exclusively the cleaned SEO package.`;
-      const fixedSeo = await OpenRouterAPI.generateContent(promptFixSeo, modelo || OpenRouterAPI.getModelIdeas());
-      if (fixedSeo && fixedSeo.trim()) {
-        resultadoSeo = fixedSeo.trim();
+  // Item 15: Filtro de tags fora do tema bíblico
+  const tagsMatch = resultadoSeo.match(/(?:Tags|Search Tags|Palavras-chave)\s*:\s*([\s\S]*?)(?=(?:Hashtags|\[\[|$))/i);
+  if (tagsMatch && tagsMatch[1]) {
+    const blocoTagsOriginal = tagsMatch[0];
+    const listaTags = tagsMatch[1].split(/[,;\n]+/).map(t => t.trim()).filter(Boolean);
+    const tagsProibidasForaDoTema = [
+      /\bserm[aã]o\s+d[ao]\s+mont[e|anha]\b/i,
+      /\bsermon\s+on\s+the\s+mount\b/i,
+      /\bbeatitudes\b/i,
+      /\bten\s+commandments\b/i,
+      /\bt[aá]buas\s+da\s+lei\b/i,
+      /\bcrucifixion\b/i
+    ];
+
+    const tagsFiltradas = listaTags.filter(tag => {
+      // Se o próprio tema do vídeo menciona o termo, permite
+      const temaNorm = (tema || '').toLowerCase();
+      const tagNorm = tag.toLowerCase();
+      for (const tp of tagsProibidasForaDoTema) {
+        if (tp.test(tagNorm) && !tp.test(temaNorm)) {
+          console.log(`[SEO] Tag fora do tema removida: "${tag}"`);
+          return false;
+        }
       }
-    } catch (eSeo) {
-      console.warn('[SEO] Erro ao regenerar pacote SEO com Explicador Bíblico:', eSeo);
-    }
+      return true;
+    });
+
+    const blocoTagsLimpo = `Search Tags:\n${tagsFiltradas.join(', ')}`;
+    resultadoSeo = resultadoSeo.replace(blocoTagsOriginal, blocoTagsLimpo);
+  }
+
+  // Verificação contra "Explicador Bíblico" e variações em todo o pacote de SEO (Item 2)
+  if (/\bexplicador(?:\s*b[ií]blico)?\b/i.test(resultadoSeo)) {
+    resultadoSeo = resultadoSeo.replace(/\bexplicador(?:\s*b[ií]blico)?\b/gi, '').replace(/\s{2,}/g, ' ');
   }
 
   return resultadoSeo;
@@ -7602,58 +7692,73 @@ ${roteiro}
     return `Act as a master art director and AI prompt engineer for biblical documentaries following our own signature illuminated-manuscript visual style.
 Read the entire script below in strict chronological order and generate between 30 and 40 detailed visual prompts (numbered Prompt 1 to Prompt 35) covering the script from the very first opening hook to the final scene.
 
-MANDATORY RULES FOR SCENE DESCRIPTIONS:
-1. QUANTITY & CHRONOLOGICAL COVERAGE: Generate exactly 30 to 40 prompts, walking through the entire narrative progression of the script without skipping any section.
-2. LANGUAGE & NAMES IN ENGLISH: Every prompt description must be entirely in ENGLISH. Character names MUST always be in English (e.g., use "Simon Peter", NEVER "Simão Pedro"; "Hezekiah", NEVER "Ezequias"; "Moses", NEVER "Moisés"; "John", NEVER "João").
-3. HISTORICAL TERMINOLOGY (STRICT): Always use "Israelites" or "Israelite army". NEVER use "Israeli" or "Israeli army", which refers to the modern state.
-4. PROHIBITED OBJECTS, NO SPOKEN DIALOGUE & NO TEXT:
+MANDATORY RULES FOR SCENE DESCRIPTIONS (ITEMS 1 TO 4):
+1. ZERO REPEATED SCENES OR ACTIONS (ITEM 1):
+   - Proibido repetir a mesma ação do mesmo personagem! Each prompt MUST show a completely different, unique moment or specific action.
+   - NEVER repeat the same action of the same character twice across the entire video. For example: hitting the rock is shown ONLY ONCE; people drinking water is shown ONLY ONCE; looking at the horizon at sunset is shown ONLY ONCE; raising the staff is shown ONLY ONCE. Every single prompt must capture a new, distinct beat of the script.
+2. FULL CHRONOLOGICAL COVERAGE OF THE ENTIRE SCRIPT (ITEM 2):
+   - Distribuir os prompts ao longo de todas as seções da Narração Limpa, from the opening hook to the very last sentence without skipping any section.
+   - The ending of the script must NEVER be left without scenes! You MUST generate dedicated visual prompts for the climax and closing events in strict chronological order: e.g., Aaron's death at Mount Hor, the 30 days of mourning, the commissioning of Joshua, Moses delivering his final speeches on the plains of Moab, and Moses ascending the summit of Mount Nebo overlooking the Promised Land.
+3. CHARACTER CONSISTENCY SHEET & PROMPT PREFIX (ITEM 3):
+   - Before generating the numbered prompts, generate a 'CHARACTER CONSISTENCY SHEET' defining a single, fixed, highly detailed physical description for every principal character in the script (e.g.: "Moses = elderly Hebrew patriarch with long flowing silver-white beard, weathered tanned face, cream linen tunic, deep crimson outer mantle, rustic carved olive wood staff").
+   - You MUST repeat that EXACT physical description in EVERY prompt in which that character appears throughout the entire video.
+   - Also provide an exact 'CONSISTENCY PROMPT FOR IMAGE GENERATOR' header (a single sentence ready to copy and paste at the start of the image generator conversation to guarantee identical style and character faces).
+4. EXACT CANONICAL PLACE NAMES (ITEM 4):
+   - Use the exact canonical geographical place names from the biblical text (e.g. "summit of Mount Nebo", "plains of Moab", "Mount Hor", "waters of Meribah in the Wilderness of Zin").
+   - NEVER use generic, watered-down names (NEVER say "a small hill", "a high mountain", "a deserted plain").
+5. LANGUAGE & NAMES IN ENGLISH: Every prompt description must be entirely in ENGLISH. Character names MUST always be in English (e.g., use "Simon Peter", NEVER "Simão Pedro"; "Hezekiah", NEVER "Ezequias"; "Moses", NEVER "Moisés"; "John", NEVER "João").
+6. HISTORICAL TERMINOLOGY (STRICT): Always use "Israelites" or "Israelite army". NEVER use "Israeli" or "Israeli army", which refers to the modern state.
+7. PROHIBITED OBJECTS, NO SPOKEN DIALOGUE & NO TEXT:
    - Absolutely FORBIDDEN to depict maps, stone tablets, plaques, signboards, opened scrolls, or any object bearing writing or inscriptions.
    - NEVER include spoken dialogue, lines, or phrases in quotation marks in the prompts; describe ONLY the physical visual scene.
    - Absolutely NEVER request visible letters, words, titles, signs, banners, or typography in the image.
    - If depicting ancient stones, altars, or closed rolled scrolls, show only blank, weathered physical textures without any legible letters or carved writing.
-5. STRICT SCRIPT FIDELITY & NO FABRICATED SCENES:
+8. STRICT SCRIPT FIDELITY & NO FABRICATED SCENES:
    - Every scene MUST originate strictly from something explicitly stated in the script. Do NOT invent feasts, celebrations, or scenes not described in the script.
    - NEVER depict people worshiping, bowing before, or paying homage to physical objects.
-6. SCENE VARIETY & PACING:
-   - Limit to a maximum of 2 similar landscapes across the entire video.
-   - MAXIMUM OF 2 CONSECUTIVE SCENES OF THE SAME TYPE (e.g., at most two consecutive scenes of two people conversing). Constantly alternate with concrete close-up objects, physical details, and environments from the script.
-   - MAXIMUM OF 2 IMAGES OF THE SAME EVENT ACROSS THE ENTIRE VIDEO: Strictly limit depictions of the exact same event or action to at most 2 images in the entire video (e.g., at most 2 scenes of rain falling, at most 2 scenes of Elijah running). Use the remaining prompt slots for other chronological moments, physical objects, and specific narrative details from the script.
-   - Strongly prioritize specific physical objects, characters, and concrete moments from the script over generic landscape vistas.
-7. BIBLICALLY COHERENT TIME OF DAY:
-   - Lighting and time of day MUST be strictly coherent with the canonical biblical account (e.g. early morning dawn at the Sea of Galilee for John 21).
-8. ACCURATE GUARDS & SOLDIERS:
-   - In the high priest's courtyard and before the Sanhedrin, depict Jewish Temple guards in linen tunics with staves/spears (NO Roman armor, NO Roman helmets).
-   - Depict Roman soldiers ONLY where canonical Scripture explicitly indicates Roman jurisdiction (Pontius Pilate's praetorium, the crucifixion at Golgotha, Roman prison cohorts).
-9. MANDATORY FIXED DESCRIPTION FOR JESUS:
-   - Whenever Jesus appears in a scene, you MUST use this EXACT visual description:
-     "Jesus as a first-century Jewish man with shoulder-length dark brown hair, short beard, calm and kind expression, cream linen tunic with a deep red mantle, subtle soft golden halo"
-10. ONE SINGLE FOCAL SUBJECT: Each description must have exactly ONE clear main subject/focal point. Keep generous empty parchment space around it; avoid crowded or cluttered compositions.
-11. CONCRETE & TANGIBLE DETAILS FROM THE SCRIPT:
-   - Bring concrete, physical and visual details directly from the script: exact measurements, specific ancient materials (e.g., acacia wood, weathered bronze, rough limestone, beaten gold, woven linen), and exact quantities.
-   - SCALE COMPARISON: Whenever something large or massive is depicted (giants, colossal walls, large structures, oversized objects), ALWAYS include a size comparison with a normal-sized human being standing nearby to clearly convey the scale. When a giant is depicted, show him side by side with normal-sized people at the same distance from the camera, about twice their height.
-12. ABSOLUTELY NO CORPSES, DEAD BODIES, EXECUTIONS, ATTACKS, OR AGGRESSION:
-   - NEVER depict fallen corpses, dead bodies, blood, or gore.
-   - NEVER depict executions, physical attacks, assaults, or acts of aggression: in all such scenes, depict EITHER the tense moment immediately before the event, OR the emotional/psychological reaction of the people around (terrified faces, onlookers recoiling in shock, hands raised in awe) — NEVER the violent attack, execution, or fallen body itself.
-   - Convey the aftermath of battles through abandoned ancient weapons stuck in the ground, ruined stone ramparts, charred debris, and distant smoke.
-13. NO MIDJOURNEY SYNTAX: Do NOT use '--ar 16:9'.
-14. MANDATORY FIXED VISUAL STYLE BLOCK AT THE END OF EVERY PROMPT:
-   Every single prompt MUST conclude with this EXACT fixed visual style block:
-   ", ${fixedStyleBlock}"
+9. BIBLICALLY COHERENT TIME OF DAY:
+   - Lighting and time of day MUST be strictly coherent with the canonical biblical account.
+10. ACCURATE GUARDS & SOLDIERS:
+    - In the high priest's courtyard and before the Sanhedrin, depict Jewish Temple guards in linen tunics with staves/spears (NO Roman armor, NO Roman helmets).
+    - Depict Roman soldiers ONLY where canonical Scripture explicitly indicates Roman jurisdiction.
+11. MANDATORY FIXED DESCRIPTION FOR JESUS:
+    - Whenever Jesus appears in a scene, you MUST use this EXACT visual description:
+      "Jesus as a first-century Jewish man with shoulder-length dark brown hair, short beard, calm and kind expression, cream linen tunic with a deep red mantle, subtle soft golden halo"
+12. ONE SINGLE FOCAL SUBJECT: Each description must have exactly ONE clear main subject/focal point. Keep generous empty parchment space around it; avoid crowded or cluttered compositions.
+13. CONCRETE & TANGIBLE DETAILS FROM THE SCRIPT:
+    - Bring concrete, physical and visual details directly from the script: exact measurements, specific ancient materials, and exact quantities.
+    - SCALE COMPARISON: Whenever something large or massive is depicted, ALWAYS include a size comparison with a normal-sized human being standing nearby to clearly convey the scale.
+14. ABSOLUTELY NO CORPSES, DEAD BODIES, EXECUTIONS, ATTACKS, OR AGGRESSION:
+    - NEVER depict fallen corpses, dead bodies, blood, or gore.
+    - NEVER depict executions, physical attacks, assaults, or acts of aggression. Depict EITHER the tense moment immediately before the event, OR the emotional/psychological reaction of the people around.
+15. NO MIDJOURNEY SYNTAX: Do NOT use '--ar 16:9'.
+16. MANDATORY FIXED VISUAL STYLE BLOCK AT THE END OF EVERY PROMPT:
+    Every single prompt MUST conclude with this EXACT fixed visual style block:
+    ", ${fixedStyleBlock}"
 
 SCRIPT:
 ${roteiro}
 
 OUTPUT FORMAT:
-Output ONLY the numbered prompts (Prompt 1 to Prompt 35) in English.
-Each item must follow this structure:
-Prompt [N]: [Concrete scene description in English with single focal subject, tangible script details/materials/measurements/scale comparison, no text], ${fixedStyleBlock}`;
+=== CHARACTER CONSISTENCY SHEET ===
+[Character 1]: [Fixed description to repeat everywhere]
+[Character 2]: ...
+
+=== CONSISTENCY PROMPT FOR IMAGE GENERATOR ===
+[One-sentence prompt to paste at the start of your image generator session for character and style consistency]
+
+=== VISUAL PROMPTS (PROMPT 1 TO PROMPT 35) ===
+Prompt 1: [Concrete scene description in English with single focal subject, fixed character description if present, tangible script details/materials/measurements/scale comparison, exact biblical place names, no text], ${fixedStyleBlock}
+...
+Prompt [N]: [Concrete scene description in English with single focal subject, no repeated actions], ${fixedStyleBlock}`;
   },
 
   generateThumbnailPrompts({ tema, estilo, cores, elementos, styleRef, estiloRoteiro, numItens = 9 }) {
     const styleRefLine = styleRef ? `\n- Technical Style Reference (en): ${styleRef}` : '';
     const isGrade = estilo === 'Grade de ilustrações com legendas' || (estiloRoteiro && (estiloRoteiro.includes('Catálogo') || estiloRoteiro.includes('Catalogo')));
     const n = numItens || 9;
-    const thumbStyleBlock = ', cinematic lighting, chiaroscuro atmosphere, deep solemn shadows, historical biblical realism, 8k resolution, photorealistic cinematic composition, 16:9 widescreen, no text, no letters, no words';
+    // Estilo visual fixo do canal: Manuscrito Iluminado sobre pergaminho envelhecido (Item 7)
+    const thumbStyleBlock = ', Hand-drawn illustration in sepia ink linework with soft watercolor washes on aged parchment paper, warm ochre and umber tones, deep crimson red and burnished gold leaf accents, divine golden illumination, single striking focal subject, 16:9 widescreen, no text, no letters, no words, no watermark';
 
     if (isGrade) {
       return `Act as a senior YouTube thumbnail designer for our biblical documentary channel.
@@ -7663,26 +7768,26 @@ MANDATORY RULES:
 1. IMAGE SPECIFICATION (16:9 SINGLE IMAGE GRID):
    - A single 16:9 widescreen image composed of a balanced 2-row grid containing exactly ${n} distinct panels/cards, one card per item.
    - Each panel contains a clean, simple, consistent-style biblical illustration representing one of the ${n} items.
-   - Warm beige / parchment background (#F5EBE0 tone) unifying all panels.
-   - Historical minimalist iconographic illustration style.
+   - Warm beige / aged parchment background (#F5EBE0 tone) unifying all panels.
+   - Hand-drawn illuminated manuscript illustration style in sepia ink with watercolor washes.
    - ABSOLUTELY ZERO TEXT, ZERO LETTERS, AND ZERO WORDS inside the generated image!
 2. SEPARATE CAPTION LIST FOR EDITOR OVERLAY:
    - Provide a separate ordered list of the ${n} short text captions (1 to 2 words per item, in English and in Portuguese) for the video editor to overlay manually on each panel.
 
 OUTPUT FORMAT:
 [[OPCAO_A]]
-Prompt Visual (en): (16:9 image prompt describing a 2-row grid of ${n} simple consistent biblical illustrations on warm beige background, historical iconographic style, absolutely no text, no letters, no words)
+Prompt Visual (en): (16:9 image prompt describing a 2-row grid of ${n} simple consistent biblical illustrations on warm aged parchment background, sepia ink watercolor style, absolutely no text, no letters, no words)
 Lista de Legendas (Overlay Captions for Editor, in order 1 to ${n}):
 1. [Caption 1]
 2. [Caption 2]
 ...
 ${n}. [Caption ${n}]
 [[OPCAO_B]]
-Prompt Visual (en): (Alternative artistic variation of the 2-row grid of ${n} illustrations on beige background, no text)
+Prompt Visual (en): (Alternative artistic variation of the 2-row grid of ${n} illustrations on parchment background, no text)
 Lista de Legendas (Overlay Captions for Editor):
 ...
 [[OPCAO_C]]
-Prompt Visual (en): (Dramatic high-contrast variation of the 2-row grid of ${n} illustrations on beige background, no text)
+Prompt Visual (en): (Dramatic high-contrast variation of the 2-row grid of ${n} illustrations on parchment background, no text)
 Lista de Legendas (Overlay Captions for Editor):
 ...
 [[FIM]]`;
@@ -7696,31 +7801,39 @@ User Preferences:
 - Color Palette: ${cores}
 - Key Symbolic Elements: ${elementos}
 
-MANDATORY THUMBNAIL RULES (ITEM 7):
-1. USE THE MOST CONCRETE DETAIL FROM SCRIPT:
-   - Center each concept on the most concrete tangible detail from the script (e.g. a striking ancient biblical object, number, or scale comparison, such as King Og's massive iron bed with a standard-sized human standing beside it to dramatically illustrate the scale).
-2. FORMAT: Always specify '16:9 widescreen' (DO NOT use Midjourney '--ar 16:9' syntax).
-3. NO EMBEDDED TEXT IN AI IMAGE:
-   - Produce high-contrast, dramatic imagery with clean negative space and NO written words, signs, or letters in the generated image. Every prompt MUST conclude with: "${thumbStyleBlock}".
-4. NO BLOOD OR CORPSES:
-   - Depict battle consequences with broken shields, fallen weapons in soil, and smoke, avoiding blood or gore to ensure AI generators never refuse generation.
-5. SPECIFIC OVERLAY TEXT (NUMBER OR SPECIFIC NAME):
-   - For each option, provide a suggested 'Overlay Text' (short punchy text for graphic editors, 1 to 3 words max).
-   - MUST BE SPECIFIC: Use specific numbers, dimensions, or exact proper names (e.g. "13 FEET", "9 CUBITS", "MOUNT HERMON", "THE IRON BED").
-   - STRICTLY FORBIDDEN to use generic, meaningless clichés (e.g. NEVER use "Unveiling the Mystery", "Hidden Secrets", "Beyond Humanity", "The Truth Revealed", "Secret Power").
-   - The overlay text MUST COMPLEMENT the title '${tema}' and NEVER repeat words from the title!
+MANDATORY THUMBNAIL RULES (ITEMS 7 TO 10):
+1. CHANNEL VISUAL IDENTITY — ILLUMINATED MANUSCRIPT STYLE (ITEM 7):
+   - The style MUST ALWAYS be the channel's signature Illuminated Manuscript style: Hand-drawn sepia ink linework with delicate watercolor washes painted on aged parchment paper with natural fibers, warm ochre, umber, parchment beige, deep crimson, and burnished gold leaf highlights.
+   - STRICTLY FORBIDDEN: NEVER use photo styles, modern 3D renders, camera snapshots, or live-action imagery. Every prompt visual description MUST conclude with: "${thumbStyleBlock}".
+2. STRICT EPISODIC PURITY & REVERENCE FOR GOD (ITEM 8):
+   - NEVER depict scenes, objects, or symbols from other biblical episodes not part of this specific passage (e.g. NEVER show the stone tablets of the Law or the golden calf in a video about Meribá).
+   - STRICTLY FORBIDDEN to depict God as a human figure, man, silhouette, or shadowy human form. God's presence must be conveyed EXCLUSIVELY through sacred biblical symbolism (e.g. radiant heavenly golden divine light descending, pillar of cloud/fire, or divine voice shaking the stones).
+3. SHORT, CONCRETE OVERLAY TEXT — 1 TO 3 WORDS (ITEM 9):
+   - The Overlay Text MUST be short, punchy, and concrete (strictly 1 to 3 words, or a specific number/object, e.g. "2 STRIKES", "9 CUBITS", "120 YEARS", "THE ROCK", "THE ROD").
+   - STRICTLY FORBIDDEN to use abstract, vague, or theological concepts (e.g. NEVER use "DIVINE ACCUSATION", "FATAL PRIDE", "SPIRITUAL REBELLION", "DIVINE TRIAL", "UNVEILING THE MYSTERY").
+   - The overlay text must complement the video title '${tema}' and never repeat words from the title.
+4. EMBEDDED TEXT SPECIFICATION FOR IMAGE GENERATOR (ITEM 10):
+   - Each prompt must output an explicit image prompt that leaves the right third empty for overlay placement, and specifies:
+     * Exact text in quotation marks (e.g. "2 STRIKES")
+     * Position: empty right third of the 16:9 canvas
+     * Typography style: heavy serif lettering, burnished gold with a dark brown outer contour, bold and instantly legible on mobile screens
+5. FORMAT: Always specify '16:9 widescreen' (DO NOT use Midjourney '--ar 16:9' syntax).
+6. NO BLOOD OR CORPSES: Depict battle aftermath with abandoned shields and fallen weapons in soil; avoid blood or corpses.
 
 MANDATORY OUTPUT FORMAT — Use exactly these markers, each on its own isolated line:
 
 [[OPCAO_A]]
-Prompt Visual (en): (High-contrast concrete detail visual prompt ending with '${thumbStyleBlock}')
-Texto da Thumbnail (Overlay Text): (1-3 specific words with number/name, complementing without repeating the title)
+Prompt Visual (en): (High-contrast concrete detail visual prompt in illuminated manuscript sepia ink and watercolor on aged parchment, reserved empty right third for overlay text, ending with '${thumbStyleBlock}')
+Texto da Thumbnail (Overlay Text): (1-3 concrete words with number/object, e.g. "2 STRIKES")
+Especificação do Texto Embutido: Texto exato: "[Texto]", Posição: terço direito vazio reservado, Tipografia: serifa pesada, dourado com contorno marrom escuro, legível no celular
 [[OPCAO_B]]
-Prompt Visual (en): (Intense symbolic scale visual prompt ending with '${thumbStyleBlock}')
-Texto da Thumbnail (Overlay Text): (1-3 specific words with number/name, complementing without repeating the title)
+Prompt Visual (en): (Symbolic scale comparison prompt on aged parchment, reserved empty right third, ending with '${thumbStyleBlock}')
+Texto da Thumbnail (Overlay Text): (1-3 concrete words with number/object)
+Especificação do Texto Embutido: Texto exato: "[Texto]", Posição: terço direito vazio reservado, Tipografia: serifa pesada, dourado com contorno marrom escuro, legível no celular
 [[OPCAO_C]]
-Prompt Visual (en): (Dramatic revelation duality visual prompt ending with '${thumbStyleBlock}')
-Texto da Thumbnail (Overlay Text): (1-3 specific words with number/name, complementing without repeating the title)
+Prompt Visual (en): (Dramatic revelation prompt on aged parchment, reserved empty right third, ending with '${thumbStyleBlock}')
+Texto da Thumbnail (Overlay Text): (1-3 concrete words with number/object)
+Especificação do Texto Embutido: Texto exato: "[Texto]", Posição: terço direito vazio reservado, Tipografia: serifa pesada, dourado com contorno marrom escuro, legível no celular
 [[FIM]]`;
   },
 
@@ -7762,31 +7875,34 @@ OUTPUT FORMAT:
 Generate an optimized YouTube SEO package for a biblical video about '${tema}' based on the following script/summary:
 ${resumo || tema}
 
-MANDATORY OUTPUT GUIDELINES (ITEM 8):
-1. 3 HIGH-CTR TITLE OPTIONS:
-   - Written 100% in ${lang.name}.
+MANDATORY OUTPUT GUIDELINES (ITEMS 12 TO 15):
+1. 3 HIGH-CTR TITLE OPTIONS IN ENGLISH (ITEM 12):
+   - Written 100% in English (titles must ALWAYS be in English, regardless of the script's spoken language).
    - Strict biblical fidelity: do NOT state or invent claims unrecorded in canonical Scripture.
-   - PROHIBITION OF UNWRITTEN NUMBERS/DISTANCES: Strictly forbid numbers, distances, calendar dates, ages, or quantities that are not explicitly written in the biblical passage (e.g. proibir "16 quilômetros" ou datas inexistentes no texto). Conversions of measurements that ARE in the biblical text remain permitted, always as approximations (e.g. "9 côvados, cerca de 4 metros").
+   - PROHIBITION OF UNWRITTEN NUMBERS/DISTANCES: Strictly forbid numbers, distances, calendar dates, ages, or quantities that are not explicitly written in the biblical passage.
    - Gripping curiosity hook aligned with the chosen idea and thumbnail premise.
-   - MAXIMUM OF 1 WORD IN CAPS LOCK per title (e.g. "${lang.titleHookSample}"). Never write an entire title in uppercase.
-2. FULL VIDEO DESCRIPTION (2-3 DENSE PARAGRAPHS IN ENGLISH):
-   - Paragraph 1: Gripping overview of the historical and canonical biblical chronicle presented in the documentary, hooking the reader immediately.
-   - Paragraph 2: Comprehensive breakdown of the exact biblical chapters, books, and verses explored (e.g. explicit scripture citations, context, and canonical meaning).
-   - Paragraph 3: Solemn spiritual reflection and strong call to action inviting viewers to subscribe to the channel, like the video, and explore more biblical investigations.
-   - STRICT PROHIBITION OF FORBIDDEN CLICHÉS: Absolutely do NOT use words like "Dive into", "dive deep", "profound", "meticulously", "unpack", "serves as a reminder", "stark", "delve", "fabric". Write with natural, authoritative historical gravity.
-3. SEARCH TAGS (15-20 TAGS):
-   - High-volume relevant search tags separated by commas.
-4. HASHTAGS (5-7 HASHTAGS):
-   - 5 to 7 high-impact hashtags (#BiblicalHistory #ScriptureTruth, etc.).
+   - MAXIMUM OF 1 TO 2 WORDS IN CAPS LOCK per title (e.g. "Moses Struck The Rock TWICE"). Never write an entire title in uppercase.
+2. FULL VIDEO DESCRIPTION IN ENGLISH (ITEM 12, 13 & 14):
+   - 2-3 dense, authoritative paragraphs written 100% in English.
+   - Paragraph 1: Gripping overview of the historical and canonical chronicle, hooking the reader immediately.
+   - Paragraph 2: Comprehensive breakdown of chapters and verses explored.
+     * CRITICAL KJV REQUIREMENT (ITEM 14): Every scripture quote in the SEO package MUST be verbatim from the authorized King James Version (KJV) in data/bible/en_kjv.json. NEVER translate verses from Portuguese ARC or memory.
+   - Paragraph 3: Solemn reflection and subscribe call to action.
+   - ZERO FORBIDDEN CLICHÉS (ITEM 13): Strictly FORBIDDEN to use: "delve", "profound", "meticulously", "serves as a reminder", "serves as a sobering reminder", "sobering reminder", "unpack", "stark", "dive into", "dive deep", "fabric".
+3. SEARCH TAGS IN ENGLISH (ITEM 12 & 15):
+   - 15-20 high-volume relevant search tags in English, separated by commas.
+   - STRICTLY PROHIBIT UNRELATED TAGS (ITEM 15): Proibir tags fora do tema! Every single tag must be strictly relevant to this specific passage ('${tema}'). NEVER include disconnected topics (e.g. NEVER add "Sermon on the Mount", "Crucifixion", or "Ten Commandments" to a video about Meribah).
+4. HASHTAGS IN ENGLISH (5-7 HASHTAGS, ITEM 12):
+   - 5 to 7 high-impact hashtags in English (#BiblicalHistory #ScriptureTruth #Moses, etc.).
 
 ${REGRA_FATOS_EN}
 
 OUTPUT FORMAT:
 Present the complete SEO package clearly separated into:
-- 3 TITLES (High CTR)
-- FULL VIDEO DESCRIPTION (English, 2-3 paragraphs with scripture references & subscribe CTA)
-- SEARCH TAGS
-- HASHTAGS`;
+- 3 TITLES (High CTR in English)
+- FULL VIDEO DESCRIPTION (English, with KJV Scripture citations & subscribe CTA)
+- SEARCH TAGS (in English)
+- HASHTAGS (in English)`;
   }
 };
 window.PromptEngine = PromptEngine;
@@ -8814,18 +8930,57 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  /**
+   * ITEM 5 & ITEM 11: Extrai apenas o título limpo + detalhe concreto principal da ideia
+   * descarta blocos de "Referência Bíblica", "Gancho / Conflito Central", etc.
+   */
+  function extrairTemaLimpoParaThumbESeo(texto) {
+    if (!texto || typeof texto !== 'string') return '';
+    const linhas = texto.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (linhas.length === 0) return '';
+
+    // 1. Título principal: primeira linha, sem numeração inicial ("1.", "#1", "**", etc.)
+    let tituloLimpo = linhas[0]
+      .replace(/^#?\d+[\.:\)\-]\s*/, '')
+      .replace(/^[\*\_\#\s]+/, '')
+      .replace(/[\*\_\#\s]+$/, '')
+      .trim();
+
+    // 2. Procura a linha de detalhe concreto
+    let detalheConcreto = '';
+    for (let i = 1; i < linhas.length; i++) {
+      const l = linhas[i];
+      const matchDetalhe = l.match(/^(?:[-*•]\s*)?(?:Detalhe\s+Concreto|Detalhe|Objeto\s+Concreto|Elemento\s+Concreto)\s*:\s*(.+)$/i);
+      if (matchDetalhe) {
+        detalheConcreto = matchDetalhe[1].trim().replace(/^[\*\_\#\s]+/, '').replace(/[\*\_\#\s]+$/, '');
+        break;
+      }
+    }
+
+    if (detalheConcreto) {
+      if (!tituloLimpo.toLowerCase().includes(detalheConcreto.toLowerCase())) {
+        return `${tituloLimpo} — ${detalheConcreto}`;
+      }
+    }
+
+    return tituloLimpo;
+  }
+  if (typeof window !== 'undefined') {
+    window.extrairTemaLimpoParaThumbESeo = extrairTemaLimpoParaThumbESeo;
+  }
+
   function syncTema() {
-    // Requisitos 6 e 8: Os campos de Thumbnail e SEO devem vir preenchidos com a ideia do Passo B (título)
+    // Requisitos 5, 6 e 11: Os campos de Thumbnail e SEO devem vir preenchidos com SÓ o título limpo + detalhe concreto
     const ideiaEscolhida = (inputIdeiaEscolhida ? inputIdeiaEscolhida.value.trim() : '');
     const temaBase = UI.getValue('select-tema', 'input-tema-custom');
-    const valorSincronizado = ideiaEscolhida || temaBase;
+    const valorLimpo = extrairTemaLimpoParaThumbESeo(ideiaEscolhida) || temaBase;
 
     if (inputTemaThumb && (!inputTemaThumb.value || inputTemaThumb.dataset.autoSynced === 'true')) {
-      inputTemaThumb.value = valorSincronizado;
+      inputTemaThumb.value = extrairTemaLimpoParaThumbESeo(ideiaEscolhida || temaBase);
       inputTemaThumb.dataset.autoSynced = 'true';
     }
     if (inputTemaSeo && (!inputTemaSeo.value || inputTemaSeo.dataset.autoSynced === 'true')) {
-      inputTemaSeo.value = valorSincronizado;
+      inputTemaSeo.value = extrairTemaLimpoParaThumbESeo(ideiaEscolhida || temaBase);
       inputTemaSeo.dataset.autoSynced = 'true';
     }
   }
@@ -8842,12 +8997,13 @@ document.addEventListener('DOMContentLoaded', () => {
   if (inputTemaCustom) inputTemaCustom.addEventListener('input', syncTema);
   if (inputIdeiaEscolhida) {
     inputIdeiaEscolhida.addEventListener('input', () => {
-      // Quando o usuário preenche a ideia no Passo B, atualiza Thumbnail e SEO se eles estiverem auto-sincronizados
+      // Quando o usuário preenche a ideia no Passo B, atualiza Thumbnail e SEO com o tema limpo
+      const temaLimpo = extrairTemaLimpoParaThumbESeo(inputIdeiaEscolhida.value.trim()) || UI.getValue('select-tema', 'input-tema-custom');
       if (inputTemaThumb && inputTemaThumb.dataset.autoSynced !== 'false') {
-        inputTemaThumb.value = inputIdeiaEscolhida.value.trim() || UI.getValue('select-tema', 'input-tema-custom');
+        inputTemaThumb.value = temaLimpo;
       }
       if (inputTemaSeo && inputTemaSeo.dataset.autoSynced !== 'false') {
-        inputTemaSeo.value = inputIdeiaEscolhida.value.trim() || UI.getValue('select-tema', 'input-tema-custom');
+        inputTemaSeo.value = temaLimpo;
       }
     });
   }
@@ -8861,7 +9017,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (inputTomCustom) inputTomCustom.addEventListener('input', syncTomAudio);
   syncTomAudio();
 
-  // Botão: Preencher com o padrão do canal (Item 3)
+  // Botão: Preencher com o padrão do canal (Item 3 & Item 6)
   const btnPadraoCanal = document.getElementById('btn-preencher-padrao-canal');
   if (btnPadraoCanal) {
     btnPadraoCanal.addEventListener('click', () => {
@@ -8897,6 +9053,33 @@ document.addEventListener('DOMContentLoaded', () => {
       if (containerTomCustom) containerTomCustom.classList.add('hidden');
       if (inputTomCustom) inputTomCustom.value = '';
       if (selectGancho) selectGancho.value = 'Citação Impactante';
+
+      // Item 6: Preenche também a etapa 3 com o padrão do canal (campos continuam editáveis)
+      const selectEstiloThumb = document.getElementById('select-estilo-thumb');
+      const containerEstiloThumbCustom = document.getElementById('container-estilo-thumb-custom');
+      const inputEstiloThumbCustom = document.getElementById('input-estilo-thumb-custom');
+      const selectCoresThumb = document.getElementById('select-cores-thumb');
+      const containerCoresThumbCustom = document.getElementById('container-cores-thumb-custom');
+      const inputCoresThumbCustom = document.getElementById('input-cores-thumb-custom');
+      const selectElementosThumb = document.getElementById('select-elementos-thumb');
+      const containerElementosThumbCustom = document.getElementById('container-elementos-thumb-custom');
+      const inputElementosThumbCustom = document.getElementById('input-elementos-thumb-custom');
+
+      if (selectEstiloThumb) {
+        selectEstiloThumb.value = 'Impacto Visual Dramático';
+        if (containerEstiloThumbCustom) containerEstiloThumbCustom.classList.add('hidden');
+        if (inputEstiloThumbCustom) inputEstiloThumbCustom.value = '';
+      }
+      if (selectCoresThumb) {
+        selectCoresThumb.value = 'Sóbrias e Dramáticas (tons escuros, sépia)';
+        if (containerCoresThumbCustom) containerCoresThumbCustom.classList.add('hidden');
+        if (inputCoresThumbCustom) inputCoresThumbCustom.value = '';
+      }
+      if (selectElementosThumb) {
+        selectElementosThumb.value = 'Ilustração Central Única';
+        if (containerElementosThumbCustom) containerElementosThumbCustom.classList.add('hidden');
+        if (inputElementosThumbCustom) inputElementosThumbCustom.value = '';
+      }
 
       syncTema();
       syncTomAudio();

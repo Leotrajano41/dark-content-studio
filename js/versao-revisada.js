@@ -49,89 +49,89 @@
    * Compara duas sequências de frases usando algoritmo de Longest Common Subsequence (LCS)
    * ou pareamento posicional / similaridade para extrair as alterações (antes -> depois).
    */
+  /**
+   * Compara duas sequências de frases usando algoritmo de Longest Common Subsequence (LCS)
+   * para identificar com exatidão cirúrgica quais frases foram modificadas, adicionadas ou removidas.
+   */
   function compararFrases(textoOriginal, textoRevisado) {
-    const frasesOriginais = extrairFrases(textoOriginal);
-    const frasesRevisadas = extrairFrases(textoRevisado);
+    if (!textoOriginal && !textoRevisado) return [];
+    if (String(textoOriginal).trim() === String(textoRevisado).trim()) return [];
 
-    // Se forem idênticas
-    if (textoOriginal.trim() === textoRevisado.trim()) {
-      return [];
-    }
+    // Limpeza defensiva de marcações de roteiro se houver no original
+    const limparMarcacoesRoteiro = (t) => {
+      return String(t || '')
+        .replace(/\[(?:CENA|EFEITO\s+SONORO|TRILHA|PAUSA|IMAGEM|VÍDEO)[^\]]*\]/gi, '')
+        .replace(/^Narrador:\s*/gim, '')
+        .trim();
+    };
 
-    // Algoritmo de alinhamento por similaridade/LCS
-    // Abordagem balanceada: se o tamanho for igual ou muito próximo,
-    // identificamos exatamente quais frases diferem.
-    // Para casos com adições/remoções, usamos matriz de alinhamento com pontuação Levenshtein/Jaccard.
-    
-    const mudancas = [];
+    const frasesOriginais = extrairFrases(limparMarcacoesRoteiro(textoOriginal));
+    const frasesRevisadas = extrairFrases(limparMarcacoesRoteiro(textoRevisado));
 
-    // Se ambos tiverem o mesmo número de frases, podemos comparar 1 a 1 diretamente
-    if (frasesOriginais.length === frasesRevisadas.length) {
-      for (let i = 0; i < frasesOriginais.length; i++) {
-        if (frasesOriginais[i] !== frasesRevisadas[i]) {
-          mudancas.push({
-            antes: frasesOriginais[i],
-            depois: frasesRevisadas[i]
-          });
+    if (frasesOriginais.length === 0 && frasesRevisadas.length === 0) return [];
+
+    const m = frasesOriginais.length;
+    const n = frasesRevisadas.length;
+
+    // Normalização suave para match de frases
+    const norm = s => String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+    const saoIguais = (a, b) => a === b || norm(a) === norm(b);
+
+    // Tabela DP do LCS
+    const dp = Array.from({ length: m + 1 }, () => new Int32Array(n + 1));
+
+    for (let i = 0; i < m; i++) {
+      for (let j = 0; j < n; j++) {
+        if (saoIguais(frasesOriginais[i], frasesRevisadas[j])) {
+          dp[i + 1][j + 1] = dp[i][j] + 1;
+        } else {
+          dp[i + 1][j + 1] = Math.max(dp[i + 1][j], dp[i][j + 1]);
         }
       }
-      return mudancas;
     }
 
-    // Para contagens diferentes de frases, usamos alinhamento por distância
-    let i = 0;
-    let j = 0;
+    // Reconstrução do diff do final para o início
+    let i = m;
+    let j = n;
+    const diffTokens = [];
 
-    while (i < frasesOriginais.length || j < frasesRevisadas.length) {
-      if (i < frasesOriginais.length && j < frasesRevisadas.length) {
-        if (frasesOriginais[i] === frasesRevisadas[j]) {
-          i++;
-          j++;
-          continue;
-        }
+    while (i > 0 || j > 0) {
+      if (i > 0 && j > 0 && saoIguais(frasesOriginais[i - 1], frasesRevisadas[j - 1])) {
+        diffTokens.unshift({ tipo: 'igual', antes: frasesOriginais[i - 1], depois: frasesRevisadas[j - 1] });
+        i--;
+        j--;
+      } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+        diffTokens.unshift({ tipo: 'adicionado', antes: null, depois: frasesRevisadas[j - 1] });
+        j--;
+      } else if (i > 0 && (j === 0 || dp[i][j - 1] < dp[i - 1][j])) {
+        diffTokens.unshift({ tipo: 'removido', antes: frasesOriginais[i - 1], depois: null });
+        i--;
+      }
+    }
 
-        // Tenta encontrar a próxima frase igual em um raio de até 5 posições
-        let matchJ = -1;
-        let matchI = -1;
+    // Agrupa blocos contíguos de mudanças
+    const mudancas = [];
+    let k = 0;
+    while (k < diffTokens.length) {
+      if (diffTokens[k].tipo === 'igual') {
+        k++;
+        continue;
+      }
 
-        for (let lookahead = 1; lookahead <= 5; lookahead++) {
-          if (j + lookahead < frasesRevisadas.length && frasesOriginais[i] === frasesRevisadas[j + lookahead]) {
-            matchJ = j + lookahead;
-            break;
-          }
-          if (i + lookahead < frasesOriginais.length && frasesOriginais[i + lookahead] === frasesRevisadas[j]) {
-            matchI = i + lookahead;
-            break;
-          }
-        }
+      const rems = [];
+      const adds = [];
+      while (k < diffTokens.length && diffTokens[k].tipo !== 'igual') {
+        if (diffTokens[k].tipo === 'removido') rems.push(diffTokens[k].antes);
+        if (diffTokens[k].tipo === 'adicionado') adds.push(diffTokens[k].depois);
+        k++;
+      }
 
-        if (matchJ !== -1) {
-          // Frases adicionadas no revisado
-          while (j < matchJ) {
-            mudancas.push({ antes: '(nenhuma)', depois: frasesRevisadas[j] });
-            j++;
-          }
-        } else if (matchI !== -1) {
-          // Frases removidas do original
-          while (i < matchI) {
-            mudancas.push({ antes: frasesOriginais[i], depois: '(removida)' });
-            i++;
-          }
-        } else {
-          // Frase alterada pontualmente
-          mudancas.push({
-            antes: frasesOriginais[i],
-            depois: frasesRevisadas[j]
-          });
-          i++;
-          j++;
-        }
-      } else if (i < frasesOriginais.length) {
-        mudancas.push({ antes: frasesOriginais[i], depois: '(removida)' });
-        i++;
-      } else if (j < frasesRevisadas.length) {
-        mudancas.push({ antes: '(nenhuma)', depois: frasesRevisadas[j] });
-        j++;
+      const maxLen = Math.max(rems.length, adds.length);
+      for (let x = 0; x < maxLen; x++) {
+        mudancas.push({
+          antes: rems[x] || '(nenhuma)',
+          depois: adds[x] || '(removida)'
+        });
       }
     }
 
