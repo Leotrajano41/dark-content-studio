@@ -1902,6 +1902,24 @@ textarea.h-180 {
           </button>
         </div>
 
+        <!-- Painel de Cenas Pendentes (Bloqueia a exportação até serem geradas) -->
+        <div id="card-cenas-pendentes" class="output-card mt-4 hidden" style="border: 1px solid #f59e0b; background: rgba(245, 158, 11, 0.1);">
+          <div class="output-header" style="flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="output-title" style="color: #fbbf24;">⚠️ Cenas Pendentes de Prompt (<span id="count-cenas-pendentes">0</span>)</span>
+            </div>
+            <button id="btn-regenerar-cenas-pendentes" class="btn btn-warning btn-sm" style="font-weight: 700; background: #f59e0b; color: #000; border: none;">
+              <span class="spinner hidden"></span>
+              ↻ Gerar de novo as cenas pendentes
+            </button>
+          </div>
+          <p class="field-hint" style="color: #fde68a; margin-bottom: 10px;">
+            As cenas abaixo não receberam prompt visual aprovado (a IA falhou ou a descrição foi rejeitada pelo validador). 
+            <strong>A exportação do pacote Scriptorium fica bloqueada até que todas sejam geradas.</strong>
+          </p>
+          <div id="lista-cenas-pendentes" style="max-height: 160px; overflow-y: auto; font-size: 0.82rem; font-family: var(--font-mono); color: #fef3c7; background: rgba(0, 0, 0, 0.4); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(245, 158, 11, 0.3);"></div>
+        </div>
+
         <!-- Painel de Exportação e Arquivos para o Scriptorium (Itens 9 a 14) -->
         <div id="card-plano-cenas" class="output-card mt-4 hidden">
           <div class="output-header" style="flex-wrap: wrap; gap: 10px;">
@@ -11041,9 +11059,13 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       const alerta = document.getElementById('alerta-plano-cenas-desatualizado');
       if (alerta) alerta.classList.add('hidden');
 
+      atualizarPainelCenasPendentes();
       atualizarSeloAba(2, true);
 
-      if (plano.avisos && plano.avisos.length > 0) {
+      const pendentesIniciais = plano.cenas.filter(c => c.status === 'PENDENTE');
+      if (pendentesIniciais.length > 0) {
+        UI.showToast(`Atenção: ${pendentesIniciais.length} cena(s) ficaram pendentes de aprovação visual. Gere-as de novo.`, 'warning');
+      } else if (plano.avisos && plano.avisos.length > 0) {
         UI.showToast(`Atenção: ${plano.avisos[0]}`, 'warning');
       } else {
         UI.showToast(`Plano de Cenas gerado com sucesso: ${plano.cenas.length} imagens!`);
@@ -11055,6 +11077,100 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       UI.setButtonLoading(btnGerar, false);
     }
   }
+
+  function atualizarPainelCenasPendentes() {
+    const cardPendentes = document.getElementById('card-cenas-pendentes');
+    const countSpan = document.getElementById('count-cenas-pendentes');
+    const listaDiv = document.getElementById('lista-cenas-pendentes');
+    const btnDownloadZip = document.getElementById('btn-download-pacote-scriptorium');
+    if (!cardPendentes || !countSpan || !listaDiv) return;
+
+    const cenas = window._planoDeCenasAtual?.cenas || [];
+    const pendentes = cenas.filter(c => c.status === 'PENDENTE' || (c.promptIngles && c.promptIngles.includes('[PENDENTE')));
+
+    if (pendentes.length > 0) {
+      cardPendentes.classList.remove('hidden');
+      countSpan.textContent = `${pendentes.length} cena(s)`;
+      listaDiv.innerHTML = pendentes.map(c => `
+        <div style="margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 4px;">
+          <strong>Cena ${c.numero}</strong>: "${(c.frases || [c.fraseInicio]).join(' ').slice(0, 65)}..." 
+          <span style="color: #fca5a5;">(Motivo: ${c.motivoPendente || 'Rejeitada pelo validador'})</span>
+        </div>
+      `).join('');
+      if (btnDownloadZip) {
+        btnDownloadZip.setAttribute('disabled', 'disabled');
+        btnDownloadZip.title = 'Bloqueado: existem cenas pendentes de prompt!';
+        btnDownloadZip.style.opacity = '0.5';
+      }
+    } else {
+      cardPendentes.classList.add('hidden');
+      if (btnDownloadZip) {
+        btnDownloadZip.removeAttribute('disabled');
+        btnDownloadZip.title = 'Baixar Pacote Scriptorium Completo (.zip)';
+        btnDownloadZip.style.opacity = '1';
+      }
+    }
+  }
+
+  // Evento de regeneração das cenas pendentes
+  document.getElementById('btn-regenerar-cenas-pendentes')?.addEventListener('click', async () => {
+    if (!window._planoDeCenasAtual || !window._planoDeCenasAtual.cenas) {
+      UI.showToast('Gere o Plano de Cenas primeiro!', 'warning');
+      return;
+    }
+
+    const narracaoLimpa = (document.getElementById('textarea-roteiro-gerado')?.value || '').trim();
+    const btn = document.getElementById('btn-regenerar-cenas-pendentes');
+    UI.setButtonLoading(btn, true);
+
+    try {
+      const inputTema = document.getElementById('input-tema-custom')?.value?.trim() ||
+                        document.getElementById('select-tema')?.value?.trim() ||
+                        'Tema Bíblico';
+      const personagem = document.getElementById('input-personagem-principal')?.value?.trim() || inputTema;
+
+      const hasKey = typeof OpenRouterAPI !== 'undefined' && Boolean(OpenRouterAPI.getApiKey());
+      const chamarIaFn = hasKey ? async (promptLote) => {
+        const modelo = typeof OpenRouterAPI.getModelMediaPrompts === 'function'
+          ? OpenRouterAPI.getModelMediaPrompts()
+          : (typeof OpenRouterAPI.getModelIdeas === 'function' ? OpenRouterAPI.getModelIdeas() : 'google/gemini-2.0-flash-001');
+        return await OpenRouterAPI.generateContent(promptLote, modelo);
+      } : null;
+
+      const res = await PlanoCenasModule.regenerarCenasPendentes(
+        window._planoDeCenasAtual.cenas,
+        narracaoLimpa,
+        chamarIaFn,
+        { tema: inputTema, personagemPrincipal: personagem }
+      );
+
+      const cenasTxt = PlanoCenasModule.gerarCenasTxt(window._planoDeCenasAtual.cenas, narracaoLimpa);
+      const descricoesTxt = PlanoCenasModule.gerarDescricoesTxt(window._planoDeCenasAtual.cenas);
+      const promptsTxt = PlanoCenasModule.gerarPromptsTxt(window._planoDeCenasAtual.cenas);
+
+      window._cenasTxtAtual = cenasTxt;
+      window._descricoesTxtAtual = descricoesTxt;
+      window._promptsTxtAtual = promptsTxt;
+
+      const outCenas = document.getElementById('output-cenas-txt');
+      const outPrompts = document.getElementById('output-prompts-txt');
+      if (outCenas) outCenas.value = cenasTxt;
+      if (outPrompts) outPrompts.value = promptsTxt;
+
+      atualizarPainelCenasPendentes();
+
+      if (res.pendentesRestantes.length === 0) {
+        UI.showToast('Todas as cenas pendentes foram resolvidas e geradas com sucesso!');
+      } else {
+        UI.showToast(`Restam ${res.pendentesRestantes.length} cena(s) pendente(s).`, 'warning');
+      }
+    } catch (err) {
+      console.error(err);
+      UI.showToast(`Erro ao regenerar cenas pendentes: ${err.message}`, 'error');
+    } finally {
+      UI.setButtonLoading(btn, false);
+    }
+  });
 
   // Eventos de clique do Plano de Cenas
   const btnGerarPlano = document.getElementById('btn-gerar-plano-cenas');
@@ -11116,7 +11232,8 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
     if (!validacao.valido) {
       const msg = validacao.erros.join('; ');
       console.warn('[Scriptorium] Falha na validação do pacote:', validacao.erros);
-      UI.showToast(`Aviso de validação: ${msg}`, 'warning');
+      UI.showToast(`Bloqueio de exportação: ${msg}`, 'error');
+      return;
     }
 
     const arquivosZip = [

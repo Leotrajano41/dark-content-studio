@@ -487,17 +487,86 @@ Write a corrected, strictly factual visual description in English adhering to al
           } catch (_) {}
         }
 
-        // Se ainda não for válida, aplica o fallback contextual
-        if (!validacao.valido) {
-          descVisual = gerarDescricaoVisualFallback(trechoPt, c.numero, contexto);
+        // Se a descrição foi validada com sucesso
+        if (validacao.valido) {
+          c.status = 'CONCLUIDA';
+          c.motivoPendente = '';
+          c.descricaoVisual = descVisual;
+          c.promptIngles = montarPromptFinalCena(descVisual, trechoPt, contexto);
+        } else {
+          // NÃO USAR FALLBACK EM SILÊNCIO: Marca como PENDENTE
+          c.status = 'PENDENTE';
+          c.motivoPendente = validacao.motivo || 'Descrição não gerada ou rejeitada pelo validador';
+          c.descricaoVisual = '';
+          c.promptIngles = `[PENDENTE: ${c.motivoPendente}]`;
         }
-
-        c.descricaoVisual = descVisual;
-        c.promptIngles = montarPromptFinalCena(descVisual, trechoPt, contexto);
       }
     }
 
     return cenas;
+  }
+
+  /**
+   * Regenera exclusivamente as cenas com status PENDENTE chamando a IA.
+   */
+  async function regenerarCenasPendentes(cenas, narracaoLimpa, chamarIaFn, contexto = {}) {
+    if (!cenas || !Array.isArray(cenas)) return { cenas: [], pendentesRestantes: [] };
+
+    const pendentes = cenas.filter(c => c.status === 'PENDENTE');
+    if (pendentes.length === 0) {
+      return { cenas, pendentesRestantes: [] };
+    }
+
+    const tamanhoLote = 10;
+    const lotes = [];
+    for (let i = 0; i < pendentes.length; i += tamanhoLote) {
+      lotes.push(pendentes.slice(i, i + tamanhoLote));
+    }
+
+    for (const lote of lotes) {
+      const payloadLote = lote.map(c => ({
+        numero: c.numero,
+        trecho: c.frases.join(' ')
+      }));
+
+      const promptLote = construirPromptIaLoteCenas(payloadLote);
+      let itensLote = [];
+      if (typeof chamarIaFn === 'function') {
+        try {
+          const resp = await chamarIaFn(promptLote);
+          itensLote = extrairJsonLote(resp);
+        } catch (e) {
+          console.warn('[PlanoCenas] Falha ao regenerar lote de pendentes:', e);
+        }
+      }
+
+      for (const c of lote) {
+        const trechoPt = c.frases.join(' ');
+        const itemIa = Array.isArray(itensLote)
+          ? itensLote.find(it => String(it.numero).padStart(2, '0') === c.numero)
+          : null;
+
+        const descVisual = itemIa ? (itemIa.descricaoVisual || itemIa.descricao || '') : '';
+        const validacao = validarDescricaoVisualCena(descVisual, trechoPt);
+
+        if (validacao.valido) {
+          c.status = 'CONCLUIDA';
+          c.motivoPendente = '';
+          c.descricaoVisual = descVisual;
+          c.promptIngles = montarPromptFinalCena(descVisual, trechoPt, contexto);
+        } else {
+          c.status = 'PENDENTE';
+          c.motivoPendente = validacao.motivo || 'Descrição rejeitada na regeneração';
+          c.descricaoVisual = '';
+          c.promptIngles = `[PENDENTE: ${c.motivoPendente}]`;
+        }
+      }
+    }
+
+    return {
+      cenas,
+      pendentesRestantes: cenas.filter(c => c.status === 'PENDENTE')
+    };
   }
 
   /**
@@ -664,6 +733,20 @@ Write a corrected, strictly factual visual description in English adhering to al
       }
     }
 
+    // Bloqueia a exportação se houver qualquer cena com status PENDENTE
+    const cenasPendentes = (cenas || []).filter(c => c.status === 'PENDENTE' || (c.promptIngles && c.promptIngles.includes('[PENDENTE')));
+    if (cenasPendentes.length > 0) {
+      const listaNums = cenasPendentes.map(c => c.numero).join(', ');
+      erros.push(`Existem ${cenasPendentes.length} cena(s) com status PENDENTE aguardando geração de prompt (Cenas: ${listaNums}). Gere de novo as cenas pendentes antes de exportar o pacote Scriptorium.`);
+    }
+
+    if (descricoesTxt && descricoesTxt.includes('[PENDENTE')) {
+      erros.push('descricoes.txt contém cena(s) com status PENDENTE.');
+    }
+    if (promptsTxt && promptsTxt.includes('[PENDENTE')) {
+      erros.push('prompts.txt contém cena(s) com status PENDENTE.');
+    }
+
     return {
       valido: erros.length === 0,
       erros
@@ -798,6 +881,7 @@ Write a corrected, strictly factual visual description in English adhering to al
     montarPromptFinalCena,
     gerarDescricaoVisualFallback,
     gerarDescricoesVisuaisComIa,
+    regenerarCenasPendentes,
     gerarDescricoesVisuaisOffline,
     gerarPlanoDeCenas,
     expandirTrechoParaMinimoPalavras,

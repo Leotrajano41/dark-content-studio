@@ -394,6 +394,128 @@ checar(rejGenerico.valido === false, 'Item E2d: Descrição com "solemn biblical
   checar(palavrasLinha35 >= 5, `Item E6c: Linha 35 expandida possui >= 5 palavras (total: ${palavrasLinha35} palavras: "${linha35.split('|')[1].trim()}")`);
   checar(!linha35.includes('\n'), 'Item E6d: Linha 35 não contém quebras de linha');
 
+  // ---------------------------------------------------------------------------
+  // GRUPO F: CENAS PENDENTES, BLOQUEIO DE EXPORTAÇÃO E REGENERAÇÃO
+  // ---------------------------------------------------------------------------
+  console.log('\n--- GRUPO F: Cenas Pendentes, Bloqueio de Exportação e Regeneração ---');
+
+  // Checagem de elementos na UI (index.html)
+  checar(html.includes('id="card-cenas-pendentes"'), 'Item F0a: Painel card-cenas-pendentes presente no HTML');
+  checar(html.includes('id="btn-regenerar-cenas-pendentes"'), 'Item F0b: Botão btn-regenerar-cenas-pendentes presente no HTML');
+  checar(html.includes('id="lista-cenas-pendentes"'), 'Item F0c: Container lista-cenas-pendentes presente no HTML');
+  checar(html.includes('id="count-cenas-pendentes"'), 'Item F0d: Contador count-cenas-pendentes presente no HTML');
+
+  // Simulação de IA falhando em exatamente 3 cenas (ex: 02, 05 e 08)
+  const cenasTesteFalha = JSON.parse(JSON.stringify(planoReal.cenas.slice(0, 10)));
+  const stubIaFalhandoEm3 = async (promptLote) => {
+    // Se for uma tentativa de correção de uma das cenas que falharam, a IA persiste na falha
+    if (promptLote.includes('Scene 02') || promptLote.includes('Scene 05') || promptLote.includes('Scene 08')) {
+      return JSON.stringify([{ numero: '00', descricaoVisual: 'still invalid description with roaring sea and Portuguese palavras' }]);
+    }
+    const arraySimulado = [];
+    for (let i = 1; i <= 10; i++) {
+      const numStr = String(i).padStart(2, '0');
+      if (i === 2) {
+        // Falha 1: Falso mar ("sea") em trecho sem mar
+        arraySimulado.push({
+          numero: numStr,
+          descricaoVisual: 'Moses standing before the raging sea waves with roaring waters'
+        });
+      } else if (i === 5) {
+        // Falha 2: Texto em português rejeitado pelo validador
+        arraySimulado.push({
+          numero: numStr,
+          descricaoVisual: 'Moisés conversando com o povo hebreu no acampamento do deserto'
+        });
+      } else if (i === 8) {
+        // Falha 3: Clichê vazio proibido
+        arraySimulado.push({
+          numero: numStr,
+          descricaoVisual: 'solemn biblical historical tableau depicting biblical figures'
+        });
+      } else {
+        // Cenas válidas
+        arraySimulado.push({
+          numero: numStr,
+          descricaoVisual: `Biblical desert landscape with ancient Hebrew encampment scene ${numStr}`
+        });
+      }
+    }
+    return JSON.stringify(arraySimulado);
+  };
+
+  await PlanoCenasModule.gerarDescricoesVisuaisComIa(
+    cenasTesteFalha,
+    narracaoMoisesReal,
+    stubIaFalhandoEm3,
+    { tema: 'Moisés em Meribá', personagemPrincipal: 'Moisés' }
+  );
+
+  const pendentes = cenasTesteFalha.filter(c => c.status === 'PENDENTE');
+  checar(pendentes.length === 3, `Item F1a: Exatamente 3 cenas marcadas como PENDENTE após falhas da IA (obtido: ${pendentes.length})`);
+  checar(cenasTesteFalha[1].status === 'PENDENTE', 'Item F1b: Cena 02 marcada como PENDENTE');
+  checar(cenasTesteFalha[4].status === 'PENDENTE', 'Item F1c: Cena 05 marcada como PENDENTE');
+  checar(cenasTesteFalha[7].status === 'PENDENTE', 'Item F1d: Cena 08 marcada como PENDENTE');
+
+  checar(cenasTesteFalha[1].promptIngles.startsWith('[PENDENTE:'), 'Item F1e: Prompt da cena 02 sinaliza status [PENDENTE: ...]');
+  checar(Boolean(cenasTesteFalha[1].motivoPendente), 'Item F1f: Cena 02 possui motivo de pendência explícito');
+  checar(cenasTesteFalha[0].status === 'CONCLUIDA', 'Item F1g: Cenas sem falha são marcadas como CONCLUIDA');
+
+  // Validador do Pacote DEVE bloquear exportação enquanto houver cenas pendentes
+  const cenasTxtPendentes = PlanoCenasModule.gerarCenasTxt(cenasTesteFalha, narracaoMoisesReal);
+  const descricoesTxtPendentes = PlanoCenasModule.gerarDescricoesTxt(cenasTesteFalha);
+  const promptsTxtPendentes = PlanoCenasModule.gerarPromptsTxt(cenasTesteFalha);
+
+  const validacaoComPendentes = PlanoCenasModule.validarPacoteScriptorium({
+    cenasTxt: cenasTxtPendentes,
+    descricoesTxt: descricoesTxtPendentes,
+    promptsTxt: promptsTxtPendentes,
+    narracaoLimpa: narracaoMoisesReal,
+    cenas: cenasTesteFalha
+  });
+
+  checar(validacaoComPendentes.valido === false, 'Item F2a: Validador do pacote Scriptorium rejeita pacote com cenas pendentes');
+  checar(
+    validacaoComPendentes.erros.some(e => e.includes('PENDENTE') && e.includes('02') && e.includes('05') && e.includes('08')),
+    `Item F2b: Mensagem de erro do validador acusa as 3 cenas pendentes nominalmente`
+  );
+
+  // Teste de regeneração de cenas pendentes
+  const stubIaRegeneracao = async (promptLote) => {
+    // Retorna descrições válidas para as 3 cenas pendentes (02, 05, 08)
+    return JSON.stringify([
+      { numero: '02', descricaoVisual: 'Moses standing thoughtfully near desert rocks and sand dunes' },
+      { numero: '05', descricaoVisual: 'Ancient Hebrew people gathering in the arid desert plain' },
+      { numero: '08', descricaoVisual: 'Elders listening attentively in front of nomadic tents under sunlight' }
+    ]);
+  };
+
+  const resRegeneracao = await PlanoCenasModule.regenerarCenasPendentes(
+    cenasTesteFalha,
+    narracaoMoisesReal,
+    stubIaRegeneracao,
+    { tema: 'Moisés em Meribá', personagemPrincipal: 'Moisés' }
+  );
+
+  checar(resRegeneracao.pendentesRestantes.length === 0, 'Item F3a: Regeneração resolve todas as 3 cenas pendentes');
+  checar(cenasTesteFalha[1].status === 'CONCLUIDA', 'Item F3b: Cena 02 atualizada para CONCLUIDA após regeneração');
+  checar(cenasTesteFalha[4].status === 'CONCLUIDA', 'Item F3c: Cena 05 atualizada para CONCLUIDA após regeneração');
+  checar(cenasTesteFalha[7].status === 'CONCLUIDA', 'Item F3d: Cena 08 atualizada para CONCLUIDA após regeneração');
+  checar(!cenasTesteFalha[1].promptIngles.includes('[PENDENTE'), 'Item F3e: Prompt da cena 02 não possui mais marcador de pendência');
+
+  // Validador do Pacote passa com 100% de sucesso após regeneração
+  const descricoesTxtPosRegen = PlanoCenasModule.gerarDescricoesTxt(cenasTesteFalha);
+  const promptsTxtPosRegen = PlanoCenasModule.gerarPromptsTxt(cenasTesteFalha);
+
+  const validacaoPosRegen = PlanoCenasModule.validarPacoteScriptorium({
+    cenasTxt: cenasTxtPendentes,
+    descricoesTxt: descricoesTxtPosRegen,
+    promptsTxt: promptsTxtPosRegen,
+    narracaoLimpa: narracaoMoisesReal,
+    cenas: cenasTesteFalha
+  });
+  checar(validacaoPosRegen.valido === true, 'Item F4: Validador do pacote Scriptorium aprova 100% o pacote após a regeneração das pendentes');
+
   console.log(`\n🎉 ESTRUTURA DE TESTES OFFLINE DO LOTE 02 PASSOU COM SUCESSO (${totalAsserts} verificações)!`);
 })().catch(e => {
   console.error(e);
