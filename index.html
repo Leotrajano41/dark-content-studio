@@ -8553,17 +8553,24 @@ function limparTextoParaNarracao(texto, estiloRoteiro = '') {
 
   let limpo = texto;
 
+  // 0. Remove títulos em maiúsculas acompanhados de separadores (---, --, —, -, :, |) antes de uma citação bíblica/narrativa
+  // ex: '# A ABERTURA DO MAR VERMELHO --- **[HOOK – CITAÇÃO IMPACTANTE]** "Não temais..."' vira '"Não temais..."'
+  // ex: 'A ABERTURA DO MAR VERMELHO --- "Não temais..."' vira '"Não temais..."'
+  limpo = limpo.replace(/^[^\S\r\n]*(?:#+\s*|(?:Title|Título|Titulo)\s*:\s*)?(?:[A-ZÀ-Ú0-9\s,.'’\-–—]{3,70})\s*(?:---|--|—|-|:|\|)\s*(?:\*{0,2}\[[^\]]*\]\*{0,2}\s*:?\s*)?(["“«][^"”»]{5,}["”»])/gm, '$1');
+
   // 1. Remove linhas de título ("Title: ...", "Título: ...", "# ...", "## ...", "### ...")
-  // ITEM 15: Nunca apaga linha que contém citação bíblica (entre aspas) ou frase narrativa; remove apenas o rótulo inicial
+  // ITEM 15: Se contiver citação bíblica entre aspas, preserva APENAS a citação/narrativa, descartando qualquer prefixo de título e separador
   limpo = limpo.replace(/^\s*(?:Title|Título|Titulo)\s*:\s*(.*)$/gmi, (match, resto) => {
-    if (/(["“«])([^"”»]{5,})(["”»])/.test(resto)) {
-      return resto;
+    const citMatch = resto.match(/(["“«][^"”»]{5,}["”»].*)$/);
+    if (citMatch) {
+      return citMatch[1].trim();
     }
     return '';
   });
   limpo = limpo.replace(/^\s*#+\s*(.*)$/gm, (match, resto) => {
-    if (/(["“«])([^"”»]{5,})(["”»])/.test(resto)) {
-      return resto;
+    const citMatch = resto.match(/(["“«][^"”»]{5,}["”»].*)$/);
+    if (citMatch) {
+      return citMatch[1].trim();
     }
     return '';
   });
@@ -8670,6 +8677,12 @@ function limparTextoParaNarracao(texto, estiloRoteiro = '') {
   if (typeof validarECorrigirAspas === 'function') {
     limpo = validarECorrigirAspas(limpo);
   }
+
+  // 18. Garante ponto final em citações isoladas no fim de linha ou parágrafo sem pontuação
+  limpo = limpo.replace(/(^[^\S\r\n]*["“«][^"”»\n]+?)(["”»])(?=[^\S\r\n]*(?:\r?\n|$))/gm, (m, txt, aspa) => {
+    if (/[.!?]$/.test(txt.trim())) return m;
+    return txt.trim() + '.' + aspa;
+  });
 
   return limpo.trim();
 }
@@ -8994,7 +9007,7 @@ document.addEventListener('DOMContentLoaded', () => {
     selectEstiloEl.value = 'YouTube Longo (18-20 minutos)';
   }
 
-  document.getElementById('btn-save-api-config').addEventListener('click', () => {
+  document.getElementById('btn-save-api-config')?.addEventListener('click', () => {
     const key = (inputApiKey.value || '').trim();
     const modelIdeias = (inputApiModelIdeias.value || '').trim() || 'openai/gpt-4o-mini';
     const modelRoteiro = (inputApiModelRoteiro.value || '').trim() || 'anthropic/claude-sonnet-4.5';
@@ -9044,7 +9057,7 @@ document.addEventListener('DOMContentLoaded', () => {
         containerNumItensEl.classList.add('hidden');
       }
     };
-    selectEstiloCatalogoEl.addEventListener('change', atualizarVisibilidadeNumItens);
+    if (selectEstiloCatalogoEl) selectEstiloCatalogoEl.addEventListener('change', atualizarVisibilidadeNumItens);
     atualizarVisibilidadeNumItens();
   }
 
@@ -9140,7 +9153,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  selectTema.addEventListener('change', syncTema);
+  if (selectTema) selectTema.addEventListener('change', syncTema);
   if (inputTemaCustom) inputTemaCustom.addEventListener('input', syncTema);
   if (inputIdeiaEscolhida) {
     inputIdeiaEscolhida.addEventListener('input', () => {
@@ -9264,7 +9277,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  document.getElementById('btn-gerar-prompt-ideias').addEventListener('click', async () => {
+  document.getElementById('btn-gerar-prompt-ideias')?.addEventListener('click', async () => {
     // 1) Ativa trava estrita: impede qualquer recriação ou exibição de cards enquanto a geração estiver em andamento
     window._gerandoIdeiasAtivo = true;
 
@@ -10794,10 +10807,6 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       const outputRoteiroEl = document.getElementById('output-prompt-roteiro');
       if (outputRoteiroEl) outputRoteiroEl.value = resultText;
 
-      if (textareaRoteiroGerado) {
-        textareaRoteiroGerado.value = resultText;
-      }
-
       // ITEM 5 (Requisito Narração Limpa): Gera a versão limpa sem marcadores nem rótulos
       let textoLimpo = typeof limparTextoParaNarracao === 'function'
         ? limparTextoParaNarracao(resultText)
@@ -10813,12 +10822,16 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
             const emCompleto = aplicarCorrecoesGramaticais(resultText, gramRes.aplicadas.map(a => ({ fraseOriginal: a.original, fraseCorrigida: a.corrigida })));
             resultText = emCompleto.texto;
             if (outputRoteiroEl) outputRoteiroEl.value = resultText;
-            if (textareaRoteiroGerado) textareaRoteiroGerado.value = resultText;
             UI.showToast(`Revisão gramatical: ${gramRes.aplicadas.length} frase(s) quebrada(s) corrigida(s) na Narração Limpa.`);
           }
         } catch (eGram) {
           console.warn('[Revisão Gramatical] Falha ao revisar a Narração Limpa:', eGram);
         }
+      }
+
+      // Base do Plano de Cenas (Etapa 2) recebe a Narração Limpa (NÃO o roteiro bruto)
+      if (textareaRoteiroGerado) {
+        textareaRoteiroGerado.value = textoLimpo;
       }
 
       const outputRoteiroLimpoEl = document.getElementById('output-roteiro-limpo');
@@ -10987,8 +11000,15 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
   }
 
   async function executarGeracaoPlanoCenas() {
+    const outLimpo = document.getElementById('output-roteiro-limpo');
     const textareaRoteiro = document.getElementById('textarea-roteiro-gerado');
-    const narracaoLimpa = (textareaRoteiro?.value || '').trim();
+    let narracaoLimpa = (outLimpo?.value || textareaRoteiro?.value || '').trim();
+    if (typeof limparTextoParaNarracao === 'function' && (/^#\s|\*\*\[|\[HOOK/i.test(narracaoLimpa))) {
+      narracaoLimpa = limparTextoParaNarracao(narracaoLimpa);
+    }
+    if (textareaRoteiro && textareaRoteiro.value !== narracaoLimpa) {
+      textareaRoteiro.value = narracaoLimpa;
+    }
     if (!narracaoLimpa) {
       UI.showToast('Gere ou cole a Narração Limpa no campo acima primeiro!', 'warning');
       return;
@@ -11215,7 +11235,9 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       return;
     }
 
-    const narracaoLimpa = (document.getElementById('textarea-roteiro-gerado')?.value || '').trim();
+    const narracaoLimpa = (document.getElementById('output-roteiro-limpo')?.value ||
+                           document.getElementById('textarea-narracao-limpa-audio')?.value ||
+                           document.getElementById('textarea-roteiro-gerado')?.value || '').trim();
     const cenasTxt = window._cenasTxtAtual;
     const descricoesTxt = window._descricoesTxtAtual || PlanoCenasModule.gerarDescricoesTxt(window._planoDeCenasAtual.cenas);
     const promptsTxt = window._promptsTxtAtual || PlanoCenasModule.gerarPromptsTxt(window._planoDeCenasAtual.cenas);
@@ -11266,7 +11288,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
     UI.showToast(`Pacote ${nomeZip} exportado com sucesso!`);
   });
 
-  document.getElementById('btn-gerar-prompt-keywords').addEventListener('click', async () => {
+  document.getElementById('btn-gerar-prompt-keywords')?.addEventListener('click', async () => {
     const roteiro = textareaRoteiroGerado.value.trim();
     if (!roteiro) {
       UI.showToast('Cole ou gere o roteiro no campo acima primeiro!', 'warning');
@@ -11320,63 +11342,66 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
     }
   });
 
-  document.getElementById('btn-gerar-prompt-imagens-ia').addEventListener('click', async () => {
-    const roteiro = textareaRoteiroGerado.value.trim();
-    if (!roteiro) {
-      UI.showToast('Cole ou gere o roteiro no campo acima primeiro!', 'warning');
-      return;
-    }
-
-    const promptText = PromptEngine.generateAiVisualPrompts({ roteiro });
-    const hasKey = Boolean(OpenRouterAPI.getApiKey());
-    const btn = document.getElementById('btn-gerar-prompt-imagens-ia');
-    const outputEl = document.getElementById('output-prompt-imagens-ia');
-
-    UI.setButtonLoading(btn, true);
-
-    try {
-      const fixedStyleSuffix = 'Hand-drawn illustration in sepia ink linework with soft watercolor washes, painted on aged parchment paper with subtle stains and fibers. Warm palette of ochre, umber and parchment beige, with deep crimson red and burnished gold leaf as the only accent colors. Warm candlelight or golden divine light on the main subject. One clear focal subject, generous empty parchment around it, delicate thin gold corner ornaments. Clothing, armor and architecture accurate to the scene\'s biblical period: Bronze and Iron Age Near East for Old Testament scenes (no Roman or Greek armor), first-century Roman Judea for New Testament scenes; no medieval elements. No text, no letters, no words, no watermark, no logo. 16:9.';
-
-      if (hasKey) {
-        const aiResponse = await OpenRouterAPI.generateContent(promptText, OpenRouterAPI.getModelIdeas());
-        
-        // Processa linha por linha garantindo o bloco de estilo apenas nas linhas de Prompt
-        const finalResponse = aiResponse.split('\n').map(line => {
-          if (/^\s*(\*{1,2})?\s*Prompt\s+\d+/i.test(line)) {
-            if (!line.includes('Hand-drawn illustration in sepia ink linework')) {
-              const cleanLine = line.trimEnd().replace(/[,.]\s*$/, '');
-              return `${cleanLine}, ${fixedStyleSuffix}`;
-            }
-          }
-          return line;
-        }).join('\n');
-
-        if (outputEl) outputEl.value = finalResponse || aiResponse;
-        atualizarSeloAba(2, true);
-        UI.showToast('30-40 Prompts para IA visual gerados em ordem cronológica!');
-        AutoSave.save();
-      } else {
-        const samplePrompts = [
-          `Prompt 1: Extreme close-up of an ancient weathered bronze oil lamp resting on a rough limestone block, a single warm amber flame casting subtle golden light, generous empty aged parchment surrounding it, ${fixedStyleSuffix}`,
-          `Prompt 2: A massive iron bedstead measuring nine cubits in length, with a standard-sized man standing beside it for biblical scale comparison, rough dark iron texture, ${fixedStyleSuffix}`,
-          `Prompt 3: A single cloaked Judean traveler walking with a gnarled olive wood staff through an arid stony valley, warm golden light descending from above, ${fixedStyleSuffix}`,
-          `Prompt 4: An ancient cedarwood table holding five small silver shekels and a single clay jar, warm candlelight illumination, generous empty parchment background, ${fixedStyleSuffix}`,
-          `Prompt 5: Massive stone fortress ramparts towering forty cubits high, with a single watchman standing on the walkway for human scale comparison, ${fixedStyleSuffix}`
-        ].join('\n\n');
-
-        if (outputEl) outputEl.value = samplePrompts;
-        atualizarSeloAba(2, true);
-        UI.showToast('Prompts modelo gerados! Insira sua API Key para cobrir o roteiro completo.', 'warning');
-        AutoSave.save();
+  const btnImagensIa = document.getElementById('btn-gerar-prompt-imagens-ia');
+  if (btnImagensIa) {
+    btnImagensIa.addEventListener('click', async () => {
+      const roteiro = textareaRoteiroGerado ? textareaRoteiroGerado.value.trim() : '';
+      if (!roteiro) {
+        UI.showToast('Cole ou gere o roteiro no campo acima primeiro!', 'warning');
+        return;
       }
-    } catch (err) {
-      UI.showToast(err.message, 'error');
-    } finally {
-      UI.setButtonLoading(btn, false);
-    }
-  });
 
-  document.getElementById('btn-gerar-prompts-thumb').addEventListener('click', async () => {
+      const promptText = PromptEngine.generateAiVisualPrompts({ roteiro });
+      const hasKey = Boolean(OpenRouterAPI.getApiKey());
+      const btn = document.getElementById('btn-gerar-prompt-imagens-ia');
+      const outputEl = document.getElementById('output-prompt-imagens-ia');
+
+      UI.setButtonLoading(btn, true);
+
+      try {
+        const fixedStyleSuffix = 'Hand-drawn illustration in sepia ink linework with soft watercolor washes, painted on aged parchment paper with subtle stains and fibers. Warm palette of ochre, umber and parchment beige, with deep crimson red and burnished gold leaf as the only accent colors. Warm candlelight or golden divine light on the main subject. One clear focal subject, generous empty parchment around it, delicate thin gold corner ornaments. Clothing, armor and architecture accurate to the scene\'s biblical period: Bronze and Iron Age Near East for Old Testament scenes (no Roman or Greek armor), first-century Roman Judea for New Testament scenes; no medieval elements. No text, no letters, no words, no watermark, no logo. 16:9.';
+
+        if (hasKey) {
+          const aiResponse = await OpenRouterAPI.generateContent(promptText, OpenRouterAPI.getModelIdeas());
+          
+          // Processa linha por linha garantindo o bloco de estilo apenas nas linhas de Prompt
+          const finalResponse = aiResponse.split('\n').map(line => {
+            if (/^\s*(\*{1,2})?\s*Prompt\s+\d+/i.test(line)) {
+              if (!line.includes('Hand-drawn illustration in sepia ink linework')) {
+                const cleanLine = line.trimEnd().replace(/[,.]\s*$/, '');
+                return `${cleanLine}, ${fixedStyleSuffix}`;
+              }
+            }
+            return line;
+          }).join('\n');
+
+          if (outputEl) outputEl.value = finalResponse || aiResponse;
+          atualizarSeloAba(2, true);
+          UI.showToast('30-40 Prompts para IA visual gerados em ordem cronológica!');
+          AutoSave.save();
+        } else {
+          const samplePrompts = [
+            `Prompt 1: Extreme close-up of an ancient weathered bronze oil lamp resting on a rough limestone block, a single warm amber flame casting subtle golden light, generous empty aged parchment surrounding it, ${fixedStyleSuffix}`,
+            `Prompt 2: A massive iron bedstead measuring nine cubits in length, with a standard-sized man standing beside it for biblical scale comparison, rough dark iron texture, ${fixedStyleSuffix}`,
+            `Prompt 3: A single cloaked Judean traveler walking with a gnarled olive wood staff through an arid stony valley, warm golden light descending from above, ${fixedStyleSuffix}`,
+            `Prompt 4: An ancient cedarwood table holding five small silver shekels and a single clay jar, warm candlelight illumination, generous empty parchment background, ${fixedStyleSuffix}`,
+            `Prompt 5: Massive stone fortress ramparts towering forty cubits high, with a single watchman standing on the walkway for human scale comparison, ${fixedStyleSuffix}`
+          ].join('\n\n');
+
+          if (outputEl) outputEl.value = samplePrompts;
+          atualizarSeloAba(2, true);
+          UI.showToast('Prompts modelo gerados! Insira sua API Key para cobrir o roteiro completo.', 'warning');
+          AutoSave.save();
+        }
+      } catch (err) {
+        UI.showToast(err.message, 'error');
+      } finally {
+        UI.setButtonLoading(btn, false);
+      }
+    });
+  }
+
+  document.getElementById('btn-gerar-prompts-thumb')?.addEventListener('click', async () => {
     const tema = (inputIdeiaEscolhida ? inputIdeiaEscolhida.value.trim() : '') || inputTemaThumb.value.trim() || UI.getValue('select-tema', 'input-tema-custom');
     const estilo = UI.getValue('select-estilo-thumb', 'input-estilo-thumb-custom');
     const cores = UI.getValue('select-cores-thumb', 'input-cores-thumb-custom');
@@ -11445,7 +11470,7 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
     }
   });
 
-  document.getElementById('btn-gerar-prompt-seo').addEventListener('click', async () => {
+  document.getElementById('btn-gerar-prompt-seo')?.addEventListener('click', async () => {
     const tema = (inputIdeiaEscolhida ? inputIdeiaEscolhida.value.trim() : '') || inputTemaSeo.value.trim() || UI.getValue('select-tema', 'input-tema-custom');
     const resumo = document.getElementById('textarea-resumo-seo').value.trim();
     const idioma = UI.getValue('select-idioma', 'input-idioma-custom');
@@ -11631,7 +11656,7 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
   const outputLegendaSrt = document.getElementById('output-legenda-srt');
 
   // Gerar Narração (Áudio MP3)
-  btnGerarAudio.addEventListener('click', async () => {
+  if (btnGerarAudio) btnGerarAudio.addEventListener('click', async () => {
     // A5: Ao gerar um áudio novo, apagar a legenda antiga automaticamente
     if (outputLegendaSrt) outputLegendaSrt.value = '';
     if (cardLegendaOutput) cardLegendaOutput.classList.add('hidden');
@@ -11799,7 +11824,7 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
   });
 
   // Baixar Narração (.mp3)
-  btnDownloadAudio.addEventListener('click', () => {
+  if (btnDownloadAudio) btnDownloadAudio.addEventListener('click', () => {
     if (!currentAudioBlob) {
       UI.showToast('Nenhum áudio gerado nesta sessão para download.', 'warning');
       return;
@@ -11827,7 +11852,7 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
   });
 
   // Gerar Legenda (.srt via AssemblyAI alinhada com o texto exato da Narração Limpa)
-  btnGerarLegenda.addEventListener('click', async () => {
+  if (btnGerarLegenda) btnGerarLegenda.addEventListener('click', async () => {
     if (!currentAudioBlob) {
       UI.showToast('Gere o áudio da narração primeiro antes de gerar a legenda!', 'warning');
       return;
@@ -11929,7 +11954,7 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
   });
 
   // Baixar Legenda (.srt)
-  btnDownloadSrt.addEventListener('click', () => {
+  if (btnDownloadSrt) btnDownloadSrt.addEventListener('click', () => {
     const srtText = (outputLegendaSrt ? outputLegendaSrt.value.trim() : '') || currentSrtContent;
     if (!srtText) {
       UI.showToast('Nenhuma legenda gerada para download.', 'warning');
@@ -11994,17 +12019,17 @@ Desenvolvimento: A soberania divina cumpre cada detalhe profético anunciado pel
     syncTema();
     syncTomAudio();
 
-    document.getElementById('btn-gerar-prompt-ideias').click();
-    document.getElementById('btn-gerar-prompt-roteiro').click();
-    document.getElementById('btn-gerar-prompt-keywords').click();
-    document.getElementById('btn-gerar-prompts-thumb').click();
-    document.getElementById('btn-gerar-prompt-seo').click();
+    document.getElementById('btn-gerar-prompt-ideias')?.click();
+    document.getElementById('btn-gerar-prompt-roteiro')?.click();
+    document.getElementById('btn-gerar-prompt-keywords')?.click();
+    document.getElementById('btn-gerar-prompts-thumb')?.click();
+    document.getElementById('btn-gerar-prompt-seo')?.click();
 
     UI.showToast('Exemplo demonstrativo carregado!');
   });
 
   // === LIMPAR TUDO ===
-  document.getElementById('btn-clear-all').addEventListener('click', () => {
+  document.getElementById('btn-clear-all')?.addEventListener('click', () => {
     if (confirm('Deseja limpar todos os campos e conteúdos gerados?')) {
       document.querySelectorAll('input[type="text"]').forEach(i => {
         if (i.id !== 'input-api-model-ideias' && i.id !== 'input-api-model-roteiro') i.value = '';
@@ -12041,7 +12066,7 @@ Desenvolvimento: A soberania divina cumpre cada detalhe profético anunciado pel
   });
 
   // === BAIXAR PACOTE .TXT ===
-  document.getElementById('btn-download-package').addEventListener('click', () => {
+  document.getElementById('btn-download-package')?.addEventListener('click', () => {
     const tema = UI.getValue('select-tema', 'input-tema-custom') || 'sem-tema';
     const idioma = UI.getValue('select-idioma', 'input-idioma-custom') || 'Português (Brasil)';
     const estilo = document.getElementById('select-estilo-roteiro')?.value || 'YouTube Longo (18-20 minutos)';
