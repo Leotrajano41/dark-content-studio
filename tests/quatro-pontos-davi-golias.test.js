@@ -117,11 +117,17 @@ function checar(condicao, mensagem) {
     checar(c.promptIngles.includes(fichaElias), `Prompt da cena ${c.numero} inclui a ficha canônica idêntica de Elias`);
   }
 
-  // Confere que a MESMA linha idêntica de Acabe aparece em todas as cenas onde ele é citado
-  const cenasComAcabe = planoElias.cenas.filter(c => c.frases.join(' ').toLowerCase().includes('acabe'));
-  checar(cenasComAcabe.length >= 2, `Acabe aparece em múltiplas cenas (${cenasComAcabe.length})`);
+  // Confere que a MESMA linha idêntica de Acabe aparece em todas as cenas onde ele aparece na imagem (descricaoVisual)
+  const cenasComAcabe = planoElias.cenas.filter(c => PlanoCenasModule.detectarPersonagensNaDescricao(c.descricaoVisual).includes('ahab'));
+  checar(cenasComAcabe.length >= 2, `Acabe aparece visualmente em múltiplas cenas (${cenasComAcabe.length})`);
   for (const c of cenasComAcabe) {
     checar(c.promptIngles.includes(fichaAcabe), `Prompt da cena ${c.numero} inclui a ficha canônica idêntica de Acabe`);
+  }
+
+  // PONTO 1: Na cena onde o personagem é só mencionado na frase mas NÃO aparece na imagem, NÃO injeta
+  const cena06 = planoElias.cenas.find(c => c.numero === '06');
+  if (cena06) {
+    checar(!cena06.promptIngles.includes(fichaAcabe), 'Cena 06 não inclui ficha de Acabe pois ele é só mencionado na fala');
   }
 
   // Se o personagem estiver na lista fixa (ex: Davi e Golias), USA A LISTA FIXA em vez de pedir à IA

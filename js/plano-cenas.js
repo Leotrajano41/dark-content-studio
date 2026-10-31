@@ -124,7 +124,7 @@
    * ITEM 2: Nome do .ZIP baseado exclusivamente no TEMA do vídeo ou título da ideia escolhida.
    * NUNCA usa o nome da categoria do menu e NUNCA usa valor fantasma de sessão anterior.
    */
-  function gerarNomeZipScriptorium(temaOuOpcoes) {
+  function gerarNomeZipScriptorium(temaOuOpcoes, opcoesExtras = {}) {
     let temaFinal = '';
 
     if (typeof temaOuOpcoes === 'object' && temaOuOpcoes !== null) {
@@ -168,8 +168,30 @@
       temaFinal = (!str || ehCategoria) ? 'roteiro' : str;
     }
 
+    // PONTO 3: Nome do ZIP curto
+    // Usar só o título, a parte antes do primeiro ":" (ou as primeiras 6 palavras), com no máximo 60 caracteres
+    if (temaFinal.includes(':')) {
+      temaFinal = temaFinal.split(':')[0].trim();
+    }
+    const palavrasTema = temaFinal.split(/\s+/).filter(Boolean);
+    if (palavrasTema.length > 6) {
+      temaFinal = palavrasTema.slice(0, 6).join(' ');
+    }
+    if (temaFinal.length > 60) {
+      temaFinal = temaFinal.slice(0, 60).trim();
+    }
+
     const slug = gerarSlug(temaFinal);
-    return `${slug}-scriptorium.zip`;
+
+    // Suporta flag sufixoScriptorium: false para gerar apenas "${slug}.zip"
+    const semSufixo = (opcoesExtras.sufixoScriptorium === false || opcoesExtras.semSufixo === true ||
+      (typeof temaOuOpcoes === 'object' && temaOuOpcoes !== null && (temaOuOpcoes.sufixoScriptorium === false || temaOuOpcoes.semSufixo === true)));
+
+    return semSufixo ? `${slug}.zip` : `${slug}-scriptorium.zip`;
+  }
+
+  function gerarNomeZipCurto(temaOuOpcoes) {
+    return gerarNomeZipScriptorium(temaOuOpcoes, { sufixoScriptorium: false });
   }
 
   /**
@@ -621,13 +643,33 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
     return `${nomeEn}: dignified biblical figure in late forties, weathered resolute countenance, dark beard with grey streaks, rustic linen tunic, woven woolen mantle in earth tones`;
   }
 
+  /**
+   * PONTO 1: Remove referências teológicas, orações e expressões genealógicas
+   * ("Deus de Abraão", "filhos de Jacó", "casa de teu pai", "God of Abraham", etc.)
+   * para que nomes citados apenas em oração ou genealogia NÃO recebam fichas.
+   */
+  function limparExpressoesGenealogicas(texto) {
+    if (!texto || typeof texto !== 'string') return '';
+    return texto
+      // Captura sequência completa: "Deus de Abraão, de Isaque e de Israel" ou "God of Abraham, Isaac and Jacob"
+      .replace(/\b(?:ó\s+)?(?:senhor\s+)?deus\s+de\s+(?:abra[aã]o|isaque|jac[oó]|israel)(?:\s*,\s*(?:de\s+)?(?:abra[aã]o|isaque|jac[oó]|israel))*(?:\s+(?:e|ou)\s+(?:de\s+)?(?:abra[aã]o|isaque|jac[oó]|israel))?\b/gi, '')
+      .replace(/\b(?:o\s+)?(?:lord\s+)?god\s+of\s+(?:abraham|isaac|jacob|israel)(?:\s*,\s*(?:of\s+)?(?:abraham|isaac|jacob|israel))*(?:\s+and\s+(?:of\s+)?(?:abraham|isaac|jacob|israel))?\b/gi, '')
+      .replace(/\b(?:filhos?|tribos?)\s+de\s+(?:israel|jac[oó]|jud[aá]|levi)\b/gi, '')
+      .replace(/\b(?:sons?|children|tribes?)\s+of\s+(?:israel|jacob|judah|levi)\b/gi, '')
+      .replace(/\b(?:casa|descend[eê]ncia|descendentes)\s+de\s+[\p{L}]+\b/giu, '')
+      .replace(/\b(?:house|descendants?)\s+of\s+[a-z]+\b/gi, '')
+      .replace(/\b(?:deus|senhor)\s+(?:dos?\s+)?(?:teus|seus|nossos?|vossos?)\s+pais\b/gi, '')
+      .replace(/\b(?:god|lord)\s+of\s+(?:your|our|their)\s+fathers\b/gi, '');
+  }
+
   async function extrairOuGerarFichasDoRoteiro(narracaoLimpa, chamarIaFn, contexto = {}) {
     const fichas = { ...(contexto.fichasPersonagens || {}) };
     if (typeof window !== 'undefined' && window._fichasPersonagensAtual) {
       Object.assign(fichas, window._fichasPersonagensAtual);
     }
 
-    const texto = (narracaoLimpa || '').toLowerCase();
+    // PONTO 1: Filtra expressões genealógicas e teológicas para não criar fichas de quem é apenas citado em oração
+    const texto = limparExpressoesGenealogicas((narracaoLimpa || '').toLowerCase());
 
     // 1. Identifica quais personagens do catálogo canônico (reserva fixa) estão presentes
     for (const [chave, fichaCanon] of Object.entries(FICHAS_PERSONAGENS)) {
@@ -806,50 +848,96 @@ Return EXCLUSIVELY a JSON object where keys are the character names and values a
       acao = `${sujeito} participating in solemn historical events at ${lugar} under dramatic atmospheric lighting`;
     }
 
-    // 3. Aplica o enquadramento desejado sobre a ação
+    // 3. PONTO 2: Seleção e alternância de enquadramento evitando repetição no vídeo inteiro
     let enq = enqSugerido;
+    const opcoesEnq = ['aberto', 'close', 'detalhe', 'medio'];
+    const numInt = parseInt(numeroCena, 10) || 1;
+
     if (!enq || enq === 'outro' || enq === 'padrao') {
-      const numInt = parseInt(numeroCena, 10) || 1;
       enq = (numInt % 2 === 0) ? 'close' : 'aberto';
     }
 
-    let descFinal = '';
-    if (enq === 'close') {
-      if (primeiroNome) {
-        descFinal = `Dramatic intense close-up on ${primeiroNome} with focused facial expression and determined gaze as ${acao}`;
-      } else {
-        descFinal = `Dramatic close-up on authentic Hebrew faces with solemn expressions observing ${acao}`;
-      }
-    } else if (enq === 'detalhe') {
-      descFinal = `Macro detail shot capturing the physical textures and intensity of ${acao}`;
-    } else if (enq === 'aberto') {
-      descFinal = `Wide panoramic landscape shot of ${lugar} depicting ${acao}`;
-    } else {
-      descFinal = `Dynamic medium shot showing ${acao}`;
-    }
-
-    // 4. GARANTIA DE UNICIDADE ABSOLUTA:
-    // Duas cenas do mesmo plano NUNCA podem ter descricaoVisual idêntica!
+    // Se qualquer cena anterior tiver o mesmo enquadramento e os mesmos personagens, alterna enquadramento
     if (Array.isArray(descricoesAnteriores) && descricoesAnteriores.length > 0) {
-      let duplicada = false;
       for (const ant of descricoesAnteriores) {
         if (!ant) continue;
-        if (ant.trim().toLowerCase() === descFinal.trim().toLowerCase() || calcularSemelhancaDescricoes(descFinal, ant) >= 0.60) {
-          duplicada = true;
+        const enqAnt = detectarTipoEnquadramento(ant);
+        const persAnt = detectarPersonagensNaDescricao(ant);
+        const persAtual = primeiroNome ? [primeiroNome.toLowerCase()] : [];
+
+        const colidePers = persAtual.length > 0 && persAnt.length > 0 &&
+          persAtual.every(p => persAnt.includes(p));
+
+        if (enqAnt === enq && colidePers) {
+          // Alterna para outro enquadramento não colidente
+          const alternativos = opcoesEnq.filter(e => e !== enq && e !== enqAnt);
+          enq = alternativos[(numInt - 1) % alternativos.length] || 'detalhe';
           break;
         }
       }
-      if (duplicada) {
-        // Altera perspectiva para garantir 100% de diferenciação
+    }
+
+    let descFinal = '';
+    const montarDesc = (tipoEnq, acaoTexto) => {
+      if (tipoEnq === 'close') {
+        if (primeiroNome) {
+          return `Dramatic intense close-up on ${primeiroNome} with focused facial expression and determined gaze as ${acaoTexto}`;
+        }
+        return `Dramatic close-up on authentic Hebrew faces with solemn expressions observing ${acaoTexto}`;
+      }
+      if (tipoEnq === 'detalhe') {
+        return `Macro detail shot capturing the physical textures and intensity of ${acaoTexto}`;
+      }
+      if (tipoEnq === 'aberto') {
+        return `Wide panoramic landscape shot of ${lugar} depicting ${acaoTexto}`;
+      }
+      return `Dynamic medium shot showing ${acaoTexto}`;
+    };
+
+    descFinal = montarDesc(enq, acao);
+
+    // 4. GARANTIA DE UNICIDADE ABSOLUTA NO VÍDEO INTEIRO (PONTO 2):
+    // Duas cenas do mesmo plano NUNCA podem ter mesma combinação de plano + personagens + ação!
+    if (Array.isArray(descricoesAnteriores) && descricoesAnteriores.length > 0) {
+      let repetida = false;
+      let colidePlanoPersAcao = false;
+
+      for (let idxAnt = 0; idxAnt < descricoesAnteriores.length; idxAnt++) {
+        const ant = descricoesAnteriores[idxAnt];
+        if (!ant) continue;
+
+        const enqAnt = detectarTipoEnquadramento(ant);
+        const persAnt = detectarPersonagensNaDescricao(ant);
+        const persAtual = detectarPersonagensNaDescricao(descFinal);
+
+        const mesmosPers = (persAtual.length > 0 || persAnt.length > 0) &&
+          persAtual.length === persAnt.length &&
+          persAtual.every(p => persAnt.includes(p));
+
+        const taxa = calcularSemelhancaDescricoes(descFinal, ant);
+
+        if (ant.trim().toLowerCase() === descFinal.trim().toLowerCase() || taxa >= 0.55) {
+          repetida = true;
+        }
+
+        if (enqAnt === enq && mesmosPers && taxa >= 0.35) {
+          colidePlanoPersAcao = true;
+          break;
+        }
+      }
+
+      if (repetida || colidePlanoPersAcao) {
+        // Alterna enquadramento e perspectiva para garantir distinção total
+        const enqNovo = (enq === 'aberto') ? 'detalhe' : (enq === 'close' ? 'medio' : 'aberto');
         const perspectivas = [
           `from a high-angle aerial perspective looking down over ${lugar}`,
           `from a low dramatic ground-level angle emphasizing the stony terrain`,
           `captured in cinematic side-profile lighting at twilight`,
-          `viewed through atmospheric morning mist across the landscape`
+          `viewed through atmospheric morning mist across the landscape`,
+          `focusing on the stunned awe of gathered onlookers and Hebrew multitude`
         ];
-        const numInt = parseInt(numeroCena, 10) || 1;
         const persEscolhida = perspectivas[numInt % perspectivas.length];
-        descFinal = `${descFinal}, ${persEscolhida}`;
+        descFinal = `${montarDesc(enqNovo, acao)}, ${persEscolhida}`;
       }
     }
 
@@ -1160,23 +1248,39 @@ ${exemploJson}`;
       return { valido: false, motivo: 'Representação antropomórfica indevida da figura de Deus.' };
     }
 
-    // 6. ITEM 4: Proibição de repetição de enquadramento com mesmos personagens em cenas consecutivas
+    // 6. PONTO 2: Proibição de repetição de enquadramento + mesmos personagens + mesma ação NO VÍDEO INTEIRO
     if (contexto && Array.isArray(contexto.descricoesAnteriores) && contexto.descricoesAnteriores.length > 0) {
-      const descAnterior = contexto.descricoesAnteriores[contexto.descricoesAnteriores.length - 1];
-      if (descAnterior) {
-        const enqAtual = detectarTipoEnquadramento(desc);
+      const enqAtual = detectarTipoEnquadramento(desc);
+      const persAtual = detectarPersonagensNaDescricao(desc);
+
+      for (let idxAnt = 0; idxAnt < contexto.descricoesAnteriores.length; idxAnt++) {
+        const descAnterior = contexto.descricoesAnteriores[idxAnt];
+        if (!descAnterior) continue;
+
         const enqAnt = detectarTipoEnquadramento(descAnterior);
-        const persAtual = detectarPersonagensNaDescricao(desc);
         const persAnt = detectarPersonagensNaDescricao(descAnterior);
 
-        const mesmosPersonagens = persAtual.length > 0 && persAnt.length > 0 &&
+        const mesmosPersonagens = (persAtual.length > 0 || persAnt.length > 0) &&
           persAtual.length === persAnt.length &&
           persAtual.every(p => persAnt.includes(p));
 
-        if (enqAtual !== 'outro' && enqAtual !== 'padrao' && enqAtual === enqAnt && mesmosPersonagens) {
+        const ehVizinha = (idxAnt === contexto.descricoesAnteriores.length - 1);
+        const taxaSemelhanca = calcularSemelhancaDescricoes(desc, descAnterior);
+
+        // Se for cena vizinha: não pode repetir mesmo plano + mesmos personagens (mesmo com ação um pouco diferente)
+        if (ehVizinha && enqAtual !== 'outro' && enqAtual !== 'padrao' && enqAtual === enqAnt && mesmosPersonagens) {
           return {
             valido: false,
             motivo: `Cenas consecutivas não podem repetir o mesmo tipo de plano (${enqAtual}) e os mesmos personagens (${persAtual.join(', ')}). Exige variar (ex.: plano aberto do vale → close no rosto ou detalhe).`
+          };
+        }
+
+        // No vídeo inteiro (não só na vizinha): duas cenas nunca podem repetir o mesmo tipo de plano + os mesmos personagens + a mesma ação
+        if (enqAtual !== 'outro' && enqAtual !== 'padrao' && enqAtual === enqAnt && mesmosPersonagens && taxaSemelhanca >= 0.35) {
+          const numCenaAnt = String(idxAnt + 1).padStart(2, '0');
+          return {
+            valido: false,
+            motivo: `Cena repete a combinação de plano (${enqAtual}), personagens (${persAtual.join(', ')}) e ação já usada na Cena ${numCenaAnt}. Exige variar ângulo, enquadramento ou foco dramático (multidão, detalhe, objeto, lugar).`
           };
         }
       }
@@ -1206,7 +1310,7 @@ ${exemploJson}`;
   /**
    * Injeta os elementos fixos de consistência após a descrição visual:
    * 1. Prefixo do estilo do canal no início.
-   * 2. Ficha canônica do personagem quando ele aparece (ITEM 2).
+   * 2. Ficha canônica do personagem quando ele aparece (ITEM 2 e PONTO 1).
    * 3. Sufixo "Full bleed image, no border, no frame, no decorative corners. No text." no final.
    */
   function montarPromptFinalCena(descricaoVisual, trechoPt, contexto = {}) {
@@ -1216,6 +1320,13 @@ ${exemploJson}`;
     desc = desc.replace(/^Illuminated manuscript[^.]*\.\s*/i, '');
     desc = desc.replace(/Full bleed image[^.]*\.?\s*$/i, '');
     desc = desc.replace(/^Depicting\s+/i, '');
+
+    // Se desc estiver vazia ou for curta demais (< 5 palavras) ou apenas o nome do personagem,
+    // gera a ação concreta da cena a partir de trechoPt para garantir que a ação NUNCA suma
+    if (contarPalavras(desc) < 5 || /^(?:elijah|david|moses|aaron|goliath|saul|samuel|jonathan|solomon|prophet|king|giant)[\s.:,]*$/i.test(desc)) {
+      desc = gerarDescricaoVisualSemantica(trechoPt, '01', 'medio', contexto);
+      desc = desc.replace(/[.,;:\s]+$/, '');
+    }
 
     // Combina fichas canônicas prontas (reserva) com fichas geradas do roteiro atual (PONTO B)
     const fichasDisponiveis = {
@@ -1229,12 +1340,16 @@ ${exemploJson}`;
       ...(contexto.nomesNormalizados || {})
     };
 
-    const textoCombinado = `${trechoPt} ${desc}`.toLowerCase();
+    // PONTO 1: Injetar a ficha SÓ dos personagens que estão na descricaoVisual da cena (quem aparece na imagem),
+    // NUNCA de quem é apenas mencionado no trecho falado (oração, fala ou genealogia).
+    const descLowerLimpa = limparExpressoesGenealogicas(desc.toLowerCase());
+
     for (const [chave, fichaCanon] of Object.entries(fichasDisponiveis)) {
       const nomeEn = nomesNormalizados[chave.toLowerCase()] || chave;
       if (nomeEn && !personagensEncontrados.some(p => p.nome.toLowerCase() === nomeEn.toLowerCase())) {
         const reg = new RegExp(`\\b${chave}\\b`, 'i');
-        if (reg.test(textoCombinado)) {
+        // Busca EXCLUSIVAMENTE na descrição visual da cena (descLowerLimpa)
+        if (reg.test(descLowerLimpa)) {
           personagensEncontrados.push({ nome: nomeEn, ficha: fichaCanon });
         }
       }
@@ -1247,13 +1362,6 @@ ${exemploJson}`;
 
     // Limpa pontuação final da descrição
     desc = desc.replace(/[.,;:\s]+$/, '');
-
-    // BUG 2: Se desc estiver vazia ou for curta demais (< 5 palavras) ou apenas o nome do personagem,
-    // gera a ação concreta da cena a partir de trechoPt para garantir que a ação NUNCA suma
-    if (contarPalavras(desc) < 5 || /^(?:elijah|david|moses|aaron|goliath|saul|samuel|jonathan|solomon|prophet|king|giant)[\s.:,]*$/i.test(desc)) {
-      desc = gerarDescricaoVisualSemantica(trechoPt, '01', 'medio', contexto);
-      desc = desc.replace(/[.,;:\s]+$/, '');
-    }
 
     return `${PREFIXO_ESTILO_CANAL} Depicting ${blocoFichas}${desc}. ${SUFIXO_ESTILO_SEM_MOLDURA}`;
   }
@@ -2052,6 +2160,88 @@ CRITICAL RULES:
     return arquivosLidos;
   }
 
+  /**
+   * PONTO 4: Validação automática de integridade estrutural do roteiro pós-geração.
+   * Checagens:
+   * 1. Aspas abertas = fechadas (sem aspas desbalanceadas ou faltando fechar)
+   * 2. Nenhuma frase ou expressão significativa repetida
+   * 3. Nenhuma citação solta fora de uma fala (ou aspas isoladas sem texto bíblico válido)
+   * 4. Desfecho completo presente (narração do clímax do episódio bíblico, fogo/vitória e reação do povo)
+   */
+  function validarIntegridadeEstruturalRoteiro(roteiro, contexto = {}) {
+    if (!roteiro || typeof roteiro !== 'string' || roteiro.trim().length === 0) {
+      return { valido: false, erros: ['Roteiro vazio ou inválido.'] };
+    }
+
+    const erros = [];
+    const texto = roteiro.trim();
+
+    // 1. Aspas balanceadas (aspas abertas = fechadas)
+    const aspasRetas = (texto.match(/"/g) || []).length;
+    if (aspasRetas % 2 !== 0) {
+      erros.push(`Aspas duplas desbalanceadas: número ímpar (${aspasRetas}) de aspas detectado no texto.`);
+    }
+
+    const aspasAbreTipograficas = (texto.match(/[“«]/g) || []).length;
+    const aspasFechaTipograficas = (texto.match(/[”»]/g) || []).length;
+    if (aspasAbreTipograficas !== aspasFechaTipograficas) {
+      erros.push(`Aspas tipográficas desbalanceadas: ${aspasAbreTipograficas} abertura(s) vs ${aspasFechaTipograficas} fechamento(s).`);
+    }
+
+    // 2. Nenhuma frase repetida
+    // Divide em frases e normaliza para detectar repetições mecânicas (ex: "três vezes", orações duplicadas)
+    const frasesRoteiro = dividirEmFrases(texto);
+    const mapaFrases = new Map();
+    for (const f of frasesRoteiro) {
+      const fNorm = f.toLowerCase().replace(/["'”»“«]/g, '').replace(/[.,;:!?…\s]+/g, ' ').trim();
+      const numPalavras = contarPalavras(fNorm);
+      if (numPalavras >= 2 && fNorm.length >= 8) {
+        if (mapaFrases.has(fNorm)) {
+          erros.push(`Frase repetida detectada no roteiro: "${f.trim()}".`);
+          break;
+        }
+        mapaFrases.set(fNorm, true);
+      }
+    }
+
+    // 3. Nenhuma citação solta fora de uma fala
+    const linhas = texto.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    for (const linha of linhas) {
+      if (/^"\s*$/.test(linha) || /^\s*"\s*\(?\d?\s*[A-ZÀ-Ú][a-zà-ú]+\s+\d+:\d+\)?\s*$/.test(linha)) {
+        erros.push(`Citação solta ou aspas órfãs detectadas: "${linha}".`);
+        break;
+      }
+    }
+
+    // 4. Desfecho completo do episódio bíblico presente antes da conclusão/CTA
+    const temaLower = `${contexto.tema || ''} ${contexto.ideia || ''} ${contexto.titulo || ''} ${texto.slice(0, 300)}`.toLowerCase();
+    const textoLower = texto.toLowerCase();
+
+    // Verificação de desfecho para ciclo de Elias no Carmelo / profetas de Baal
+    const ehCicloEliasCarmelo = /\b(?:elias|carmelo|baal)\b/i.test(temaLower);
+    if (ehCicloEliasCarmelo) {
+      const narrouFogo = /\b(?:fogo\s+(?:do\s+senhor|do\s+c[eé]u|caiu|desceu|consumiu)|chamas?\s+(?:do\s+senhor|consumir(?:am)?))\b/i.test(textoLower);
+      const narrouReacaoPovo = /\b(?:povo\s+(?:viu|caiu|prostr(?:ou|aram)|declarou|gritou|clamou)|rostos?\s+em\s+terra|o\s+senhor\s+[eé]\s+deus)\b/i.test(textoLower);
+      if (!narrouFogo || !narrouReacaoPovo) {
+        erros.push('Roteiro incompleto: falta o desfecho completo do episódio (o fogo do Senhor caindo do céu e a reação do povo se prostrando e proclamando que o Senhor é Deus).');
+      }
+    }
+
+    // Verificação de desfecho para Davi e Golias
+    const ehCicloDaviGolias = /\b(?:davi|golias|goliath)\b/i.test(temaLower);
+    if (ehCicloDaviGolias) {
+      const narrouPedraOuQueda = /\b(?:pedra\s+(?:cravou|afundou|acertou|atingiu)|caiu\s+com\s+o\s+rosto|gigante\s+caiu|tombou|morto)\b/i.test(textoLower);
+      if (!narrouPedraOuQueda) {
+        erros.push('Roteiro incompleto: falta o desfecho de Davi e Golias (o impacto decisivo da pedra na testa e a queda do gigante).');
+      }
+    }
+
+    return {
+      valido: erros.length === 0,
+      erros
+    };
+  }
+
   return {
     NOMES_ARQUIVOS_FIXOS,
     PREFIXO_ESTILO_CANAL,
@@ -2076,6 +2266,7 @@ CRITICAL RULES:
     gerarDescricaoVisualSemantica,
     gerarDescricaoVisualFallback,
     gerarFallbackEnquadramentoAlternativo,
+    limparExpressoesGenealogicas,
     extrairOuGerarFichasDoRoteiro,
     gerarFichaDeterministica,
     gerarDescricoesVisuaisComIa,
@@ -2090,6 +2281,8 @@ CRITICAL RULES:
     verificarDesatualizacao,
     gerarSlug,
     gerarNomeZipScriptorium,
+    gerarNomeZipCurto,
+    validarIntegridadeEstruturalRoteiro,
     validarPacoteScriptorium,
     criarZipScriptorium,
     lerArquivosDeZip

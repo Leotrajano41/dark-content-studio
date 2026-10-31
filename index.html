@@ -3521,6 +3521,8 @@ REGRAS ESTRITAS DO ROTEIRO:
 - CITAÇÕES: a mesma passagem não pode aparecer com duas redações; não citar o mesmo versículo duas vezes.
 - SEÇÕES FINAIS: seções finais em ordem cronológica, e cada seção recebe o resumo das anteriores para não repetir eventos.
 - REFORÇO: limitar frases de reforço a uma por seção (no máximo uma por seção).
+- OBRIGATORIEDADE DO DESFECHO COMPLETO DO EPISÓDIO BÍBLICO (NUNCA DEIXE O EPISÓDIO INCOMPLETO):
+  Todo roteiro bíblico DEVE narrar o clímax e o desfecho concreto e completo do acontecimento histórico (ex: em Elias no Carmelo, narre obrigatoriamente a oração de Elias, o fogo de Deus caindo do céu e consumindo o holocausto, a lenha, as pedras e a água, e a reação imediata de todo o povo caindo com o rosto em terra e proclamando que o Senhor é Deus; em Davi e Golias, o arremesso da pedra, o impacto decisivo cravando na testa e a queda do gigante). É ESTRITAMENTE PROIBIDO cortar ou encerrar a narrativa antes de relatar a intervenção divina e a conclusão do episódio histórico, antes de passar para a conclusão e para o CTA de inscrição.
 
 POSTURA OBRIGATÓRIA DO NARRADOR:
 - Trate todo relato bíblico como verdade sagrada afirmada diretamente: 'o fogo caiu', nunca 'o relato diz que o fogo teria caído'.
@@ -11001,7 +11003,46 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       resultText = resultText.replace(/^\s*\[(?:ABERTURA|ITEM\s*\d+|CONCLUSÃO|CONCLUSION|FECHO)[^\]]*\]\s*:?/gmi, '');
       resultText = resultText.replace(/\[(?:ABERTURA|ITEM\s*\d+|CONCLUSÃO|CONCLUSION|FECHO)[^\]]*\]/gi, '');
       resultText = resultText.replace(/^\s*(?:\*\*)?(?:WORD\s+COUNT|CONTAGEM\s+DE\s+PALAVRAS|CONTAGEM\s+TOTAL)[^\n]*/gmi, '');
-      // 12. Validação e correção automática de aspas abertas/fechadas
+
+      // 12. Validação automática de integridade estrutural pós-geração e revisão (PONTO 4)
+      const valFn = (typeof validarIntegridadeEstruturalRoteiro === 'function')
+        ? validarIntegridadeEstruturalRoteiro
+        : (typeof PlanoCenasModule !== 'undefined' && typeof PlanoCenasModule.validarIntegridadeEstruturalRoteiro === 'function' ? PlanoCenasModule.validarIntegridadeEstruturalRoteiro : null);
+
+      if (valFn) {
+        let valEstrutural = valFn(resultText, { tema: (ideiaEscolhida || promptText || '') });
+        let tentativasEstruturais = 0;
+        while (!valEstrutural.valido && tentativasEstruturais < 2 && hasApiKey) {
+          tentativasEstruturais++;
+          console.warn(`[Integridade Estrutural] Erros detectados (tentativa ${tentativasEstruturais}/2):`, valEstrutural.erros);
+          UI.showToast(`Ajustando estrutura do roteiro (tentativa ${tentativasEstruturais}/2)...`);
+          const promptFixEstrutural = `Reescreva o roteiro bíblico abaixo corrigindo estritamente todas as falhas estruturais apontadas:
+ERROS A CORRIGIR:
+${valEstrutural.erros.map(e => `- ${e}`).join('\n')}
+
+REGRAS:
+1. Aspas abertas DEVEM ter seu fechamento correspondente (número par de aspas).
+2. NUNCA repita frases ou sentenças idênticas no roteiro.
+3. Narre OBRIGATORIAMENTE o desfecho completo do episódio bíblico (o que Deus fez e a reação do povo) antes da conclusão e do CTA de inscrição.
+4. Entregue EXCLUSIVAMENTE o texto completo do roteiro corrigido, sem comentários.
+
+ROTEIRO ORIGINAL:
+${resultText}`;
+          try {
+            const corrigido = await OpenRouterAPI.generateContent(promptFixEstrutural, modeloRoteiro, SCRIPT_SYSTEM_PROMPT);
+            if (corrigido && corrigido.trim()) {
+              resultText = corrigido.trim();
+              valEstrutural = valFn(resultText, { tema: (ideiaEscolhida || promptText || '') });
+              if (valEstrutural.valido) break;
+            }
+          } catch (eFix) {
+            console.warn('[Integridade Estrutural] Falha na auto-regeneração:', eFix);
+            break;
+          }
+        }
+      }
+
+      // 13. Validação e correção automática de aspas abertas/fechadas
       if (typeof validarECorrigirAspas === 'function') {
         resultText = validarECorrigirAspas(resultText);
       }
