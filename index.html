@@ -8274,7 +8274,8 @@ const AutoSave = window.AutoSave = {
     'output-thumb-a', 'output-thumb-b', 'output-thumb-c',
     'output-prompt-seo',
     'textarea-narracao-limpa-audio',
-    'select-voz-audio', 'output-legenda-srt'
+    'select-voz-audio', 'output-legenda-srt',
+    'output-cenas-txt', 'output-prompts-txt'
   ],
 
   save() {
@@ -8283,6 +8284,17 @@ const AutoSave = window.AutoSave = {
       const el = document.getElementById(id);
       if (el) session[id] = el.value;
     });
+
+    // Salva o Plano de Cenas (Scriptorium) junto com a narração
+    if (window._planoDeCenasAtual) {
+      session._planoDeCenasAtual = window._planoDeCenasAtual;
+    }
+    if (window._descricoesTxtAtual) {
+      session._descricoesTxtAtual = window._descricoesTxtAtual;
+    }
+    if (window._hashNarracaoPlanoCenas) {
+      session._hashNarracaoPlanoCenas = window._hashNarracaoPlanoCenas;
+    }
 
     // A chave NÃO vai dentro da sessão (fica só na chave canônica do OpenRouterAPI): uma cópia a menos em texto puro
     delete session['input-api-key'];
@@ -8411,6 +8423,31 @@ const AutoSave = window.AutoSave = {
         cardLegenda.classList.remove('hidden');
       }
 
+      // Restaura o Plano de Cenas (cenas.txt / prompts.txt / Scriptorium)
+      if (session._planoDeCenasAtual || session['output-cenas-txt'] || session['output-prompts-txt']) {
+        if (session._planoDeCenasAtual) {
+          window._planoDeCenasAtual = session._planoDeCenasAtual;
+        }
+        window._cenasTxtAtual = session['output-cenas-txt'] || '';
+        window._promptsTxtAtual = session['output-prompts-txt'] || '';
+        window._descricoesTxtAtual = session._descricoesTxtAtual || '';
+        window._hashNarracaoPlanoCenas = session._hashNarracaoPlanoCenas || '';
+
+        const cardPlano = document.getElementById('card-plano-cenas');
+        if (cardPlano && (window._cenasTxtAtual || window._promptsTxtAtual || window._planoDeCenasAtual)) {
+          cardPlano.classList.remove('hidden');
+        }
+
+        const badge = document.getElementById('badge-contagem-cenas');
+        if (badge && window._planoDeCenasAtual && Array.isArray(window._planoDeCenasAtual.cenas)) {
+          badge.textContent = `${window._planoDeCenasAtual.cenas.length} cenas prontas`;
+        }
+
+        if (typeof atualizarPainelCenasPendentes === 'function') {
+          try { atualizarPainelCenasPendentes(); } catch (_) {}
+        }
+      }
+
       UI.updateApiStatusBadge();
       return true;
     } catch (e) {
@@ -8425,6 +8462,11 @@ const AutoSave = window.AutoSave = {
     try {
       localStorage.removeItem(this.SESSION_KEY);
       localStorage.removeItem(this.LEGACY_SESSION_KEY);
+      delete window._planoDeCenasAtual;
+      delete window._cenasTxtAtual;
+      delete window._promptsTxtAtual;
+      delete window._descricoesTxtAtual;
+      delete window._hashNarracaoPlanoCenas;
     } catch (e) {
       console.warn('AutoSave: erro ao limpar sessão.', e);
     }
@@ -11269,6 +11311,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       } else {
         UI.showToast(`Plano de Cenas gerado com sucesso: ${plano.cenas.length} imagens!`);
       }
+      try { AutoSave.save(); } catch (_) {}
     } catch (err) {
       console.error(err);
       UI.showToast(`Erro ao gerar Plano de Cenas: ${err.message}`, 'error');
@@ -11383,6 +11426,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
         const motivo = res.pendentesRestantes[0]?.motivoPendente || 'Rejeitada pelo validador';
         UI.showToast(`Restam ${res.pendentesRestantes.length} cena(s) pendente(s): ${motivo}`, 'warning');
       }
+      try { AutoSave.save(); } catch (_) {}
     } catch (err) {
       console.error(err);
       UI.showToast(`Erro ao regenerar cenas pendentes: ${err.message}`, 'error');
@@ -11958,16 +12002,39 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
       };
       mostrarProgresso();
 
-      // Auxiliar para obter a duração do áudio em segundos a partir do buffer
+      // Auxiliar resiliente para obter a duração do áudio em segundos a partir do buffer MP3 (com timeout estrito)
       const obterDuracaoMp3Buffer = (u8) => new Promise((resolve) => {
-        const blob = new Blob([u8], { type: 'audio/mpeg' });
-        const url = URL.createObjectURL(blob);
-        const a = new Audio();
-        const fim = (d) => { URL.revokeObjectURL(url); resolve(isFinite(d) && d > 0 ? d : 0); };
-        a.preload = 'metadata';
-        a.onloadedmetadata = () => fim(a.duration);
-        a.onerror = () => fim(0);
-        a.src = url;
+        if (!u8 || u8.length === 0) return resolve(0);
+        let resolvido = false;
+        let timer = null;
+        let url = null;
+
+        const fim = (d) => {
+          if (resolvido) return;
+          resolvido = true;
+          if (timer) clearTimeout(timer);
+          if (url) {
+            try { URL.revokeObjectURL(url); } catch (_) {}
+          }
+          resolve(isFinite(d) && d > 0 ? Number(d) : 0);
+        };
+
+        // Timeout estrito de 1.5s: se o navegador atrasar ou não disparar metadados, NUNCA trava o fluxo
+        timer = setTimeout(() => fim(0), 1500);
+
+        try {
+          const blob = new Blob([u8], { type: 'audio/mpeg' });
+          url = URL.createObjectURL(blob);
+          const a = new Audio();
+          a.preload = 'metadata';
+          a.onloadedmetadata = () => fim(a.duration);
+          a.oncanplaythrough = () => fim(a.duration);
+          a.onerror = () => fim(0);
+          a.src = url;
+          if (typeof a.load === 'function') a.load();
+        } catch (_) {
+          fim(0);
+        }
       });
 
       const historicoPartesCompletas = [];
@@ -11978,12 +12045,17 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
         const numPalavrasParte = NarracaoModule.contarPalavras(textoParte);
 
         for (let tentativa = 1; tentativa <= 3; tentativa++) {
+          const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+          const fetchTimer = controller ? setTimeout(() => controller.abort(), 45000) : null;
           try {
             const resp = await fetch('/api/narrar', {
               method: 'POST',
               headers: cabecalhosApi({ 'Content-Type': 'application/json' }),
-              body: JSON.stringify({ texto: textoParte, voz, tom })
+              body: JSON.stringify({ texto: textoParte, voz, tom }),
+              signal: controller ? controller.signal : undefined
             });
+            if (fetchTimer) clearTimeout(fetchTimer);
+
             if (resp.status === 404 || resp.status === 405) {
               throw new Error('Esta funcionalidade requer que a ferramenta esteja rodando via Vercel (dark-content-studio.vercel.app). Não está disponível na versão do GitHub Pages ou local estática.');
             }
@@ -11993,7 +12065,7 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
             }
             const buf = new Uint8Array(await resp.arrayBuffer());
 
-            // Checagem de duração: compara com a esperada calibrada pela voz real (ex: Onyx) com tolerância mínima de 75%
+            // Checagem de duração: compara com a esperada calibrada pela voz real com tolerância de 75%
             const duracao = await obterDuracaoMp3Buffer(buf);
             if (duracao > 0 && numPalavrasParte > 0) {
               const ppmCalibrado = NarracaoModule.calibrarVelocidade(historicoPartesCompletas);
@@ -12017,6 +12089,7 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
             mostrarProgresso();
             return;
           } catch (e) {
+            if (fetchTimer) clearTimeout(fetchTimer);
             ultimoErro = e;
             if (/requer que a ferramenta/.test(e.message)) break;
             if (tentativa < 3) await new Promise(r => setTimeout(r, 1200));
@@ -12034,12 +12107,34 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
       };
       await Promise.all(Array.from({ length: Math.min(2, partes.length) }, trabalhador));
 
-      const audioBlob = new Blob([NarracaoModule.juntarMp3(buffers)], { type: 'audio/mpeg' });
+      // Garante que todas as partes foram geradas
+      for (let i = 0; i < partes.length; i++) {
+        if (!buffers[i] || buffers[i].length === 0) {
+          throw new Error(`Parte ${i + 1} de ${partes.length} da narração não foi recebida com sucesso.`);
+        }
+      }
+
+      let audioBytes;
+      try {
+        audioBytes = NarracaoModule.juntarMp3(buffers);
+      } catch (eJuntar) {
+        console.warn('[btnGerarAudio] Falha ao juntar cabeçalhos MP3, concatenando buffers diretamente:', eJuntar);
+        const totalLen = buffers.reduce((acc, b) => acc + (b ? b.length : 0), 0);
+        audioBytes = new Uint8Array(totalLen);
+        let pos = 0;
+        for (const b of buffers) {
+          if (b) { audioBytes.set(b, pos); pos += b.length; }
+        }
+      }
+
+      const audioBlob = new Blob([audioBytes], { type: 'audio/mpeg' });
       currentAudioBlob = audioBlob;
       currentAudioParts = buffers.slice();
       currentAudioTextParts = partes.slice(); // Salva as fatias de texto da Narração Limpa para alinhamento da legenda
 
-      if (currentAudioUrl) URL.revokeObjectURL(currentAudioUrl);
+      if (currentAudioUrl) {
+        try { URL.revokeObjectURL(currentAudioUrl); } catch (_) {}
+      }
       currentAudioUrl = URL.createObjectURL(audioBlob);
 
       if (audioPlayerEl) {
@@ -12051,13 +12146,15 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
 
       atualizarSeloAba(5, true);
       UI.showToast('Narração gerada com sucesso! Você pode ouvir e baixar o arquivo .mp3.');
-      AutoSave.save();
+      try { AutoSave.save(); } catch (_) {}
     } catch (err) {
       console.error('Erro ao gerar áudio:', err);
-      UI.showToast(err.message, 'error');
+      UI.showToast(err.message || 'Erro inesperado ao gerar a narração.', 'error');
     } finally {
       UI.setButtonLoading(btnGerarAudio, false);
       if (audioLoadingNotice) audioLoadingNotice.classList.add('hidden');
+      const progressoEl = document.getElementById('audio-progresso-partes');
+      if (progressoEl) progressoEl.textContent = '';
     }
   });
 
