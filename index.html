@@ -8295,6 +8295,9 @@ const AutoSave = window.AutoSave = {
     if (window._hashNarracaoPlanoCenas) {
       session._hashNarracaoPlanoCenas = window._hashNarracaoPlanoCenas;
     }
+    if (window._fichasPersonagensAtual) {
+      session._fichasPersonagensAtual = window._fichasPersonagensAtual;
+    }
 
     // A chave NÃO vai dentro da sessão (fica só na chave canônica do OpenRouterAPI): uma cópia a menos em texto puro
     delete session['input-api-key'];
@@ -8439,6 +8442,9 @@ const AutoSave = window.AutoSave = {
         window._promptsTxtAtual = session['output-prompts-txt'] || '';
         window._descricoesTxtAtual = session._descricoesTxtAtual || '';
         window._hashNarracaoPlanoCenas = session._hashNarracaoPlanoCenas || '';
+        if (session._fichasPersonagensAtual) {
+          window._fichasPersonagensAtual = session._fichasPersonagensAtual;
+        }
 
         const cardPlano = document.getElementById('card-plano-cenas');
         if (cardPlano && (window._cenasTxtAtual || window._promptsTxtAtual || window._planoDeCenasAtual)) {
@@ -8474,6 +8480,7 @@ const AutoSave = window.AutoSave = {
       delete window._promptsTxtAtual;
       delete window._descricoesTxtAtual;
       delete window._hashNarracaoPlanoCenas;
+      delete window._fichasPersonagensAtual;
     } catch (e) {
       console.warn('AutoSave: erro ao limpar sessão.', e);
     }
@@ -8954,6 +8961,7 @@ function limparEstadoTemaAnterior() {
   ocultarAvisoTermosBastidor();
   window._planoDeCenasAtual = null;
   window._hashNarracaoPlanoCenas = null;
+  window._fichasPersonagensAtual = null;
   if (typeof currentAudioBlob !== 'undefined') currentAudioBlob = null;
   if (typeof currentAudioParts !== 'undefined') currentAudioParts = [];
   if (typeof currentSrtContent !== 'undefined') currentSrtContent = '';
@@ -11286,7 +11294,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
             UI.showToast(`IA gerando imagens: lote ${loteIndex} de ${totalLotes}...`);
             return await OpenRouterAPI.generateContent(promptLote, modeloPrompts);
           },
-          { tema: inputTema, personagemPrincipal: personagem }
+          { tema: inputTema, personagemPrincipal: personagem, fichasPersonagens: window._fichasPersonagensAtual }
         );
       }
 
@@ -11415,7 +11423,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
         window._planoDeCenasAtual.cenas,
         narracaoLimpa,
         chamarIaFn,
-        { tema: inputTema, personagemPrincipal: personagem }
+        { tema: inputTema, personagemPrincipal: personagem, fichasPersonagens: window._fichasPersonagensAtual }
       );
 
       const cenasTxt = PlanoCenasModule.gerarCenasTxt(window._planoDeCenasAtual.cenas, narracaoLimpa);

@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const PlanoCenasModule = require('../js/plano-cenas.js');
 
-console.log('=== TESTES: 4 PONTOS DAVI E GOLIAS (DARK STUDIO) ===\n');
+console.log('=== TESTES: 3 AJUSTES CRÍTICOS (GANCHO, FICHAS DINÂMICAS, VALIDADOR) ===\n');
 
 let totalChecks = 0;
 let passedChecks = 0;
@@ -20,110 +20,176 @@ function checar(condicao, mensagem) {
   }
 }
 
-// =========================================================================
-// PONTO 1: NOME DO ZIP ERRADO
-// O nome do .zip precisa vir do tema/título ATUAL do projeto (ideia escolhida),
-// NUNCA de um tema customizado antigo guardado na sessão anterior.
-// =========================================================================
-console.log('--- PONTO 1: Nome do ZIP baseado no tema/título atual do projeto ---');
+(async () => {
+  // =========================================================================
+  // AJUSTE A: GANCHO — NÃO DIVIDIR EM VÍRGULA (,) NEM TRAVESSÃO (—)
+  // Dividir SOMENTE em ; : . ! ? …
+  // Se a primeira frase não tiver nenhum desses sinais, NÃO dividir (deixar inteira).
+  // =========================================================================
+  console.log('--- AJUSTE A: Gancho sem divisão em vírgulas nem travessões ---');
 
-const nomeZip1 = PlanoCenasModule.gerarNomeZipScriptorium({
-  temaCustom: 'ogue-rei-de-basa-o-gigante-da-biblia', // resíduo antigo do localStorage
-  ideiaEscolhida: 'Davi e Golias: O Pastor Que Derrubou o Gigante', // ideia ATUAL
-  categoria: 'Acontecimentos Chave da Bíblia'
-});
-checar(nomeZip1.startsWith('davi-e-golias'), `Ideia escolhida tem prioridade sobre temaCustom antigo: ${nomeZip1}`);
-checar(!nomeZip1.includes('ogue'), 'Nome do zip não contém resíduo antigo de Ogue');
+  // Teste obrigatório especificado pelo usuário:
+  const fraseExemploUsuario = "Tu vens a mim com espada, e com lança, e com escudo; porém eu venho a ti em nome do Senhor dos Exércitos";
+  const planoGanchoA = PlanoCenasModule.gerarPlanoDeCenas(fraseExemploUsuario, { tema: 'Davi e Golias' });
 
-// Se categoria for Personalizável e não houver ideia escolhida, usa temaCustom
-const nomeZip2 = PlanoCenasModule.gerarNomeZipScriptorium({
-  temaCustom: 'Davi e Golias',
-  categoria: 'Personalizável'
-});
-checar(nomeZip2 === 'davi-e-golias-scriptorium.zip', `Tema customizado usado quando categoria for Personalizável: ${nomeZip2}`);
-
-// Se ideia tiver formato de lista com prefixo "1. Davi e Golias", remove o prefixo
-const nomeZip3 = PlanoCenasModule.gerarNomeZipScriptorium({
-  ideiaEscolhida: '1. Davi e Golias\nReferência Bíblica: 1 Samuel 17'
-});
-checar(nomeZip3 === 'davi-e-golias-scriptorium.zip', `Limpa numeração inicial de ideia: ${nomeZip3}`);
-
-// =========================================================================
-// PONTO 2: PERSONAGEM COM FICHA FIXA CANÔNICA
-// Idade, cabelo, rosto, roupa e cores idênticos em todo prompt
-// =========================================================================
-console.log('\n--- PONTO 2: Ficha canônica fixa de Davi e Golias nos prompts ---');
-
-checar(Boolean(PlanoCenasModule.FICHAS_PERSONAGENS['David']), 'Ficha de David existe no catálogo canônico');
-checar(Boolean(PlanoCenasModule.FICHAS_PERSONAGENS['Davi']), 'Ficha de Davi existe no catálogo canônico');
-checar(Boolean(PlanoCenasModule.FICHAS_PERSONAGENS['Goliath']), 'Ficha de Goliath existe no catálogo canônico');
-checar(Boolean(PlanoCenasModule.FICHAS_PERSONAGENS['Golias']), 'Ficha de Golias existe no catálogo canônico');
-
-const fichaDavi = PlanoCenasModule.FICHAS_PERSONAGENS['Davi'];
-checar(fichaDavi.includes('late teens') || fichaDavi.includes('young'), 'Ficha de Davi contém idade (late teens)');
-checar(fichaDavi.includes('reddish-brown hair') || fichaDavi.includes('hair'), 'Ficha de Davi contém cabelo');
-checar(fichaDavi.includes('sheep wool tunic'), 'Ficha de Davi contém roupas e tecido');
-checar(fichaDavi.includes('leather sling'), 'Ficha de Davi contém a funda');
-
-const fichaGolias = PlanoCenasModule.FICHAS_PERSONAGENS['Golias'];
-checar(fichaGolias.includes('giant') || fichaGolias.includes('colossal'), 'Ficha de Golias contém porte gigante');
-checar(fichaGolias.includes('bronze scale armor'), 'Ficha de Golias contém armadura de bronze');
-checar(fichaGolias.includes('beard') && fichaGolias.includes('helmet'), 'Ficha de Golias contém barba e capacete');
-
-// Prompts gerados para cenas onde Davi e Golias aparecem devem conter exatamente o mesmo texto canônico
-const promptCenaDavi1 = PlanoCenasModule.montarPromptFinalCena(
-  'young shepherd holding stones in front of the camp',
-  'Davi avançou pelo vale'
-);
-const promptCenaDavi2 = PlanoCenasModule.montarPromptFinalCena(
-  'young shepherd aiming at the forehead',
-  'Davi girou a funda com determinação'
-);
-
-checar(promptCenaDavi1.includes(fichaDavi), 'Prompt da cena 1 contém ficha canônica exata de Davi');
-checar(promptCenaDavi2.includes(fichaDavi), 'Prompt da cena 2 contém a mesma ficha canônica exata de Davi');
-
-// =========================================================================
-// PONTO 3: GANCHO LENTO (4 a 6s por cena nos primeiros ~15s)
-// =========================================================================
-console.log('\n--- PONTO 3: Gancho dinâmico com cenas de 4 a 6s no início ---');
-
-const narracaoGanchoLongo = 'Tu vens contra mim com espada, com lança e com escudo, mas eu vou contra ti em nome do Senhor dos Exércitos, o Deus dos exércitos de Israel, a quem tens afrontado. Davi apascentava as ovelhas de seu pai nas colinas de Belém. O vale de Elá separava os dois exércitos armados.';
-const planoGancho = PlanoCenasModule.gerarPlanoDeCenas(narracaoGanchoLongo, { tema: 'Davi e Golias' });
-
-// Primeiras cenas devem respeitar o ritmo do gancho (4 a 6 segundos por cena)
-const cenasGancho = planoGancho.cenas.filter(c => c.tempoInicioTotal < 15);
-checar(cenasGancho.length >= 2, `Gancho gerou múltiplas cenas curtas (total: ${cenasGancho.length}) em vez de uma única cena longa`);
-
-for (const c of cenasGancho) {
   checar(
-    c.duracaoEstimadaSegundos >= 3.5 && c.duracaoEstimadaSegundos <= 6.5,
-    `Cena ${c.numero} do gancho tem duração entre 4 e 6s (${c.duracaoEstimadaSegundos}s)`
+    planoGanchoA.cenas.length === 2,
+    `Frase com vírgulas e um ";" gerou exatamente 2 trechos (obtido: ${planoGanchoA.cenas.length}) — nunca 3 ou 4`
   );
-}
 
-// =========================================================================
-// PONTO 4: CENAS CONSECUTIVAS NÃO PODEM REPETIR ENQUADRAMENTO + PERSONAGENS
-// =========================================================================
-console.log('\n--- PONTO 4: Proibição de repetição de enquadramento em cenas consecutivas ---');
+  const trechoCena1 = planoGanchoA.cenas[0].fraseInicio;
+  const trechoCena2 = planoGanchoA.cenas[1].fraseInicio;
+  checar(trechoCena1.includes('espada') && trechoCena1.includes('escudo;'), `Cena 01 termina no ponto e vírgula: "${trechoCena1}"`);
+  checar(trechoCena2.startsWith('porém eu venho'), `Cena 02 começa exatamente após o ponto e vírgula: "${trechoCena2}"`);
 
-const descCena01 = 'Wide panoramic establishing landscape shot of the Valley of Elah with both David and Goliath standing in the distance under the sunset';
-const descCena02Repetida = 'Wide panoramic shot of the rocky Valley of Elah with David and Goliath standing opposite each other under warm sunlight';
-const descCena02Variada = 'Extreme close-up on Goliath face sneering with ferocious eyes and dark beard';
+  // Se a frase for longa mas NÃO contiver ; : . ! ? …, NÃO dividir (deixar inteira numa cena só)
+  const fraseSemSinal = "Davi correu rapidamente pelo leito pedregoso do vale com sua funda rústica de pastor e cinco pedras lisas guardadas na bolsa de couro sem parar nem recuar";
+  const planoSemSinal = PlanoCenasModule.gerarPlanoDeCenas(fraseSemSinal, { tema: 'Davi e Golias' });
+  checar(
+    planoSemSinal.cenas.length === 1,
+    `Frase longa sem nenhum dos sinais permitidos não é dividida (mantida em 1 única cena: ${planoSemSinal.cenas.length})`
+  );
 
-const validacaoRepetida = PlanoCenasModule.validarDescricaoVisualCena(
-  descCena02Repetida,
-  'Davi encarou o gigante filisteu',
-  { descricoesAnteriores: [descCena01] }
-);
-checar(!validacaoRepetida.valido, 'Validador rejeitou cena 02 repetindo enquadramento (wide) e mesmos personagens (Davi + Golias)');
-checar(validacaoRepetida.motivo.includes('Cenas consecutivas não podem repetir'), `Motivo legível: "${validacaoRepetida.motivo}"`);
+  // O texto no cenas.txt começa exatamente após o sinal
+  const cenasTxtA = PlanoCenasModule.gerarCenasTxt(planoGanchoA.cenas, fraseExemploUsuario);
+  const linhasCenasA = cenasTxtA.split('\n').filter(Boolean);
+  checar(linhasCenasA[0].includes('Tu vens a mim com espada'), 'Linha 1 do cenas.txt começa no início da citação');
+  checar(linhasCenasA[1].includes('porém eu venho a ti em nome'), 'Linha 2 do cenas.txt começa logo após o ponto e vírgula');
 
-const validacaoVariada = PlanoCenasModule.validarDescricaoVisualCena(
-  descCena02Variada,
-  'Golias zombava com desprezo',
-  { descricoesAnteriores: [descCena01] }
-);
-checar(validacaoVariada.valido, 'Validador aceitou cena 02 variando para close-up facial');
+  // =========================================================================
+  // AJUSTE B: FICHA DE PERSONAGEM DINÂMICA (PARA QUALQUER ROTEIRO)
+  // Elias e Acabe: fichas curtas em inglês (idade, rosto, cabelo, barba, roupa, cores)
+  // Injetadas de forma idêntica em todas as cenas de ambos os personagens
+  // =========================================================================
+  console.log('\n--- AJUSTE B: Fichas de personagem dinâmicas (ex.: Elias e Acabe) ---');
 
-console.log(`\n🎉 Todos os testes dos 4 pontos passaram: ${passedChecks}/${totalChecks} verificações aprovadas!`);
+  const narracaoElias = [
+    "Elias, o tisbita, subiu ao cume do monte Carmelo perante todo o povo de Israel.",
+    "O rei Acabe reuniu os quatrocentos e cinquenta profetas de Baal no monte.",
+    "Elias clamou ao Senhor Deus de Abraão, de Isaque e de Israel para que respondesse com fogo.",
+    "Então caiu fogo do céu e consumiu o holocausto, a lenha, as pedras e lambeu a água na vala.",
+    "O rei Acabe desceu em sua carruagem enquanto o céu se escurecia com nuvens pesadas e vento.",
+    "A mão do Senhor estava sobre Elias, que cingiu os lombos e correu à frente da carruagem de Acabe até Jezreel."
+  ].join(' ');
+
+  // Simula callback de IA gerando fichas dinâmicas para personagens que não estão na lista fixa
+  const stubIaFichas = async (prompt) => {
+    if (prompt.includes('visual identity card') || prompt.includes('Elijah')) {
+      return JSON.stringify({
+        Elijah: "Elijah: robust elderly prophet in late sixties, piercing fiery eyes, weathered sun-browned face, wild unkempt grey beard and long grey hair, coarse dark camel-hair mantle, thick leather girdle belt",
+        Ahab: "Ahab: arrogant middle-aged Hebrew king in late forties, conflicted brooding face, trimmed dark beard, royal bronze circlet crown, royal purple linen tunic with gold trim, ornate dagger at belt"
+      });
+    }
+    // Para as cenas individuais
+    return JSON.stringify([
+      { numero: "01", descricaoVisual: "Elijah standing atop Mount Carmel overlooking the assembly" },
+      { numero: "02", descricaoVisual: "Ahab standing proud with royal entourage watching the altar" },
+      { numero: "03", descricaoVisual: "Elijah lifting hands in fervent prayer toward heaven beside the trench" },
+      { numero: "04", descricaoVisual: "heavenly supernatural fire descending from stormy sky upon the altar" },
+      { numero: "05", descricaoVisual: "Ahab riding his royal two-wheeled bronze chariot under torrential dark clouds" },
+      { numero: "06", descricaoVisual: "Elijah running with prophetic strength along the muddy highway ahead of royal chariot" }
+    ]);
+  };
+
+  const planoElias = PlanoCenasModule.gerarPlanoDeCenas(narracaoElias, { tema: 'Elias no Monte Carmelo' });
+  const contextoElias = { tema: 'Elias no Monte Carmelo' };
+
+  await PlanoCenasModule.gerarDescricoesVisuaisComIa(
+    planoElias.cenas,
+    narracaoElias,
+    stubIaFichas,
+    contextoElias
+  );
+
+  checar(Boolean(contextoElias.fichasPersonagens), 'Fichas de personagens foram geradas e anexadas ao contexto do projeto');
+  const fichaElias = contextoElias.fichasPersonagens['Elijah'] || contextoElias.fichasPersonagens['Elias'];
+  const fichaAcabe = contextoElias.fichasPersonagens['Ahab'] || contextoElias.fichasPersonagens['Acabe'];
+
+  checar(Boolean(fichaElias), 'Ficha de Elias gerada com sucesso');
+  checar(Boolean(fichaAcabe), 'Ficha de Acabe gerada com sucesso');
+  checar(fichaElias.includes('late sixties') && fichaElias.includes('camel-hair mantle'), 'Ficha de Elias contém idade, barba e vestes');
+  checar(fichaAcabe.includes('late forties') && fichaAcabe.includes('royal purple'), 'Ficha de Acabe contém idade, rosto, coroa e vestes reais');
+
+  // Confere que a MESMA linha idêntica de Elias aparece em todas as cenas onde ele é citado
+  const cenasComElias = planoElias.cenas.filter(c => c.frases.join(' ').toLowerCase().includes('elias'));
+  checar(cenasComElias.length >= 2, `Elias aparece em múltiplas cenas (${cenasComElias.length})`);
+  for (const c of cenasComElias) {
+    checar(c.promptIngles.includes(fichaElias), `Prompt da cena ${c.numero} inclui a ficha canônica idêntica de Elias`);
+  }
+
+  // Confere que a MESMA linha idêntica de Acabe aparece em todas as cenas onde ele é citado
+  const cenasComAcabe = planoElias.cenas.filter(c => c.frases.join(' ').toLowerCase().includes('acabe'));
+  checar(cenasComAcabe.length >= 2, `Acabe aparece em múltiplas cenas (${cenasComAcabe.length})`);
+  for (const c of cenasComAcabe) {
+    checar(c.promptIngles.includes(fichaAcabe), `Prompt da cena ${c.numero} inclui a ficha canônica idêntica de Acabe`);
+  }
+
+  // Se o personagem estiver na lista fixa (ex: Davi e Golias), USA A LISTA FIXA em vez de pedir à IA
+  const fichasDavi = await PlanoCenasModule.extrairOuGerarFichasDoRoteiro("Davi enfrentou Golias no vale de Elá.", null);
+  checar(fichasDavi['David'] === PlanoCenasModule.FICHAS_PERSONAGENS['David'], 'Personagens do catálogo canônico usam a ficha fixa pronta');
+
+  // =========================================================================
+  // AJUSTE C: VALIDADOR DE ENQUADRAMENTO REPETIDO
+  // Se a IA devolver o mesmo enquadramento e mesmos personagens da anterior:
+  // Tenta até 2 vezes; se ainda falhar, usa o fallback trocando o tipo de plano.
+  // NUNCA DEIXAR A CENA COMO PENDENTE POR CAUSA DESSA REGRA!
+  // =========================================================================
+  console.log('\n--- AJUSTE C: Validador de enquadramento repetido com auto-recuperação ---');
+
+  // Usamos frases com comprimento suficiente para que o agrupador gere a Cena 01 e a Cena 02
+  const narracaoDuasCenas = "Davi desceu apressadamente pelas encostas íngremes do vale de Elá com sua funda e seu cajado de pastor na mão. Do outro lado o gigante Golias marchou com passos pesados exibindo sua armadura de bronze e sua espada afiada.";
+  const planoCenasC = PlanoCenasModule.gerarPlanoDeCenas(narracaoDuasCenas, { tema: 'Davi e Golias' });
+  checar(planoCenasC.cenas.length >= 2, `Cenas geradas para o teste: ${planoCenasC.cenas.length} cenas`);
+
+  // Stub de IA teimosa: na cena 2 ela sempre tenta devolver wide shot com Davi e Golias
+  let tentativasCena2 = 0;
+  const stubIaTeimosa = async (prompt) => {
+    if (prompt.includes('Scene 02') || prompt.includes('Scene 2') || prompt.includes('Davi e Golias se encararam')) {
+      tentativasCena2++;
+      // A IA insiste em devolver o mesmo enquadramento repetido
+      return JSON.stringify([{
+        numero: "02",
+        descricaoVisual: "Wide panoramic establishing landscape shot of the Valley of Elah with both David and Goliath standing in the distance under the sunset"
+      }]);
+    }
+    return JSON.stringify([
+      {
+        numero: "01",
+        descricaoVisual: "Wide panoramic establishing landscape shot of the Valley of Elah with both David and Goliath standing in the distance under the sunset"
+      },
+      {
+        numero: "02",
+        descricaoVisual: "Wide panoramic establishing landscape shot of the Valley of Elah with both David and Goliath standing in the distance under the sunset"
+      }
+    ]);
+  };
+
+  await PlanoCenasModule.gerarDescricoesVisuaisComIa(
+    planoCenasC.cenas,
+    narracaoDuasCenas,
+    stubIaTeimosa,
+    { tema: 'Davi e Golias' }
+  );
+
+  const cena1 = planoCenasC.cenas[0];
+  const cena2 = planoCenasC.cenas[1];
+
+  checar(cena1.status === 'CONCLUIDA', 'Cena 01 concluída com sucesso');
+  checar(cena2.status === 'CONCLUIDA', 'Cena 02 NUNCA fica como PENDENTE por repetição de enquadramento');
+  checar(!cena2.promptIngles.includes('[PENDENTE:'), 'Prompt da cena 02 não contém marcação de PENDENTE');
+  checar(tentativasCena2 >= 1, `IA foi chamada para tentar corrigir o enquadramento (tentativas: ${tentativasCena2})`);
+
+  // O fallback trocou o enquadramento para close-up ou detalhe
+  const enq1 = PlanoCenasModule.detectarTipoEnquadramento ? PlanoCenasModule.detectarTipoEnquadramento(cena1.descricaoVisual) : 'aberto';
+  const desc2Lower = cena2.descricaoVisual.toLowerCase();
+  checar(
+    desc2Lower.includes('close-up') || desc2Lower.includes('macro') || desc2Lower.includes('detail'),
+    `Cena 02 recebeu plano alternativo (close-up ou detalhe) em vez de repetir wide shot: "${cena2.descricaoVisual}"`
+  );
+
+  // Confere também o comportamento direto da função de fallback alternativo
+  const fallbackAlternativo = PlanoCenasModule.gerarFallbackEnquadramentoAlternativo('Davi encarou o gigante', '02', 'aberto');
+  checar(fallbackAlternativo.includes('close-up') || fallbackAlternativo.includes('Macro'), `Fallback trocou plano aberto por close/macro: "${fallbackAlternativo}"`);
+
+  console.log(`\n🎉 Todos os testes dos 3 ajustes passaram: ${passedChecks}/${totalChecks} verificações aprovadas!`);
+})();

@@ -48,7 +48,18 @@
     'Eleazar': "Eleazar: dignified young high priest, sacred linen garments, ceremonial priestly vestments",
     'Pharaoh': "Pharaoh: royal Egyptian monarch, nemes headdress with golden uraeus cobra, ornate royal linen kilt, gold collar necklace, commanding defiant expression",
     'Faraó': "Pharaoh: royal Egyptian monarch, nemes headdress with golden uraeus cobra, ornate royal linen kilt, gold collar necklace, commanding defiant expression",
-    'Farao': "Pharaoh: royal Egyptian monarch, nemes headdress with golden uraeus cobra, ornate royal linen kilt, gold collar necklace, commanding defiant expression"
+    'Farao': "Pharaoh: royal Egyptian monarch, nemes headdress with golden uraeus cobra, ornate royal linen kilt, gold collar necklace, commanding defiant expression",
+    'Abraham': "Abraham: venerable elderly patriarch in his seventies, long flowing white beard, deep contemplative eyes, nomadic wool mantle, simple leather sandals",
+    'Abraão': "Abraham: venerable elderly patriarch in his seventies, long flowing white beard, deep contemplative eyes, nomadic wool mantle, simple leather sandals",
+    'Abraao': "Abraham: venerable elderly patriarch in his seventies, long flowing white beard, deep contemplative eyes, nomadic wool mantle, simple leather sandals",
+    'Isaac': "Isaac: gentle devout patriarch in his late forties, neatly trimmed dark beard with grey streaks, soft reflective gaze, humble woven wool tunic",
+    'Isaque': "Isaac: gentle devout patriarch in his late forties, neatly trimmed dark beard with grey streaks, soft reflective gaze, humble woven wool tunic",
+    'Jacob': "Jacob: resolute patriarch in his late forties, weathered sun-tanned face, dark thick beard, shepherd's rustic wool tunic, traveler's wooden staff",
+    'Jacó': "Jacob: resolute patriarch in his late forties, weathered sun-tanned face, dark thick beard, shepherd's rustic wool tunic, traveler's wooden staff",
+    'Jaco': "Jacob: resolute patriarch in his late forties, weathered sun-tanned face, dark thick beard, shepherd's rustic wool tunic, traveler's wooden staff",
+    'Joseph': "Joseph: dignified Hebrew governor in Egypt in his thirties, smooth-shaven youthful countenance, fine Egyptian pleated linen robe with gold pectoral collar",
+    'José': "Joseph: dignified Hebrew governor in Egypt in his thirties, smooth-shaven youthful countenance, fine Egyptian pleated linen robe with gold pectoral collar",
+    'Jose': "Joseph: dignified Hebrew governor in Egypt in his thirties, smooth-shaven youthful countenance, fine Egyptian pleated linen robe with gold pectoral collar"
   };
 
   const DICIONARIO_TOPONIMOS = [
@@ -316,8 +327,9 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
 
   /**
    * ITEM 3: No gancho (primeiros ~15s), quebra frases longas em frases curtas
-   * por pontuações intermediárias (; : — ,) para garantir uma cena nova a cada 4 a 6s.
-   * Frases sem qualquer pontuação intermediária são preservadas como bloco único para emitir aviso.
+   * dividindo SOMENTE em pontuações que o Scriptorium reconhece como início de frase (; : . ! ? … e ...).
+   * NUNCA divide em vírgula (,) nem travessão (—).
+   * Se a frase não tiver nenhum desses sinais, NÃO divide (deixa a frase inteira numa cena só).
    */
   function quebrarFrasesParaGancho(frases, limiteSegundosGancho = 18) {
     if (!Array.isArray(frases)) return [];
@@ -328,29 +340,38 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
       const qtdPalavras = contarPalavras(frase);
       const duracao = qtdPalavras / 2.5;
 
-      // Se ainda estamos dentro do gancho e a frase tem mais de 15 palavras (> 6s)
-      // E contém pontuação intermediária (; : — ,)
-      const temPontuacaoIntermediaria = /[;:—,]/.test(frase);
-      if (tempoEstimado < limiteSegundosGancho && qtdPalavras > 15 && temPontuacaoIntermediaria) {
-        // Divide por pontuação intermediária (; : — ,) preservando o sinal
-        const pedacos = frase.match(/[^;:—,\n]+(?:[;:—,]+["'”»]?|$)/g) || [frase];
-        let acumulado = '';
+      // Sinais reconhecidos pelo Scriptorium como fronteira de frase: ; : . ! ? … (e reticências ...)
+      // NUNCA divide em vírgula (,) nem travessão (—)
+      const temSinalValido = /[;:!?…\.]/.test(frase);
 
-        for (const pedaco of pedacos) {
-          const candidato = acumulado ? `${acumulado} ${pedaco.trim()}` : pedaco.trim();
-          const qtdCandidato = contarPalavras(candidato);
+      if (tempoEstimado < limiteSegundosGancho && qtdPalavras > 15 && temSinalValido) {
+        // Divide SOMENTE após ; : . ! ? … (preservando o sinal no final do trecho anterior)
+        const pedacos = frase.match(/[^;:!?…\.\n]+(?:(?:\.\.\.|[;:!?…\.])+["'”»]?|$)/g) || [frase];
+        const filtrados = pedacos.map(p => p.trim()).filter(Boolean);
 
-          if (acumulado && qtdCandidato > 15 && contarPalavras(acumulado) >= 7) {
+        // Se houver mais de um pedaço separado pelos sinais permitidos (; : . ! ? …)
+        if (filtrados.length > 1) {
+          let acumulado = '';
+          for (const pedaco of filtrados) {
+            const candidato = acumulado ? `${acumulado} ${pedaco}` : pedaco;
+            const qtdCandidato = contarPalavras(candidato);
+
+            if (acumulado && qtdCandidato > 15 && contarPalavras(acumulado) >= 5) {
+              resultado.push(acumulado.trim());
+              tempoEstimado += contarPalavras(acumulado) / 2.5;
+              acumulado = pedaco;
+            } else {
+              acumulado = candidato;
+            }
+          }
+          if (acumulado.trim()) {
             resultado.push(acumulado.trim());
             tempoEstimado += contarPalavras(acumulado) / 2.5;
-            acumulado = pedaco.trim();
-          } else {
-            acumulado = candidato;
           }
-        }
-        if (acumulado.trim()) {
-          resultado.push(acumulado.trim());
-          tempoEstimado += contarPalavras(acumulado) / 2.5;
+        } else {
+          // Não possui os sinais permitidos para divisão interna -> mantém como frase única
+          resultado.push(frase);
+          tempoEstimado += duracao;
         }
       } else {
         resultado.push(frase);
@@ -528,8 +549,181 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
     'saul': 'Saul',
     'samuel': 'Samuel',
     'jonatas': 'Jonathan', 'jônatas': 'Jonathan', 'jonathan': 'Jonathan',
-    'salomao': 'Solomon', 'salomão': 'Solomon', 'solomon': 'Solomon'
+    'salomao': 'Solomon', 'salomão': 'Solomon', 'solomon': 'Solomon',
+    'abraao': 'Abraham', 'abraão': 'Abraham', 'abraham': 'Abraham',
+    'isaque': 'Isaac', 'isaac': 'Isaac',
+    'jaco': 'Jacob', 'jacó': 'Jacob', 'jacob': 'Jacob',
+    'jose': 'Joseph', 'josé': 'Joseph', 'joseph': 'Joseph',
+    'elias': 'Elijah', 'elijah': 'Elijah',
+    'acabe': 'Ahab', 'ahab': 'Ahab',
+    'jezabel': 'Jezebel', 'jezebel': 'Jezebel',
+    'eliseu': 'Elisha', 'elisha': 'Elisha',
+    'pedro': 'Peter', 'peter': 'Peter',
+    'paulo': 'Paul', 'paul': 'Paul',
+    'joao': 'John', 'joão': 'John', 'john': 'John',
+    'daniel': 'Daniel'
   };
+
+  const NOMES_PERSONAGENS_EXTRA_CANONICOS = [
+    { pt: 'Elias', en: 'Elijah' },
+    { pt: 'Acabe', en: 'Ahab' },
+    { pt: 'Jezabel', en: 'Jezebel' },
+    { pt: 'Eliseu', en: 'Elisha' },
+    { pt: 'Abraão', en: 'Abraham', altPt: 'Abraao' },
+    { pt: 'Isaque', en: 'Isaac' },
+    { pt: 'Jacó', en: 'Jacob', altPt: 'Jaco' },
+    { pt: 'José', en: 'Joseph', altPt: 'Jose' },
+    { pt: 'Gideão', en: 'Gideon', altPt: 'Gideao' },
+    { pt: 'Sansão', en: 'Samson', altPt: 'Sansao' },
+    { pt: 'Daniel', en: 'Daniel' },
+    { pt: 'Nabucodonosor', en: 'Nebuchadnezzar' },
+    { pt: 'Pedro', en: 'Peter' },
+    { pt: 'Paulo', en: 'Paul' },
+    { pt: 'João', en: 'John', altPt: 'Joao' }
+  ];
+
+  function gerarFichaDeterministica(nomeEn, nomePt, textoRoteiro = '') {
+    const n = (nomeEn || '').toLowerCase();
+    if (n === 'elijah' || n === 'elias') {
+      return 'Elijah: robust elderly Hebrew prophet in his late sixties, intense piercing visionary eyes, weathered sun-browned face, wild unkempt grey beard and shoulder-length grey hair, coarse dark camel-hair mantle, thick leather girdle belt';
+    }
+    if (n === 'ahab' || n === 'acabe') {
+      return 'Ahab: arrogant middle-aged Hebrew monarch in his late forties, conflicted brooding face, neatly trimmed black beard, royal bronze circlet crown, royal purple linen tunic with gold embroidery, ornate ceremonial dagger at belt';
+    }
+    if (n === 'jezebel' || n === 'jezabel') {
+      return 'Jezebel: proud Phoenician queen in her early forties, haughty pale sharp face, dark lined eyes, braided raven-black hair with ornate golden headdress, lavish crimson and violet silk robes with heavy gold jewelry';
+    }
+    if (n === 'elisha' || n === 'eliseu') {
+      return 'Elisha: determined Hebrew prophet in his forties, bald crown, earnest intense gaze, rustic brown woolen mantle, holding a simple wooden traveler staff';
+    }
+    if (n === 'daniel') {
+      return 'Daniel: dignified venerable statesman and prophet in his seventies, wise serene face, neat silver-white beard, noble Babylonian linen garments with gold trim';
+    }
+    if (n === 'peter' || n === 'pedro') {
+      return 'Peter: weathered rugged Galilean fisherman in his late forties, sturdy muscular frame, salt-and-pepper curly hair and thick beard, coarse indigo wool tunic, leather work belt';
+    }
+    if (n === 'paul' || n === 'paulo') {
+      return 'Paul: earnest intense apostle in his fifties, receding dark hair with grey streaks, trimmed dark beard, piercing scholarly eyes, humble rustic brown traveler mantle, leather parchment pouch';
+    }
+    return `${nomeEn}: dignified biblical figure in late forties, weathered resolute countenance, dark beard with grey streaks, rustic linen tunic, woven woolen mantle in earth tones`;
+  }
+
+  async function extrairOuGerarFichasDoRoteiro(narracaoLimpa, chamarIaFn, contexto = {}) {
+    const fichas = { ...(contexto.fichasPersonagens || {}) };
+    if (typeof window !== 'undefined' && window._fichasPersonagensAtual) {
+      Object.assign(fichas, window._fichasPersonagensAtual);
+    }
+
+    const texto = (narracaoLimpa || '').toLowerCase();
+
+    // 1. Identifica quais personagens do catálogo canônico (reserva fixa) estão presentes
+    for (const [chave, fichaCanon] of Object.entries(FICHAS_PERSONAGENS)) {
+      const reg = new RegExp(`\\b${chave}\\b`, 'i');
+      if (reg.test(texto)) {
+        const nomeNorm = NOMES_PERSONAGENS_NORMALIZADOS[chave.toLowerCase()] || chave;
+        if (!fichas[nomeNorm]) {
+          fichas[nomeNorm] = fichaCanon;
+          fichas[chave] = fichaCanon;
+        }
+      }
+    }
+
+    // 2. Identifica personagens mencionados no roteiro que NÃO estão no catálogo canônico
+    const personagensNovos = [];
+    for (const item of NOMES_PERSONAGENS_EXTRA_CANONICOS) {
+      const regPt = new RegExp(`\\b${item.pt}\\b`, 'i');
+      const regEn = new RegExp(`\\b${item.en}\\b`, 'i');
+      const regAlt = item.altPt ? new RegExp(`\\b${item.altPt}\\b`, 'i') : null;
+      if ((regPt.test(texto) || regEn.test(texto) || (regAlt && regAlt.test(texto))) && !fichas[item.en] && !fichas[item.pt]) {
+        personagensNovos.push(item);
+      }
+    }
+
+    // 3. Se houver callback da IA e personagens novos para descrever
+    if (typeof chamarIaFn === 'function' && personagensNovos.length > 0) {
+      try {
+        const nomesParaPedir = personagensNovos.map(p => `${p.en} (${p.pt})`).join(', ');
+        const promptFichas = `You are an expert biblical art director. In this script excerpt:
+"${(narracaoLimpa || '').slice(0, 1500)}"
+For each character listed (${nomesParaPedir}), create a concise 1-line visual identity card in English (exact format: "Name: age, face, hair, beard, clothes, colors").
+Return EXCLUSIVELY a JSON object where keys are the character names and values are the 1-line descriptions. Example:
+{
+  "Elijah": "Elijah: robust elderly Hebrew prophet in his late sixties, intense piercing visionary eyes, weathered sun-browned face, wild unkempt grey beard and shoulder-length grey hair, coarse dark camel-hair mantle, thick leather girdle belt",
+  "Ahab": "Ahab: arrogant middle-aged Hebrew monarch in his late forties, conflicted brooding face, neatly trimmed black beard, royal bronze circlet crown, royal purple linen tunic with gold embroidery, ornate ceremonial dagger at belt"
+}`;
+        const respFichas = await chamarIaFn(promptFichas);
+        const objFichas = extrairJsonLote(respFichas);
+        let parsedMap = {};
+        if (typeof objFichas === 'object' && objFichas !== null && !Array.isArray(objFichas)) {
+          parsedMap = objFichas;
+        } else if (Array.isArray(objFichas)) {
+          for (const item of objFichas) {
+            if (item && (item.name || item.personagem || item.character)) {
+              const k = item.name || item.personagem || item.character;
+              parsedMap[k] = item.card || item.ficha || item.description || item.descricaoVisual;
+            }
+          }
+        }
+        for (const [k, v] of Object.entries(parsedMap)) {
+          if (typeof v === 'string' && v.trim().length > 15) {
+            const linhaFicha = v.trim();
+            fichas[k] = linhaFicha;
+            for (const item of NOMES_PERSONAGENS_EXTRA_CANONICOS) {
+              if (item.en.toLowerCase() === k.toLowerCase() || item.pt.toLowerCase() === k.toLowerCase()) {
+                fichas[item.en] = linhaFicha;
+                fichas[item.pt] = linhaFicha;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[PlanoCenas] Falha ao solicitar fichas à IA, usando gerador determinístico:', e);
+      }
+    }
+
+    // 4. Garante ficha determinística para qualquer personagem novo que ainda não tenha recebido
+    for (const item of personagensNovos) {
+      if (!fichas[item.en] && !fichas[item.pt]) {
+        const fichaFallback = gerarFichaDeterministica(item.en, item.pt, texto);
+        fichas[item.en] = fichaFallback;
+        fichas[item.pt] = fichaFallback;
+      }
+    }
+
+    // 5. Atualiza contexto e variável global do projeto
+    contexto.fichasPersonagens = fichas;
+    if (typeof window !== 'undefined') {
+      window._fichasPersonagensAtual = fichas;
+      if (window.AutoSave && typeof window.AutoSave.save === 'function') {
+        window.AutoSave.save();
+      }
+    }
+
+    return fichas;
+  }
+
+  function gerarFallbackEnquadramentoAlternativo(trechoPt, numeroCena, enqAnterior, contexto = {}) {
+    const t = (trechoPt || '').toLowerCase();
+    const pers = detectarPersonagensNaDescricao(t);
+    const primeiroNome = pers.length > 0 ? (NOMES_PERSONAGENS_NORMALIZADOS[pers[0]] || pers[0]) : '';
+
+    if (enqAnterior === 'aberto') {
+      if (primeiroNome) {
+        return `Dramatic intense close-up on ${primeiroNome} with focused solemn facial expression and determined gaze under atmospheric lighting`;
+      }
+      return `Macro detail shot on hands gripping ancient rustic implements and weathered materials on dusty ground in solemn reverence`;
+    }
+
+    if (enqAnterior === 'close' || enqAnterior === 'detalhe') {
+      return `Wide panoramic landscape shot of the historic biblical location with ancient encampment under dramatic atmospheric sky`;
+    }
+
+    if (enqAnterior === 'medio') {
+      return `Dramatic close-up on face and solemn eyes filled with reverence under atmospheric morning sunlight`;
+    }
+
+    return `Dynamic medium shot showing authentic figures in ancient biblical garments interacting with solemn dramatic reverence`;
+  }
 
   function detectarTipoEnquadramento(desc) {
     if (!desc || typeof desc !== 'string') return 'outro';
@@ -558,9 +752,20 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
     if (/\b(?:saul|rei\s+saul)\b/i.test(d)) pers.push('saul');
     if (/\b(?:samuel)\b/i.test(d)) pers.push('samuel');
     if (/\b(?:jonathan|j[oô]natas)\b/i.test(d)) pers.push('jonathan');
+    if (/\b(?:solomon|salom[aã]o)\b/i.test(d)) pers.push('solomon');
     if (/\b(?:moses|mois[eé]s)\b/i.test(d)) pers.push('moses');
     if (/\b(?:aaron|ar[aã]o)\b/i.test(d)) pers.push('aaron');
+    if (/\b(?:joshua|josu[eé])\b/i.test(d)) pers.push('joshua');
+    if (/\b(?:miriam|miri[aã])\b/i.test(d)) pers.push('miriam');
     if (/\b(?:pharaoh|fara[oó])\b/i.test(d)) pers.push('pharaoh');
+    if (/\b(?:elijah|elias)\b/i.test(d)) pers.push('elijah');
+    if (/\b(?:ahab|acabe)\b/i.test(d)) pers.push('ahab');
+    if (/\b(?:jezebel|jezabel)\b/i.test(d)) pers.push('jezebel');
+    if (/\b(?:elisha|eliseu)\b/i.test(d)) pers.push('elisha');
+    if (/\b(?:peter|pedro)\b/i.test(d)) pers.push('peter');
+    if (/\b(?:paul|paulo)\b/i.test(d)) pers.push('paul');
+    if (/\b(?:john|jo[aã]o)\b/i.test(d)) pers.push('john');
+    if (/\b(?:daniel)\b/i.test(d)) pers.push('daniel');
     return pers.sort();
   }
 
@@ -811,21 +1016,7 @@ ${exemploJson}`;
       return { valido: false, motivo: 'Representação antropomórfica indevida da figura de Deus.' };
     }
 
-    // 6. Detecção de semelhança excessiva com cenas anteriores (ITEM 4)
-    if (contexto && Array.isArray(contexto.descricoesAnteriores) && contexto.descricoesAnteriores.length > 0) {
-      for (const ant of contexto.descricoesAnteriores) {
-        if (!ant) continue;
-        const taxa = calcularSemelhancaDescricoes(desc, ant);
-        if (taxa >= 0.60) {
-          return {
-            valido: false,
-            motivo: `Semelhança excessiva com cena anterior (${Math.round(taxa * 100)}% de termos coincidentes). Exige variedade de enquadramento e composição.`
-          };
-        }
-      }
-    }
-
-    // 7. ITEM 4: Proibição de repetição de enquadramento com mesmos personagens em cenas consecutivas
+    // 6. ITEM 4: Proibição de repetição de enquadramento com mesmos personagens em cenas consecutivas
     if (contexto && Array.isArray(contexto.descricoesAnteriores) && contexto.descricoesAnteriores.length > 0) {
       const descAnterior = contexto.descricoesAnteriores[contexto.descricoesAnteriores.length - 1];
       if (descAnterior) {
@@ -842,6 +1033,20 @@ ${exemploJson}`;
           return {
             valido: false,
             motivo: `Cenas consecutivas não podem repetir o mesmo tipo de plano (${enqAtual}) e os mesmos personagens (${persAtual.join(', ')}). Exige variar (ex.: plano aberto do vale → close no rosto ou detalhe).`
+          };
+        }
+      }
+    }
+
+    // 7. Detecção de semelhança excessiva com cenas anteriores (ITEM 4)
+    if (contexto && Array.isArray(contexto.descricoesAnteriores) && contexto.descricoesAnteriores.length > 0) {
+      for (const ant of contexto.descricoesAnteriores) {
+        if (!ant) continue;
+        const taxa = calcularSemelhancaDescricoes(desc, ant);
+        if (taxa >= 0.60) {
+          return {
+            valido: false,
+            motivo: `Semelhança excessiva com cena anterior (${Math.round(taxa * 100)}% de termos coincidentes). Exige variedade de enquadramento e composição.`
           };
         }
       }
@@ -868,14 +1073,22 @@ ${exemploJson}`;
     desc = desc.replace(/Full bleed image[^.]*\.?\s*$/i, '');
     desc = desc.replace(/^Depicting\s+/i, '');
 
-    // Identifica personagens presentes com ficha canônica única e consistente
+    // Combina fichas canônicas prontas (reserva) com fichas geradas do roteiro atual (PONTO B)
+    const fichasDisponiveis = {
+      ...FICHAS_PERSONAGENS,
+      ...(contexto.fichasPersonagens || (typeof window !== 'undefined' ? window._fichasPersonagensAtual : null) || {})
+    };
+
     const personagensEncontrados = [];
-    const nomesNormalizados = NOMES_PERSONAGENS_NORMALIZADOS;
+    const nomesNormalizados = {
+      ...NOMES_PERSONAGENS_NORMALIZADOS,
+      ...(contexto.nomesNormalizados || {})
+    };
 
     const textoCombinado = `${trechoPt} ${desc}`.toLowerCase();
-    for (const [chave, fichaCanon] of Object.entries(FICHAS_PERSONAGENS)) {
-      const nomeEn = nomesNormalizados[chave.toLowerCase()];
-      if (nomeEn && !personagensEncontrados.some(p => p.nome === nomeEn)) {
+    for (const [chave, fichaCanon] of Object.entries(fichasDisponiveis)) {
+      const nomeEn = nomesNormalizados[chave.toLowerCase()] || chave;
+      if (nomeEn && !personagensEncontrados.some(p => p.nome.toLowerCase() === nomeEn.toLowerCase())) {
         const reg = new RegExp(`\\b${chave}\\b`, 'i');
         if (reg.test(textoCombinado)) {
           personagensEncontrados.push({ nome: nomeEn, ficha: fichaCanon });
@@ -968,6 +1181,9 @@ ${exemploJson}`;
   async function gerarDescricoesVisuaisComIa(cenas, narracaoLimpa, chamarIaFn, contexto = {}) {
     if (!cenas || !Array.isArray(cenas) || cenas.length === 0) return cenas;
 
+    // PONTO B: Antes de gerar o 1º lote de cenas, obtém ou gera fichas canônicas para todos os personagens do roteiro
+    await extrairOuGerarFichasDoRoteiro(narracaoLimpa, chamarIaFn, contexto);
+
     // Divide as cenas em lotes de até 10
     const tamanhoLote = 10;
     const lotes = [];
@@ -1020,12 +1236,56 @@ ${exemploJson}`;
         };
         let validacao = validarDescricaoVisualCena(descVisual, trechoPt, contextoValidacao);
 
-        // Se a validação falhar ou estiver vazia, tenta regenerar a cena individual se houver callback de IA
-        if (!validacao.valido && typeof chamarIaFn === 'function' && itemIa) {
+        // PONTO C: Se reprovar por repetição de enquadramento com mesmos personagens (ou semelhança excessiva consecutiva),
+        // gerar de novo essa cena (até 2 tentativas) e, se ainda falhar, usar o fallback trocando o tipo de plano.
+        // NUNCA deixar a cena como PENDENTE por causa dessa regra!
+        const ehRepeticaoEnquadramento = !validacao.valido &&
+          validacao.motivo && (
+            validacao.motivo.includes('Cenas consecutivas não podem repetir') ||
+            validacao.motivo.includes('Semelhança excessiva com cena anterior')
+          );
+
+        if (ehRepeticaoEnquadramento) {
+          let corrigido = false;
+          if (typeof chamarIaFn === 'function') {
+            for (let tent = 1; tent <= 2; tent++) {
+              try {
+                const descAnterior = descricoesAcumuladas[descricoesAcumuladas.length - 1] || '';
+                const enqAnt = detectarTipoEnquadramento(descAnterior);
+                const promptTroca = `The visual description for Scene ${c.numero} was rejected because it repeated the same camera framing ("${enqAnt}") with the same characters.
+CRITICAL INSTRUCTION: You MUST use a completely DIFFERENT camera angle (e.g. dramatic extreme close-up on face, macro detail shot on hands/objects, or high-angle aerial view).
+Narration excerpt: "${trechoPt}".
+Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
+                const respTroca = await chamarIaFn(promptTroca);
+                const itensTroca = extrairJsonLote(respTroca);
+                const itemTroca = localizarItemIaCena(itensTroca, c, 0);
+                const candDesc = extrairTextoDescricaoVisual(itemTroca);
+                if (candDesc) {
+                  const valTroca = validarDescricaoVisualCena(candDesc, trechoPt, contextoValidacao);
+                  if (valTroca.valido) {
+                    descVisual = candDesc;
+                    validacao = valTroca;
+                    corrigido = true;
+                    break;
+                  }
+                }
+              } catch (_) {}
+            }
+          }
+
+          // Se após até 2 tentativas a IA ainda falhar (ou sem IA), aciona fallback trocando o tipo de plano
+          if (!corrigido || !validacao.valido) {
+            const descAnterior = descricoesAcumuladas[descricoesAcumuladas.length - 1] || '';
+            const enqAnt = detectarTipoEnquadramento(descAnterior);
+            descVisual = gerarFallbackEnquadramentoAlternativo(trechoPt, c.numero, enqAnt, contexto);
+            validacao = { valido: true, motivo: '' };
+          }
+        } else if (!validacao.valido && typeof chamarIaFn === 'function' && itemIa) {
+          // Se a validação falhar por outro motivo (mar indevido, termos de bastidor, português, etc.)
           try {
             const promptCorrecao = `The previous visual description for Scene ${c.numero} was rejected because: ${validacao.motivo}.
 Excerpt: "${trechoPt}"
-Write a corrected, strictly factual visual description in English adhering to all rules (alternate camera framing, no viewers/audience/channel terms). Output JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
+Write a corrected, strictly factual visual description in English adhering to all rules. Output JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
             const respCorrigida = await chamarIaFn(promptCorrecao);
             const itensCorrigidos = extrairJsonLote(respCorrigida);
             const itemCorrigido = localizarItemIaCena(itensCorrigidos, c, 0);
@@ -1040,7 +1300,7 @@ Write a corrected, strictly factual visual description in English adhering to al
           } catch (_) {}
         }
 
-        // Se a descrição foi validada com sucesso
+        // Se a descrição foi validada com sucesso (ou resolvida via fallback de enquadramento)
         if (validacao.valido) {
           c.status = 'CONCLUIDA';
           c.motivoPendente = '';
@@ -1078,6 +1338,9 @@ Write a corrected, strictly factual visual description in English adhering to al
         erroIa: 'Função de chamada à IA não fornecida ou API Key não configurada.'
       };
     }
+
+    // PONTO B: Garante fichas dos personagens presentes
+    await extrairOuGerarFichasDoRoteiro(narracaoLimpa, chamarIaFn, contexto);
 
     const descricoesConcluidas = cenas
       .filter(c => c.status === 'CONCLUIDA' && c.descricaoVisual)
@@ -1128,7 +1391,48 @@ Write a corrected, strictly factual visual description in English adhering to al
           ...contexto,
           descricoesAnteriores: descricoesConcluidas
         };
-        const validacao = validarDescricaoVisualCena(descVisual, trechoPt, contextoValidacao);
+        let validacao = validarDescricaoVisualCena(descVisual, trechoPt, contextoValidacao);
+
+        // PONTO C: Se reprovar por repetição de enquadramento (ou semelhança consecutiva), tenta até 2 vezes ou usa fallback alternativo
+        const ehRepeticaoEnquadramento = !validacao.valido &&
+          validacao.motivo && (
+            validacao.motivo.includes('Cenas consecutivas não podem repetir') ||
+            validacao.motivo.includes('Semelhança excessiva com cena anterior')
+          );
+
+        if (ehRepeticaoEnquadramento) {
+          let corrigido = false;
+          for (let tent = 1; tent <= 2; tent++) {
+            try {
+              const descAnterior = descricoesConcluidas[descricoesConcluidas.length - 1] || '';
+              const enqAnt = detectarTipoEnquadramento(descAnterior);
+              const promptTroca = `The visual description for Scene ${c.numero} was rejected because it repeated the camera framing ("${enqAnt}") with the same characters.
+CRITICAL INSTRUCTION: You MUST use a completely DIFFERENT camera angle (e.g. dramatic extreme close-up on face, macro detail shot on hands/objects, or high-angle aerial view).
+Narration excerpt: "${trechoPt}".
+Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
+              const respTroca = await chamarIaFn(promptTroca);
+              const itensTroca = extrairJsonLote(respTroca);
+              const itemTroca = localizarItemIaCena(itensTroca, c, 0);
+              const candDesc = extrairTextoDescricaoVisual(itemTroca);
+              if (candDesc) {
+                const valTroca = validarDescricaoVisualCena(candDesc, trechoPt, contextoValidacao);
+                if (valTroca.valido) {
+                  descVisual = candDesc;
+                  validacao = valTroca;
+                  corrigido = true;
+                  break;
+                }
+              }
+            } catch (_) {}
+          }
+
+          if (!corrigido || !validacao.valido) {
+            const descAnterior = descricoesConcluidas[descricoesConcluidas.length - 1] || '';
+            const enqAnt = detectarTipoEnquadramento(descAnterior);
+            descVisual = gerarFallbackEnquadramentoAlternativo(trechoPt, c.numero, enqAnt, contexto);
+            validacao = { valido: true, motivo: '' };
+          }
+        }
 
         if (validacao.valido) {
           c.status = 'CONCLUIDA';
@@ -1175,6 +1479,11 @@ Write a corrected, strictly factual visual description in English adhering to al
   function gerarPlanoDeCenas(narracaoLimpa, contexto = {}) {
     if (!narracaoLimpa || typeof narracaoLimpa !== 'string') {
       return { cenas: [], avisos: ['Narração Limpa ausente.'] };
+    }
+
+    // PONTO B: extrai ou gera fichas dos personagens presentes no roteiro
+    if (!contexto.fichasPersonagens) {
+      extrairOuGerarFichasDoRoteiro(narracaoLimpa, null, contexto);
     }
 
     const frases = dividirEmFrases(narracaoLimpa);
@@ -1561,8 +1870,13 @@ Write a corrected, strictly factual visual description in English adhering to al
     localizarItemIaCena,
     extrairTextoDescricaoVisual,
     validarDescricaoVisualCena,
+    detectarTipoEnquadramento,
+    detectarPersonagensNaDescricao,
     montarPromptFinalCena,
     gerarDescricaoVisualFallback,
+    gerarFallbackEnquadramentoAlternativo,
+    extrairOuGerarFichasDoRoteiro,
+    gerarFichaDeterministica,
     gerarDescricoesVisuaisComIa,
     regenerarCenasPendentes,
     gerarDescricoesVisuaisOffline,
