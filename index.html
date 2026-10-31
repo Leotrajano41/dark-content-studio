@@ -6472,6 +6472,14 @@ function limparResultadosEtapasPosteriores() {
     atualizarSeloAba(5, false);
   }
 
+  // Zerar fichas de personagens e plano de cenas para evitar vazamento entre temas/roteiros
+  window._fichasPersonagensAtual = null;
+  window._planoDeCenasAtual = null;
+  if (typeof window !== 'undefined' && window.AutoSave && window.AutoSave.session) {
+    delete window.AutoSave.session._fichasPersonagensAtual;
+    delete window.AutoSave.session._planoDeCenasAtual;
+  }
+
   if (typeof AutoSave !== 'undefined' && AutoSave && AutoSave.save) {
     AutoSave.save();
   }
@@ -8664,7 +8672,11 @@ function limparTextoParaNarracao(texto, estiloRoteiro = '') {
     return '';
   });
 
-  // 3. Remove separadores horizontais markdown (---, ***, ___)
+  // 3. Remove separadores horizontais markdown (---, ***, ___) e restos de formatação
+  // inclusive no meio de frases e parágrafos (ex: "pergunta? --- O texto" vira "pergunta? O texto")
+  limpo = limpo.replace(/([.!?…:;,])\s*[-–—*_]{2,}\s*/g, '$1 ');
+  limpo = limpo.replace(/\s*[-*_]{3,}\s*/g, ' ');
+  limpo = limpo.replace(/^[^\S\r\n]*[-–—*_]{2,}\s*/gm, '');
   limpo = limpo.replace(/^\s*[-*_]{3,}\s*$/gm, '');
 
   // 4. Remove linhas e menções de WORD COUNT / contagem de palavras
@@ -8767,6 +8779,8 @@ function limparTextoParaNarracao(texto, estiloRoteiro = '') {
     if (/[.!?]$/.test(txt.trim())) return m;
     return txt.trim() + '.' + aspa;
   });
+
+  limpo = limpo.replace(/^[-–—\s]+/, '');
 
   return limpo.trim();
 }
@@ -8967,6 +8981,10 @@ function limparEstadoTemaAnterior() {
   window._planoDeCenasAtual = null;
   window._hashNarracaoPlanoCenas = null;
   window._fichasPersonagensAtual = null;
+  if (typeof window !== 'undefined' && window.AutoSave && window.AutoSave.session) {
+    delete window.AutoSave.session._fichasPersonagensAtual;
+    delete window.AutoSave.session._planoDeCenasAtual;
+  }
   if (typeof currentAudioBlob !== 'undefined') currentAudioBlob = null;
   if (typeof currentAudioParts !== 'undefined') currentAudioParts = [];
   if (typeof currentSrtContent !== 'undefined') currentSrtContent = '';
@@ -12857,6 +12875,13 @@ Desenvolvimento: A soberania divina cumpre cada detalhe profético anunciado pel
   const inputIdeiaEl = document.getElementById('input-ideia-escolhida');
   if (inputIdeiaEl) {
     inputIdeiaEl.addEventListener('input', () => {
+      // Ao mudar a ideia escolhida, zera fichas de personagens e plano de cenas do projeto anterior
+      window._fichasPersonagensAtual = null;
+      window._planoDeCenasAtual = null;
+      if (typeof window !== 'undefined' && window.AutoSave && window.AutoSave.session) {
+        delete window.AutoSave.session._fichasPersonagensAtual;
+        delete window.AutoSave.session._planoDeCenasAtual;
+      }
       if (!inputIdeiaEl.value.trim()) {
         window._numeroIdeiaEscolhida = null;
         localStorage.removeItem('dark_studio_ideia_escolhida_num');

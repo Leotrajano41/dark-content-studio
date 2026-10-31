@@ -302,6 +302,9 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
     const t = texto
       .replace(/\*{0,2}\[[^\]\r\n]*\]\*{0,2}\s*:?/g, '')
       .replace(/[\[\]]/g, '')
+      .replace(/([.!?…:;,])\s*[-–—*_]{2,}\s*/g, '$1 ')
+      .replace(/\s*[-*_]{3,}\s*/g, ' ')
+      .replace(/^[^\S\r\n]*[-–—*_]{2,}\s*/gm, '')
       .replace(/^[^\S\r\n]*(?:#+\s*)?(?:\*{1,2})?[A-ZÀ-Ú0-9\s,.'’\-–—/:]{3,80}(?:\*{1,2})?\s*:?\s*$/gm, (match) => {
         const semMd = match.replace(/[*#:_]/g, '').trim();
         const letters = semMd.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, '');
@@ -317,7 +320,7 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
 
     const frases = [];
     for (const m of matches) {
-      const f = m.trim();
+      const f = m.trim().replace(/^[-–—\s]+/, '').trim();
       if (f.length > 0) {
         frases.push(f);
       }
@@ -596,7 +599,9 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
     'pedro': 'Peter', 'peter': 'Peter',
     'paulo': 'Paul', 'paul': 'Paul',
     'joao': 'John', 'joão': 'John', 'john': 'John',
-    'daniel': 'Daniel'
+    'daniel': 'Daniel',
+    'dario': 'Darius', 'dário': 'Darius', 'darius': 'Darius',
+    'rei dario': 'Darius', 'king darius': 'Darius'
   };
 
   const NOMES_PERSONAGENS_EXTRA_CANONICOS = [
@@ -611,6 +616,7 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
     { pt: 'Gideão', en: 'Gideon', altPt: 'Gideao' },
     { pt: 'Sansão', en: 'Samson', altPt: 'Sansao' },
     { pt: 'Daniel', en: 'Daniel' },
+    { pt: 'Dario', en: 'Darius', altPt: 'Dário' },
     { pt: 'Nabucodonosor', en: 'Nebuchadnezzar' },
     { pt: 'Pedro', en: 'Peter' },
     { pt: 'Paulo', en: 'Paul' },
@@ -633,6 +639,9 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
     }
     if (n === 'daniel') {
       return 'Daniel: dignified venerable statesman and prophet in his seventies, wise serene face, neat silver-white beard, noble Babylonian linen garments with gold trim';
+    }
+    if (n === 'darius' || n === 'dario' || n === 'dário') {
+      return 'Darius: troubled middle-aged Persian emperor in his early fifties, conflicted remorseful eyes, noble sculpted face, curled grey-streaked dark beard, ornate Median golden royal crown, flowing saffron and imperial purple silk robes with gold embroidery';
     }
     if (n === 'peter' || n === 'pedro') {
       return 'Peter: weathered rugged Galilean fisherman in his late forties, sturdy muscular frame, salt-and-pepper curly hair and thick beard, coarse indigo wool tunic, leather work belt';
@@ -663,13 +672,26 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
   }
 
   async function extrairOuGerarFichasDoRoteiro(narracaoLimpa, chamarIaFn, contexto = {}) {
-    const fichas = { ...(contexto.fichasPersonagens || {}) };
-    if (typeof window !== 'undefined' && window._fichasPersonagensAtual) {
-      Object.assign(fichas, window._fichasPersonagensAtual);
-    }
+    // Inicia mapa novo para garantir isolamento estrito entre projetos.
+    // NUNCA herda fichas de outros projetos ou sessões anteriores.
+    const fichas = {};
 
     // PONTO 1: Filtra expressões genealógicas e teológicas para não criar fichas de quem é apenas citado em oração
     const texto = limparExpressoesGenealogicas((narracaoLimpa || '').toLowerCase());
+
+    // Se houver fichas existentes no contexto ou na sessão, herda SOMENTE se o personagem de fato aparece no texto do roteiro atual
+    const fichasCandidatas = {
+      ...(typeof window !== 'undefined' && window._fichasPersonagensAtual ? window._fichasPersonagensAtual : {}),
+      ...(contexto.fichasPersonagens || {})
+    };
+    for (const [k, v] of Object.entries(fichasCandidatas)) {
+      const kNorm = (NOMES_PERSONAGENS_NORMALIZADOS[k.toLowerCase()] || k).toLowerCase();
+      const reg = new RegExp(`\\b${k}\\b`, 'i');
+      const regNorm = new RegExp(`\\b${kNorm}\\b`, 'i');
+      if (reg.test(texto) || regNorm.test(texto)) {
+        fichas[k] = v;
+      }
+    }
 
     // 1. Identifica quais personagens do catálogo canônico (reserva fixa) estão presentes
     for (const [chave, fichaCanon] of Object.entries(FICHAS_PERSONAGENS)) {
@@ -766,6 +788,9 @@ Return EXCLUSIVELY a JSON object where keys are the character names and values a
     const t = (trechoPt || '').toLowerCase();
     const pers = detectarPersonagensNaDescricao(t);
     let primeiroNome = pers.length > 0 ? (NOMES_PERSONAGENS_NORMALIZADOS[pers[0]] || pers[0]) : '';
+    if (/\b(?:dario|darius)\b/i.test(t) && /\b(?:assinou|decreto|jejuou|noite|correu|apressou|chamou|ordenou|j[uú]bilo)\b/i.test(t)) {
+      primeiroNome = 'Darius';
+    }
     if (!primeiroNome && contexto.personagemPrincipal) {
       primeiroNome = NOMES_PERSONAGENS_NORMALIZADOS[contexto.personagemPrincipal.toLowerCase()] || contexto.personagemPrincipal;
     }
@@ -786,6 +811,8 @@ Return EXCLUSIVELY a JSON object where keys are the character names and values a
         lugar = 'the Valley of Elah';
       } else if (/\b(?:merib[aá]|cades|rocha)\b/i.test(temaLower) || /\b(?:merib[aá]|cades)\b/i.test(t)) {
         lugar = 'the desert wilderness of Kadesh at Meribah';
+      } else if (/\b(?:daniel|dario|darius|le[oõ]es|babil[oô]nia|p[eé]rsia|persa)\b/i.test(temaLower) || /\b(?:daniel|dario|darius|le[oõ]es)\b/i.test(t)) {
+        lugar = 'the ancient Persian royal court of Babylon';
       } else if (/\b(?:mar\s+vermelho)\b/i.test(temaLower) || /\b(?:mar\s+vermelho)\b/i.test(t)) {
         lugar = 'the parted seabed of the Red Sea';
       } else {
@@ -824,6 +851,21 @@ Return EXCLUSIVELY a JSON object where keys are the character names and values a
       acao = `young David bending down at the riverbed to select five smooth rounded river stones, placing them carefully into his small leather pouch`;
     } else if (/\b(?:atirou|lan[cç]ou|acertou|testa|caiu|rosto\s+em\s+terra)\b/i.test(t)) {
       acao = `the decisive moment of the stone striking the giant's forehead, Goliath staggering backward on the dusty slope under bright sunlight`;
+    }
+
+    // Ciclo Daniel e Dario
+    else if (/\b(?:decreto|assinou|assinar|edito|lei\s+dos\s+medos|proibia|trinta\s+dias)\b/i.test(t) && /\b(?:dario|darius|rei)\b/i.test(t)) {
+      acao = `King Darius seated upon the Persian royal throne affixing the royal seal to the parchment decree in solemn authority`;
+    } else if (/\b(?:jejuou|noite|vig[ií]lia|ins[oô]nia|ang[uú]stia)\b/i.test(t) && /\b(?:dario|darius|rei)\b/i.test(t)) {
+      acao = `troubled King Darius pacing his imperial bedchamber in sleepless fasting and anxious vigil beside a dim brass lamp`;
+    } else if (/\b(?:correu|apressou|pela\s+manh[aã]|chamou)\b/i.test(t) && /\b(?:dario|darius|rei)\b/i.test(t)) {
+      acao = `King Darius rushing anxiously at dawn to the sealed stone mouth of the lions' den calling out into the depths`;
+    } else if (/\b(?:ordenou|tirar|tirassem|j[uú]bilo)\b/i.test(t) && /\b(?:dario|darius|rei)\b/i.test(t)) {
+      acao = `King Darius rejoicing with relief as faithful Daniel is brought up unharmed from the lions' den`;
+    } else if (/\b(?:cova|le[oõ]es|anjo|fechou\s+a\s+boca)\b/i.test(t)) {
+      acao = `Daniel standing peacefully among docile resting lions in the dim stony den under celestial divine light`;
+    } else if (/\b(?:conspir|acus|s[aá]trapas|governadores)\b/i.test(t)) {
+      acao = `scheming Persian satraps and officials whispering in the palace corridors plotting deceit in shadow`;
     }
 
     // Ciclo Moisés
@@ -998,6 +1040,7 @@ Return EXCLUSIVELY a JSON object where keys are the character names and values a
     if (/\b(?:paul|paulo)\b/i.test(d)) pers.push('paul');
     if (/\b(?:john|jo[aã]o)\b/i.test(d)) pers.push('john');
     if (/\b(?:daniel)\b/i.test(d)) pers.push('daniel');
+    if (/\b(?:darius|dario|dário|king\s+darius|rei\s+dario)\b/i.test(d)) pers.push('darius');
     return pers.sort();
   }
 
@@ -1344,6 +1387,26 @@ ${exemploJson}`;
     // NUNCA de quem é apenas mencionado no trecho falado (oração, fala ou genealogia).
     const descLowerLimpa = limparExpressoesGenealogicas(desc.toLowerCase());
 
+    // PONTO: Para cada personagem que aparece na descricaoVisual e não tem ficha (ex.: Darius),
+    // gera a ficha (lista fixa ou determinística) antes de montar os prompts
+    const persDetectadosNaDesc = detectarPersonagensNaDescricao(descLowerLimpa);
+    for (const pers of persDetectadosNaDesc) {
+      const nomeEn = nomesNormalizados[pers.toLowerCase()] || pers;
+      if (!fichasDisponiveis[nomeEn] && !fichasDisponiveis[pers]) {
+        const fichaNova = FICHAS_PERSONAGENS[pers.toLowerCase()] || gerarFichaDeterministica(nomeEn, pers, trechoPt);
+        fichasDisponiveis[nomeEn] = fichaNova;
+        fichasDisponiveis[pers] = fichaNova;
+        if (contexto.fichasPersonagens) {
+          contexto.fichasPersonagens[nomeEn] = fichaNova;
+          contexto.fichasPersonagens[pers] = fichaNova;
+        }
+        if (typeof window !== 'undefined' && window._fichasPersonagensAtual) {
+          window._fichasPersonagensAtual[nomeEn] = fichaNova;
+          window._fichasPersonagensAtual[pers] = fichaNova;
+        }
+      }
+    }
+
     for (const [chave, fichaCanon] of Object.entries(fichasDisponiveis)) {
       const nomeEn = nomesNormalizados[chave.toLowerCase()] || chave;
       if (nomeEn && !personagensEncontrados.some(p => p.nome.toLowerCase() === nomeEn.toLowerCase())) {
@@ -1381,6 +1444,11 @@ ${exemploJson}`;
       return gerarDescricaoVisualSemantica(trechoPt, numeroCena, enqSugerido, contexto, descricoesAcumuladas);
     }
 
+    // Ciclo de Daniel na cova dos leões (Babilônia / Pérsia)
+    if (/\b(?:daniel|dario|darius|cova|le[oõ]es|babil[oô]nia|persa|p[eé]rsia)\b/i.test(t) || /\b(?:daniel|dario|darius|le[oõ]es)\b/i.test(tema)) {
+      return gerarDescricaoVisualSemantica(trechoPt, numeroCena, enqSugerido, contexto, descricoesAcumuladas);
+    }
+
     // Fallback contextual para Davi e Golias (ITEM 4: Cenas 01 e 02 e consecutivas variadas)
     if (/\b(?:golias|davi|goliath|david|filisteu|pastor|funda|gigante|el[aá])\b/i.test(t)) {
       const numInt = parseInt(numeroCena, 10);
@@ -1405,28 +1473,30 @@ ${exemploJson}`;
       return 'Wide landscape view of the Valley of Elah under dramatic sunlit sky with rolling stony ridges and ancient military encampment';
     }
 
-    if (/\b(?:vara|feriu|bateu)\b/i.test(t) && /\brocha\b/i.test(t)) {
+    const ehCicloMoises = /\b(?:mois[eé]s|ar[aã]o|kadesh|cades|merib[aá]|tabern[aá]culo|deserto)\b/i.test(tema) || /\b(?:mois[eé]s|ar[aã]o)\b/i.test(t);
+
+    if (ehCicloMoises && /\b(?:vara|feriu|bateu)\b/i.test(t) && /\brocha\b/i.test(t)) {
       return 'Moses raising a rustic wooden staff striking the dry desert boulder in Kadesh, tense Hebrew multitude watching in silence under parched sunlight';
     }
-    if (/\b(?:[aá]gua|jorrou|brotar|brotaram|beber|sede|gado)\b/i.test(t) && /\brocha\b/i.test(t)) {
+    if (ehCicloMoises && /\b(?:[aá]gua|jorrou|brotar|brotaram|beber|sede|gado)\b/i.test(t) && /\brocha\b/i.test(t)) {
       return 'crystal water gushing forth from the cracked desert boulder, thirsty Hebrew families and livestock kneeling to drink from the fresh desert spring';
     }
-    if (/\b(?:prostrar|prostraram|rostos?\s+em\s+terra|tenda\s+da\s+congrega[cç][aã]o|tabern[aá]culo)\b/i.test(t)) {
+    if (ehCicloMoises && /\b(?:prostrar|prostraram|rostos?\s+em\s+terra|tenda\s+da\s+congrega[cç][aã]o|tabern[aá]culo)\b/i.test(t)) {
       return 'Moses and Aaron prostrate with faces upon the desert sand before the sacred entrance of the Tabernacle tent, radiant celestial glory glowing above';
     }
-    if (/\b(?:gl[oó]ria\s+do\s+senhor|gl[oó]ria|apareceu|luz)\b/i.test(t)) {
+    if (ehCicloMoises && /\b(?:gl[oó]ria\s+do\s+senhor|gl[oó]ria|apareceu|luz)\b/i.test(t)) {
       return 'radiant supernatural beam of golden divine glory illuminating the desert wilderness and the sacred Tabernacle entrance in majestic reverence';
     }
-    if (/\b(?:senten[cç]a|decreto|irrevog[aá]vel|n[aã]o\s+entrariam|ju[ií]zo)\b/i.test(t)) {
+    if (ehCicloMoises && /\b(?:senten[cç]a|decreto|irrevog[aá]vel|n[aã]o\s+entrariam|ju[ií]zo)\b/i.test(t)) {
       return 'Moses and Aaron standing solemnly before the Hebrew assembly in Kadesh, solemn expressions of profound reverence and godly sorrow under vast open sky';
     }
-    if (/\b(?:monte\s+hor|vestes|eleazar|morte\s+de\s+ar[aã]o)\b/i.test(t)) {
+    if (ehCicloMoises && /\b(?:monte\s+hor|vestes|eleazar|morte\s+de\s+ar[aã]o)\b/i.test(t)) {
       return 'Moses, Aaron, and young priest Eleazar ascending the rugged rocky heights of Mount Hor at sunset, distant panoramic desert expanses below';
     }
-    if (/\b(?:monte\s+nebo|cume|vis[aã]o|terra\s+prometida|cana[aã])\b/i.test(t)) {
+    if (ehCicloMoises && /\b(?:monte\s+nebo|cume|vis[aã]o|terra\s+prometida|cana[aã])\b/i.test(t)) {
       return 'Moses standing on the summit of Mount Nebo looking outward across the distant green Jordan Valley and promised land of Canaan at golden hour';
     }
-    if (/\b(?:sepultura|morreu|ningu[eé]m\s+sabe|moabe)\b/i.test(t)) {
+    if (ehCicloMoises && /\b(?:sepultura|morreu|ningu[eé]m\s+sabe|moabe)\b/i.test(t)) {
       return 'serene secluded ravine in the plains of Moab enveloped in ethereal twilight mist, absolute sacred tranquility under starry desert heavens';
     }
     if (/\b(?:mar\s+vermelho|carruagens|egito|fara[oó])\b/i.test(t)) {
@@ -1845,11 +1915,15 @@ CRITICAL RULES:
     const textoBase = (narracaoLimpa || '')
       .replace(/\*{0,2}\[[^\]\r\n]*\]\*{0,2}\s*:?/g, '')
       .replace(/[\[\]]/g, '')
+      .replace(/([.!?…:;,])\s*[-–—*_]{2,}\s*/g, '$1 ')
+      .replace(/\s*[-*_]{3,}\s*/g, ' ')
+      .replace(/^[^\S\r\n]*[-–—*_]{2,}\s*/gm, '')
       .trim();
 
     const linhas = cenas.map(c => {
       let trechoFinal = expandirTrechoParaMinimoPalavras(c.fraseInicio, textoBase, 5);
       trechoFinal = trechoFinal.replace(/[\[\]]/g, '').trim();
+      trechoFinal = trechoFinal.replace(/^[-–—\s]+/, '').trim();
       return `${c.numero} | ${trechoFinal}`;
     });
 
@@ -1909,6 +1983,9 @@ CRITICAL RULES:
         continue;
       }
       const trecho = partes.slice(1).join('|').trim();
+      if (/^[-–—]/.test(trecho)) {
+        erros.push(`Linha do cenas.txt começa com hífen/separador proibido: "${linha}"`);
+      }
       const palavras = trecho.match(/\S+/g) || [];
       if (palavras.length < 5) {
         erros.push(`Trecho em cenas.txt com menos de 5 palavras: "${trecho}" (${palavras.length} palavras).`);
