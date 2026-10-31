@@ -11318,23 +11318,40 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       return;
     }
 
-    const narracaoLimpa = (document.getElementById('textarea-roteiro-gerado')?.value || '').trim();
+    const pendentes = window._planoDeCenasAtual.cenas.filter(c => c.status === 'PENDENTE' || (c.promptIngles && c.promptIngles.includes('[PENDENTE')));
+    if (pendentes.length === 0) {
+      UI.showToast('Não há nenhuma cena pendente de prompt visual.', 'info');
+      atualizarPainelCenasPendentes();
+      return;
+    }
+
+    const hasKey = typeof OpenRouterAPI !== 'undefined' && Boolean(OpenRouterAPI.getApiKey());
+    if (!hasKey) {
+      UI.showToast('Configure sua API Key nas configurações do aplicativo para regenerar as cenas com IA.', 'warning');
+      return;
+    }
+
+    const narracaoLimpa = (document.getElementById('output-roteiro-limpo')?.value ||
+                           document.getElementById('textarea-narracao-limpa-audio')?.value ||
+                           document.getElementById('textarea-roteiro-gerado')?.value || '').trim();
+
     const btn = document.getElementById('btn-regenerar-cenas-pendentes');
     UI.setButtonLoading(btn, true);
+    UI.showToast(`Regenerando ${pendentes.length} cena(s) pendente(s) com IA...`, 'info');
 
     try {
       const inputTema = document.getElementById('input-tema-custom')?.value?.trim() ||
+                        document.getElementById('input-ideia-escolhida')?.value?.trim() ||
                         document.getElementById('select-tema')?.value?.trim() ||
                         'Tema Bíblico';
       const personagem = document.getElementById('input-personagem-principal')?.value?.trim() || inputTema;
 
-      const hasKey = typeof OpenRouterAPI !== 'undefined' && Boolean(OpenRouterAPI.getApiKey());
-      const chamarIaFn = hasKey ? async (promptLote) => {
+      const chamarIaFn = async (promptLote) => {
         const modelo = typeof OpenRouterAPI.getModelMediaPrompts === 'function'
           ? OpenRouterAPI.getModelMediaPrompts()
           : (typeof OpenRouterAPI.getModelIdeas === 'function' ? OpenRouterAPI.getModelIdeas() : 'google/gemini-2.0-flash-001');
         return await OpenRouterAPI.generateContent(promptLote, modelo);
-      } : null;
+      };
 
       const res = await PlanoCenasModule.regenerarCenasPendentes(
         window._planoDeCenasAtual.cenas,
@@ -11358,10 +11375,13 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
 
       atualizarPainelCenasPendentes();
 
-      if (res.pendentesRestantes.length === 0) {
-        UI.showToast('Todas as cenas pendentes foram resolvidas e geradas com sucesso!');
+      if (res.erroIa) {
+        UI.showToast(`Aviso da IA ao regenerar: ${res.erroIa}`, 'error');
+      } else if (res.pendentesRestantes.length === 0) {
+        UI.showToast('Todas as cenas pendentes foram geradas e aprovadas com sucesso!', 'success');
       } else {
-        UI.showToast(`Restam ${res.pendentesRestantes.length} cena(s) pendente(s).`, 'warning');
+        const motivo = res.pendentesRestantes[0]?.motivoPendente || 'Rejeitada pelo validador';
+        UI.showToast(`Restam ${res.pendentesRestantes.length} cena(s) pendente(s): ${motivo}`, 'warning');
       }
     } catch (err) {
       console.error(err);
@@ -11446,11 +11466,17 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
     // ITEM 1: Grava os bytes binários reais do áudio MP3 (lê como ArrayBuffer)
     if (typeof currentAudioBlob !== 'undefined' && currentAudioBlob) {
       try {
-        const audioBuffer = await currentAudioBlob.arrayBuffer();
-        arquivosZip.push({ nome: 'narracao.mp3', conteudo: new Uint8Array(audioBuffer) });
+        let audioBuffer = null;
+        if (typeof currentAudioBlob.arrayBuffer === 'function') {
+          audioBuffer = await currentAudioBlob.arrayBuffer();
+        } else if (typeof Response !== 'undefined') {
+          audioBuffer = await new Response(currentAudioBlob).arrayBuffer();
+        }
+        if (audioBuffer && audioBuffer.byteLength > 0) {
+          arquivosZip.push({ nome: 'narracao.mp3', conteudo: new Uint8Array(audioBuffer) });
+        }
       } catch (eBlob) {
         console.warn('[Scriptorium] Falha ao ler bytes do áudio:', eBlob);
-        arquivosZip.push({ nome: 'narracao.mp3', conteudo: currentAudioBlob });
       }
     }
     if (typeof currentSrtContent !== 'undefined' && currentSrtContent) {
@@ -11461,10 +11487,16 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
     const temaCustom = document.getElementById('input-tema-custom')?.value?.trim();
     const ideiaEscolhida = document.getElementById('input-ideia-escolhida')?.value?.trim();
     const categoriaMenu = document.getElementById('select-tema')?.value?.trim();
+    const temaThumb = document.getElementById('input-tema-thumb')?.value?.trim();
+    const temaSeo = document.getElementById('input-tema-seo')?.value?.trim();
+    const personagem = document.getElementById('input-personagem-principal')?.value?.trim();
     const nomeZip = PlanoCenasModule.gerarNomeZipScriptorium({
       temaCustom,
       ideiaEscolhida,
-      categoria: categoriaMenu
+      categoria: categoriaMenu,
+      temaThumb,
+      temaSeo,
+      personagemPrincipal: personagem
     });
 
     const zipBlob = await PlanoCenasModule.criarZipScriptorium(arquivosZip);

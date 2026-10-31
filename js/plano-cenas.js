@@ -107,12 +107,21 @@
     if (typeof temaOuOpcoes === 'object' && temaOuOpcoes !== null) {
       const custom = (temaOuOpcoes.temaCustom || '').trim();
       const ideia = (temaOuOpcoes.ideiaEscolhida || '').trim();
+      const thumb = (temaOuOpcoes.temaThumb || '').trim();
+      const seo = (temaOuOpcoes.temaSeo || '').trim();
+      const personagem = (temaOuOpcoes.personagemPrincipal || '').trim();
       const cat = (temaOuOpcoes.categoria || temaOuOpcoes.tema || '').trim();
 
       if (custom) {
         temaFinal = custom;
       } else if (ideia) {
         temaFinal = ideia;
+      } else if (thumb) {
+        temaFinal = thumb;
+      } else if (seo) {
+        temaFinal = seo;
+      } else if (personagem) {
+        temaFinal = personagem;
       } else if (cat && !CATEGORIAS_MENU_IGNORAR.some(c => c === cat.toLowerCase())) {
         temaFinal = cat;
       } else {
@@ -440,6 +449,7 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
    * ITEM 4 e 5: Exige variedade de enquadramento, proíbe ação antecipada e referências a público.
    */
   function construirPromptIaLoteCenas(loteCenas, contexto = {}) {
+    const numerosEsperados = loteCenas.map(c => String(c.numero)).join(', ');
     const cenasFormatadas = loteCenas.map(c => `[Cena ${c.numero}]: "${c.trecho.replace(/\s+/g, ' ').trim()}"`).join('\n\n');
     const descricoesAnteriores = contexto.descricoesAnteriores || [];
 
@@ -448,6 +458,12 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
       const ultimas = descricoesAnteriores.slice(-8);
       blocoAnteriores = `\nPREVIOUSLY USED SCENE DESCRIPTIONS (DO NOT REPEAT THESE COMPOSITIONS, FRAMINGS OR MOTIFS):\n${ultimas.map((d, i) => `- Previous: "${d}"`).join('\n')}\n`;
     }
+
+    const primeiroNum = loteCenas[0]?.numero || '01';
+    const segundoNum = loteCenas[1]?.numero || '02';
+    const exemploJson = loteCenas.length > 1
+      ? `[\n  { "numero": "${primeiroNum}", "descricaoVisual": "description in English for scene ${primeiroNum}..." },\n  { "numero": "${segundoNum}", "descricaoVisual": "description in English for scene ${segundoNum}..." }\n]`
+      : `[\n  { "numero": "${primeiroNum}", "descricaoVisual": "description in English for scene ${primeiroNum}..." }\n]`;
 
     return `You are an expert biblical art director creating visual image descriptions for dramatic historical illustrations.
 For each narration excerpt below, write ONE concise, vivid visual description in English describing strictly what is seen in that specific scene.
@@ -471,46 +487,136 @@ CRITICAL RULES:
 5. DOMINANT EVENT RULE:
    - If an excerpt contains more than one action or subject, depict the primary event that occupies the majority of the text.
 6. FORBIDDEN to include elements from other biblical events or stories (e.g., NEVER include sea, ocean waves, or shore if the text is about a desert, rock, camp, or mountain).
-7. Use strictly biblical English names: Moses, Aaron, Miriam, Joshua, Eleazar, Pharaoh; Meribah, Kadesh, Mount Hor, Mount Nebo, Mount Sinai, Jordan River, Canaan.
+7. Use strictly biblical English names: Moses, Aaron, Miriam, Joshua, Eleazar, Pharaoh, David, Goliath, Saul, Samuel, Jonathan; Meribah, Kadesh, Mount Hor, Mount Nebo, Mount Sinai, Jordan River, Canaan, Valley of Elah.
 8. FORBIDDEN to depict God as a human figure, face, or humanoid shadow. Depict divine presence through glorious radiant celestial light, glowing illumination, pillar of cloud or fire.
 9. Do NOT include Portuguese words.
 10. Do NOT use generic placeholders like "biblical tableau", "artistic depiction" or "scene representing". Describe the physical concrete action.
-11. Output EXCLUSIVELY a valid JSON array of objects with "numero" and "descricaoVisual".
+11. CRITICAL SCENE NUMBERING RULE: You MUST PRESERVE the exact scene numbers from INPUT SCENES: [${numerosEsperados}]. DO NOT restart numbering from "01" if scenes are ${numerosEsperados}!
+12. Output EXCLUSIVELY a valid JSON array of objects with "numero" and "descricaoVisual".
 ${blocoAnteriores}
 INPUT SCENES:
 ${cenasFormatadas}
 
-OUTPUT FORMAT (JSON only):
-[
-  { "numero": "01", "descricaoVisual": "description in English..." }
-]`;
+OUTPUT FORMAT (JSON only - use exact scene numbers ${numerosEsperados}):
+${exemploJson}`;
   }
 
   /**
-   * Extrai o array JSON retornado pela IA.
+   * Extrai o array JSON retornado pela IA, com suporte resiliente a blocos markdown,
+   * objetos envelopadores ({ scenes: [...] }, { cenas: [...] }) e dicionários numéricos.
    */
   function extrairJsonLote(respostaTexto) {
     if (!respostaTexto || typeof respostaTexto !== 'string') return [];
+    let parsed = null;
     try {
-      // 1. Tenta parse direto
-      return JSON.parse(respostaTexto);
+      parsed = JSON.parse(respostaTexto);
     } catch (_) {
-      // 2. Tenta extrair de blocos ```json ... ```
+      // 1. Tenta bloco markdown ```json ... ``` ou ``` ... ```
       const matchBloco = respostaTexto.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
       if (matchBloco) {
         try {
-          return JSON.parse(matchBloco[1]);
+          parsed = JSON.parse(matchBloco[1]);
         } catch (_) {}
       }
-      // 3. Tenta encontrar o primeiro [ ... ]
-      const matchArray = respostaTexto.match(/\[\s*\{[\s\S]*\}\s*\]/);
-      if (matchArray) {
-        try {
-          return JSON.parse(matchArray[0]);
-        } catch (_) {}
+      // 2. Tenta encontrar primeiro [ ... ]
+      if (!parsed) {
+        const matchArray = respostaTexto.match(/\[\s*\{[\s\S]*\}\s*\]/);
+        if (matchArray) {
+          try {
+            parsed = JSON.parse(matchArray[0]);
+          } catch (_) {}
+        }
+      }
+      // 3. Tenta encontrar objeto { ... }
+      if (!parsed) {
+        const matchObj = respostaTexto.match(/\{[\s\S]*\}/);
+        if (matchObj) {
+          try {
+            parsed = JSON.parse(matchObj[0]);
+          } catch (_) {}
+        }
+      }
+    }
+
+    if (!parsed) return [];
+    if (Array.isArray(parsed)) return parsed;
+
+    if (typeof parsed === 'object') {
+      const chavesArray = ['scenes', 'cenas', 'items', 'cenas_pendentes', 'data', 'results', 'lote'];
+      for (const k of chavesArray) {
+        if (Array.isArray(parsed[k])) return parsed[k];
+      }
+      const chaves = Object.keys(parsed);
+      const saoNumericas = chaves.length > 0 && chaves.every(k => /^\d+$/.test(k) || /^cena/i.test(k));
+      if (saoNumericas) {
+        return chaves.map(k => {
+          const val = parsed[k];
+          const numPuro = k.replace(/\D/g, '');
+          if (typeof val === 'string') {
+            return { numero: numPuro, descricaoVisual: val };
+          }
+          return { numero: numPuro, ...(typeof val === 'object' && val !== null ? val : {}) };
+        });
+      }
+      if (parsed.descricaoVisual || parsed.description || parsed.numero || parsed.scene) {
+        return [parsed];
       }
     }
     return [];
+  }
+
+  /**
+   * Localiza de forma resiliente o item retornado pela IA para a cena c.
+   * Suporta número exato, número inteiro, renumeração a partir de 1 no lote e fallback posicional.
+   */
+  function localizarItemIaCena(itensLote, c, idx) {
+    if (!Array.isArray(itensLote) || itensLote.length === 0) return null;
+    const numCenaInt = parseInt(c.numero, 10);
+
+    // 1. Busca por número exato de cena
+    let item = itensLote.find(it => {
+      if (!it || typeof it !== 'object') return false;
+      const rawNum = String(it.numero ?? it.num ?? it.cena ?? it.scene ?? it.id ?? '').replace(/\D/g, '');
+      return rawNum && (rawNum.padStart(2, '0') === c.numero || parseInt(rawNum, 10) === numCenaInt);
+    });
+    if (item) return item;
+
+    // 2. Se a IA renumerou a partir de 1 neste lote (ex: [Cena 11, Cena 12] -> it.numero "01" e "02")
+    const numRelativo = idx + 1;
+    item = itensLote.find(it => {
+      if (!it || typeof it !== 'object') return false;
+      const rawNum = String(it.numero ?? it.num ?? it.cena ?? it.scene ?? it.id ?? '').replace(/\D/g, '');
+      return rawNum && parseInt(rawNum, 10) === numRelativo;
+    });
+    if (item) return item;
+
+    // 3. Fallback posicional pelo índice do lote
+    if (itensLote[idx] && typeof itensLote[idx] === 'object') {
+      return itensLote[idx];
+    }
+
+    return null;
+  }
+
+  /**
+   * Extrai o texto da descrição visual com tolerância a múltiplos nomes de campos em inglês/português.
+   */
+  function extrairTextoDescricaoVisual(itemIa) {
+    if (!itemIa) return '';
+    if (typeof itemIa === 'string') return itemIa.trim();
+    if (typeof itemIa !== 'object') return '';
+    return (
+      itemIa.descricaoVisual ||
+      itemIa.descricao_visual ||
+      itemIa.visualDescription ||
+      itemIa.visual_description ||
+      itemIa.description ||
+      itemIa.descricao ||
+      itemIa.prompt ||
+      itemIa.image_prompt ||
+      itemIa.visual ||
+      ''
+    ).trim();
   }
 
   /**
@@ -709,31 +815,35 @@ OUTPUT FORMAT (JSON only):
         descricoesAnteriores: descricoesAcumuladas
       });
       let itensLote = [];
+      let erroIaLote = null;
 
       if (typeof chamarIaFn === 'function') {
         try {
           const respostaIa = await chamarIaFn(promptLote);
           itensLote = extrairJsonLote(respostaIa);
+          if (!itensLote || itensLote.length === 0) {
+            erroIaLote = 'A IA respondeu em formato não reconhecido';
+          }
         } catch (e) {
           console.warn(`[PlanoCenas] Falha na chamada da IA para lote ${l + 1}:`, e);
+          erroIaLote = e.message || 'Falha de comunicação com a IA';
           itensLote = [];
         }
       }
 
-      for (const c of lote) {
+      for (let idx = 0; idx < lote.length; idx++) {
+        const c = lote[idx];
         const trechoPt = c.frases.join(' ');
-        const itemIa = Array.isArray(itensLote)
-          ? itensLote.find(it => String(it.numero).padStart(2, '0') === c.numero)
-          : null;
+        const itemIa = localizarItemIaCena(itensLote, c, idx);
+        let descVisual = extrairTextoDescricaoVisual(itemIa);
 
-        let descVisual = itemIa ? (itemIa.descricaoVisual || itemIa.descricao || '') : '';
         const contextoValidacao = {
           ...contexto,
           descricoesAnteriores: descricoesAcumuladas
         };
         let validacao = validarDescricaoVisualCena(descVisual, trechoPt, contextoValidacao);
 
-        // Se a validação falhar ou estiver vazia, tenta regenerar a cena se houver callback de IA
+        // Se a validação falhar ou estiver vazia, tenta regenerar a cena individual se houver callback de IA
         if (!validacao.valido && typeof chamarIaFn === 'function' && itemIa) {
           try {
             const promptCorrecao = `The previous visual description for Scene ${c.numero} was rejected because: ${validacao.motivo}.
@@ -741,8 +851,9 @@ Excerpt: "${trechoPt}"
 Write a corrected, strictly factual visual description in English adhering to all rules (alternate camera framing, no viewers/audience/channel terms). Output JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
             const respCorrigida = await chamarIaFn(promptCorrecao);
             const itensCorrigidos = extrairJsonLote(respCorrigida);
-            if (itensCorrigidos && itensCorrigidos[0]?.descricaoVisual) {
-              const novaDesc = itensCorrigidos[0].descricaoVisual;
+            const itemCorrigido = localizarItemIaCena(itensCorrigidos, c, 0);
+            const novaDesc = extrairTextoDescricaoVisual(itemCorrigido);
+            if (novaDesc) {
               const novaVal = validarDescricaoVisualCena(novaDesc, trechoPt, contextoValidacao);
               if (novaVal.valido) {
                 descVisual = novaDesc;
@@ -760,9 +871,9 @@ Write a corrected, strictly factual visual description in English adhering to al
           c.promptIngles = montarPromptFinalCena(descVisual, trechoPt, contexto);
           descricoesAcumuladas.push(descVisual);
         } else {
-          // NÃO USAR FALLBACK EM SILÊNCIO: Marca como PENDENTE
+          // NÃO USAR FALLBACK EM SILÊNCIO: Marca como PENDENTE com motivo real
           c.status = 'PENDENTE';
-          c.motivoPendente = validacao.motivo || 'Descrição não gerada ou rejeitada pelo validador';
+          c.motivoPendente = erroIaLote ? `Erro da IA: ${erroIaLote}` : (validacao.motivo || 'Descrição não gerada ou rejeitada pelo validador');
           c.descricaoVisual = '';
           c.promptIngles = `[PENDENTE: ${c.motivoPendente}]`;
         }
@@ -776,11 +887,19 @@ Write a corrected, strictly factual visual description in English adhering to al
    * Regenera exclusivamente as cenas com status PENDENTE chamando a IA.
    */
   async function regenerarCenasPendentes(cenas, narracaoLimpa, chamarIaFn, contexto = {}) {
-    if (!cenas || !Array.isArray(cenas)) return { cenas: [], pendentesRestantes: [] };
+    if (!cenas || !Array.isArray(cenas)) return { cenas: [], pendentesRestantes: [], erroIa: null };
 
     const pendentes = cenas.filter(c => c.status === 'PENDENTE');
     if (pendentes.length === 0) {
-      return { cenas, pendentesRestantes: [] };
+      return { cenas, pendentesRestantes: [], erroIa: null };
+    }
+
+    if (typeof chamarIaFn !== 'function') {
+      return {
+        cenas,
+        pendentesRestantes: pendentes,
+        erroIa: 'Função de chamada à IA não fornecida ou API Key não configurada.'
+      };
     }
 
     const descricoesConcluidas = cenas
@@ -793,7 +912,10 @@ Write a corrected, strictly factual visual description in English adhering to al
       lotes.push(pendentes.slice(i, i + tamanhoLote));
     }
 
-    for (const lote of lotes) {
+    let erroGlobalIa = null;
+
+    for (let l = 0; l < lotes.length; l++) {
+      const lote = lotes[l];
       const payloadLote = lote.map(c => ({
         numero: c.numero,
         trecho: c.frases.join(' ')
@@ -804,22 +926,27 @@ Write a corrected, strictly factual visual description in English adhering to al
         descricoesAnteriores: descricoesConcluidas
       });
       let itensLote = [];
-      if (typeof chamarIaFn === 'function') {
-        try {
-          const resp = await chamarIaFn(promptLote);
-          itensLote = extrairJsonLote(resp);
-        } catch (e) {
-          console.warn('[PlanoCenas] Falha ao regenerar lote de pendentes:', e);
+      let erroIaLote = null;
+
+      try {
+        const resp = await chamarIaFn(promptLote);
+        itensLote = extrairJsonLote(resp);
+        if (!itensLote || itensLote.length === 0) {
+          erroIaLote = 'A IA respondeu em formato não reconhecido.';
         }
+      } catch (e) {
+        console.warn(`[PlanoCenas] Falha ao regenerar lote ${l + 1} de pendentes:`, e);
+        erroIaLote = e.message || 'Falha de comunicação com a IA';
+        if (!erroGlobalIa) erroGlobalIa = erroIaLote;
+        itensLote = [];
       }
 
-      for (const c of lote) {
+      for (let idx = 0; idx < lote.length; idx++) {
+        const c = lote[idx];
         const trechoPt = c.frases.join(' ');
-        const itemIa = Array.isArray(itensLote)
-          ? itensLote.find(it => String(it.numero).padStart(2, '0') === c.numero)
-          : null;
+        const itemIa = localizarItemIaCena(itensLote, c, idx);
+        let descVisual = extrairTextoDescricaoVisual(itemIa);
 
-        const descVisual = itemIa ? (itemIa.descricaoVisual || itemIa.descricao || '') : '';
         const contextoValidacao = {
           ...contexto,
           descricoesAnteriores: descricoesConcluidas
@@ -834,7 +961,7 @@ Write a corrected, strictly factual visual description in English adhering to al
           descricoesConcluidas.push(descVisual);
         } else {
           c.status = 'PENDENTE';
-          c.motivoPendente = validacao.motivo || 'Descrição rejeitada na regeneração';
+          c.motivoPendente = erroIaLote ? `Erro da IA: ${erroIaLote}` : (validacao.motivo || 'Descrição rejeitada na regeneração');
           c.descricaoVisual = '';
           c.promptIngles = `[PENDENTE: ${c.motivoPendente}]`;
         }
@@ -843,7 +970,8 @@ Write a corrected, strictly factual visual description in English adhering to al
 
     return {
       cenas,
-      pendentesRestantes: cenas.filter(c => c.status === 'PENDENTE')
+      pendentesRestantes: cenas.filter(c => c.status === 'PENDENTE'),
+      erroIa: erroGlobalIa
     };
   }
 
@@ -1061,11 +1189,35 @@ Write a corrected, strictly factual visual description in English adhering to al
       const nomeBytes = encoder.encode(arq.nome);
       let dados = arq.conteudo;
 
-      // Lê Blob ou Promise de ArrayBuffer se fornecido
-      if (dados && typeof dados.arrayBuffer === 'function') {
-        dados = new Uint8Array(await dados.arrayBuffer());
-      } else if (dados && typeof dados.then === 'function') {
+      // Resolve Promise se fornecido
+      if (dados && typeof dados.then === 'function') {
         dados = await dados;
+      }
+
+      // Lê Blob ou File com arrayBuffer, Response ou FileReader
+      if (dados && (typeof dados.arrayBuffer === 'function' || (typeof Blob !== 'undefined' && dados instanceof Blob))) {
+        try {
+          if (typeof dados.arrayBuffer === 'function') {
+            dados = new Uint8Array(await dados.arrayBuffer());
+          } else if (typeof Response !== 'undefined') {
+            dados = new Uint8Array(await new Response(dados).arrayBuffer());
+          } else if (typeof FileReader !== 'undefined') {
+            dados = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(new Uint8Array(reader.result));
+              reader.onerror = reject;
+              reader.readAsArrayBuffer(dados);
+            });
+          }
+        } catch (eBlob) {
+          console.warn(`[ZipScriptorium] Falha ao extrair bytes do Blob para ${arq.nome}:`, eBlob);
+        }
+      }
+
+      // Protege contra arquivos de áudio binários passados como string corrompida '[object Blob]'
+      if (typeof dados === 'string' && (/\.(mp3|wav|ogg|aac|zip)$/i.test(arq.nome) || dados.startsWith('[object'))) {
+        console.warn(`[ZipScriptorium] Ignorando arquivo binário que foi passado como string corrompida: ${arq.nome} (${dados})`);
+        continue;
       }
 
       if (typeof dados === 'string') {
@@ -1074,8 +1226,15 @@ Write a corrected, strictly factual visual description in English adhering to al
         dados = new Uint8Array(dados);
       } else if (typeof Buffer !== 'undefined' && Buffer.isBuffer(dados)) {
         dados = new Uint8Array(dados);
-      } else if (!(dados instanceof Uint8Array)) {
-        dados = encoder.encode(String(dados || ''));
+      } else if (dados instanceof Uint8Array) {
+        // Mantém Uint8Array intacto
+      } else {
+        const strVal = String(dados || '');
+        if (/\.(mp3|wav|ogg|aac|zip)$/i.test(arq.nome) || strVal.startsWith('[object')) {
+          console.warn(`[ZipScriptorium] Ignorando arquivo corrompido não-binário: ${arq.nome} (${strVal})`);
+          continue;
+        }
+        dados = encoder.encode(strVal);
       }
       const tam = dados.length;
       const crc = calcularCrc32(dados);
@@ -1222,6 +1381,8 @@ Write a corrected, strictly factual visual description in English adhering to al
     agruparFrasesEmCenas,
     construirPromptIaLoteCenas,
     extrairJsonLote,
+    localizarItemIaCena,
+    extrairTextoDescricaoVisual,
     validarDescricaoVisualCena,
     montarPromptFinalCena,
     gerarDescricaoVisualFallback,
