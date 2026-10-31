@@ -8675,11 +8675,13 @@ function limparTextoParaNarracao(texto, estiloRoteiro = '') {
   // 5. Remove cabeçalho inicial de roteiro (ex: "**Roteiro: ...**", "# Script ...", "**Guion: ...**")
   limpo = limpo.replace(/^\s*(?:#+\s*)?(?:\*{0,2}(?:Roteiro|Script|Guión|Guion):\s*.*?\*{0,2}\s*\n+)+/im, '');
 
-  // 6. Remove marcadores de PRODUÇÃO entre colchetes, com ou sem asteriscos e dois pontos ao redor:
-  // ex: **[Hook (0-15s)]:**, [Hook], [Ponto 1: Contexto], [Point 1: Narrative], [Conclusion], [pausa], [música], etc.
-  // Colchetes que fazem parte do texto bíblico (ex.: [Selá]) NÃO são marcadores e ficam.
-  const ROTULO_PRODUCAO = /^(?:hook|gancho|introdu|intro|ponto|point|punto|conclus|cta|abertura|item|se[cç][aã]o|section|fecho|fechamento|encerramento|roteiro|cena|bloco|parte|pausa|m[úu]sica|vinheta|b-?roll|corte|sfx|narrador|locu[cç][aã]o|tela|imagem|v[íi]deo|\d+\s*[-–:]\s*\d+\s*s|\d+\s*s\b|\d+:\d{2})/i;
-  limpo = limpo.replace(/\*{0,2}\[([^\]]*)\]\*{0,2}\s*:?/g, (m, dentro) => (ROTULO_PRODUCAO.test(dentro.trim()) ? '' : m));
+  // 6. Remove marcadores e rótulos entre colchetes [ ], preservando apenas colchete litúrgico bíblico [Selá]
+  // ex: **[O FOGO DO CÉU]**, [O FOGO DO CÉU], **[Hook (0-15s)]:**, [Ponto 1: Contexto] são 100% removidos
+  limpo = limpo.replace(/\*{0,2}\[([^\]\r\n]*)\]\*{0,2}\s*:?/g, (m, dentro) => {
+    if (dentro.trim() === 'Selá' || dentro.trim() === 'Sela') return `[${dentro.trim()}]`;
+    return '';
+  });
+  limpo = limpo.replace(/\[(?!\s*Sel[aá]\s*\])/g, '').replace(/(?<!\[\s*Sel[aá]\s*)\]/g, '');
 
   // 7. Remove marcadores de cabeçalho sem colchetes em linhas isoladas ou com tempo
   // ex: HOOK (0-15s):, INTRODUÇÃO (0-45s):, PONTO 1: Título, POINT 1:, PUNTO 1:, CONCLUSÃO:, CONCLUSION:
@@ -8689,11 +8691,12 @@ function limparTextoParaNarracao(texto, estiloRoteiro = '') {
   limpo = limpo.replace(/^\s*(?:Immersive\s+)?(?:Introduction|Hook|Conclusion)\s*(?:\([^)]*\))?:?\s*$/gmi, '');
   limpo = limpo.replace(/^\s*\d+\.\s+[A-ZÀ-Ú][^\n.:]*\s*(?:\([^)]*\))?\s*:?\s*$/gm, '');
 
-  // 8. Remove cabeçalhos de seção em CAPS (linhas isoladas onde as palavras estão todas em maiúsculas)
-  limpo = limpo.replace(/^\s*(?:[A-ZÀ-Ú0-9\s:()\-–—\[\]./]{3,70})\s*:?\s*$/gm, (match) => {
-    const letters = match.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, '');
+  // 8. Remove cabeçalhos de seção em CAPS (linhas isoladas onde as palavras estão todas em maiúsculas, com ou sem **)
+  limpo = limpo.replace(/^[^\S\r\n]*(?:#+\s*)?(?:\*{1,2})?[A-ZÀ-Ú0-9\s,.'’\-–—/:]{3,80}(?:\*{1,2})?\s*:?\s*$/gm, (match) => {
+    const semMd = match.replace(/[*#:_]/g, '').trim();
+    const letters = semMd.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, '');
     // Linha em CAPS que termina em pontuação de frase ("AMÉM.", "SENHOR!") é conteúdo, não cabeçalho
-    if (/[.!?]\s*$/.test(match)) return match;
+    if (/[.!?]\s*$/.test(semMd)) return match;
     if (letters.length >= 3 && letters === letters.toUpperCase()) {
       return '';
     }
@@ -13287,12 +13290,21 @@ Output EXCLUSIVELY the complete corrected script without explanations.`;
 
       const textoOriginal = (outLimpoEl?.value || outAudioEl?.value || outRoteiroGeradoEl?.value || '').trim();
 
-      // 2. Normaliza pontuação e aspas sem alterar palavras nem conteúdo
-      const textoNormalizado = typeof VersaoRevisadaModule !== 'undefined'
+      // 2. Normaliza pontuação e aspas sem alterar palavras nem conteúdo, e remove estritamente colchetes [ ] e rótulos de seção
+      let textoNormalizado = typeof VersaoRevisadaModule !== 'undefined'
         ? VersaoRevisadaModule.normalizarTextoRevisado(textoColado)
         : (typeof PontuacaoModule !== 'undefined' && PontuacaoModule.normalizarAspasEPontuacao
             ? PontuacaoModule.normalizarAspasEPontuacao(textoColado)
             : textoColado);
+
+      if (typeof limparTextoParaNarracao === 'function') {
+        textoNormalizado = limparTextoParaNarracao(textoNormalizado);
+      } else {
+        textoNormalizado = (textoNormalizado || '')
+          .replace(/\*{0,2}\[[^\]\r\n]*\]\*{0,2}\s*:?/g, '')
+          .replace(/[\[\]]/g, '')
+          .trim();
+      }
 
       // 3. Avisos sem alterar conteúdo
       if (typeof VersaoRevisadaModule !== 'undefined') {

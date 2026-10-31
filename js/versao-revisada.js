@@ -140,18 +140,35 @@
 
   /**
    * Normaliza pontuação e aspas sem alterar palavras nem conteúdo.
+   * Remove estritamente colchetes [ ] e rótulos de seção em caixa alta.
    */
   function normalizarTextoRevisado(texto) {
     if (!texto) return '';
+    let limpo = texto;
+    // Remove qualquer texto entre colchetes [ ] (ex: [O FOGO DO CÉU], **[O FOGO DO CÉU]**, [Hook])
+    limpo = limpo.replace(/\*{0,2}\[[^\]\r\n]*\]\*{0,2}\s*:?/g, '');
+    limpo = limpo.replace(/[\[\]]/g, '');
+
+    // Remove linhas de cabeçalho isoladas em CAIXA ALTA (com ou sem **)
+    limpo = limpo.replace(/^[^\S\r\n]*(?:#+\s*)?(?:\*{1,2})?[A-ZÀ-Ú0-9\s,.'’\-–—/:]{3,80}(?:\*{1,2})?\s*:?\s*$/gm, (match) => {
+      const semMd = match.replace(/[*#:_]/g, '').trim();
+      const letters = semMd.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, '');
+      if (/[.!?]\s*$/.test(semMd)) return match;
+      if (letters.length >= 3 && letters === letters.toUpperCase()) return '';
+      return match;
+    });
+
     if (PontuacaoModule && typeof PontuacaoModule.normalizarAspasEPontuacao === 'function') {
-      return PontuacaoModule.normalizarAspasEPontuacao(texto);
+      limpo = PontuacaoModule.normalizarAspasEPontuacao(limpo);
+    } else {
+      // Fallback básico se PontuacaoModule não estiver carregado
+      limpo = limpo
+        .replace(/[""]/g, '"')
+        .replace(/['']/g, "'")
+        .replace(/\s+([.,!?:;])/g, '$1')
+        .replace(/([.,!?:;])(?!\s|$|[0-9.,])/g, '$1 ');
     }
-    // Fallback básico se PontuacaoModule não estiver carregado
-    return texto
-      .replace(/[""]/g, '"')
-      .replace(/['']/g, "'")
-      .replace(/\s+([.,!?:;])/g, '$1')
-      .replace(/([.,!?:;])(?!\s|$|[0-9.,])/g, '$1 ');
+    return limpo.replace(/[^\S\r\n]{2,}/g, ' ').trim();
   }
 
   /**

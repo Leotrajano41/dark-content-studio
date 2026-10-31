@@ -273,10 +273,23 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
 
   /**
    * Divide a Narração Limpa em frases completas respeitando pontuações e citações.
+   * Sanitização estrita: NUNCA permitir colchetes [ ] nem rótulos de seção na narração limpa.
    */
   function dividirEmFrases(texto) {
     if (!texto || typeof texto !== 'string') return [];
-    const t = texto.replace(/\r\n/g, '\n').trim();
+    const t = texto
+      .replace(/\*{0,2}\[[^\]\r\n]*\]\*{0,2}\s*:?/g, '')
+      .replace(/[\[\]]/g, '')
+      .replace(/^[^\S\r\n]*(?:#+\s*)?(?:\*{1,2})?[A-ZÀ-Ú0-9\s,.'’\-–—/:]{3,80}(?:\*{1,2})?\s*:?\s*$/gm, (match) => {
+        const semMd = match.replace(/[*#:_]/g, '').trim();
+        const letters = semMd.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, '');
+        if (/[.!?]\s*$/.test(semMd)) return match;
+        if (letters.length >= 3 && letters === letters.toUpperCase()) return '';
+        return match;
+      })
+      .replace(/[^\S\r\n]{2,}/g, ' ')
+      .replace(/\r\n/g, '\n')
+      .trim();
     const regexFrases = /[^.!?\n]+(?:[.!?]+["'”»]?|$)/g;
     const matches = t.match(regexFrases) || [];
 
@@ -702,27 +715,158 @@ Return EXCLUSIVELY a JSON object where keys are the character names and values a
     return fichas;
   }
 
-  function gerarFallbackEnquadramentoAlternativo(trechoPt, numeroCena, enqAnterior, contexto = {}) {
+  /**
+   * BUG 2: Fallback semântico rico baseado no conteúdo REAL da cena (personagens + ação física + lugar).
+   * NUNCA retorna texto genérico fixo igual para cenas diferentes.
+   * Garante variedade de enquadramento e unicidade absoluta entre todas as cenas.
+   */
+  function gerarDescricaoVisualSemantica(trechoPt, numeroCena, enqSugerido = 'medio', contexto = {}, descricoesAnteriores = []) {
     const t = (trechoPt || '').toLowerCase();
     const pers = detectarPersonagensNaDescricao(t);
-    const primeiroNome = pers.length > 0 ? (NOMES_PERSONAGENS_NORMALIZADOS[pers[0]] || pers[0]) : '';
+    let primeiroNome = pers.length > 0 ? (NOMES_PERSONAGENS_NORMALIZADOS[pers[0]] || pers[0]) : '';
+    if (!primeiroNome && contexto.personagemPrincipal) {
+      primeiroNome = NOMES_PERSONAGENS_NORMALIZADOS[contexto.personagemPrincipal.toLowerCase()] || contexto.personagemPrincipal;
+    }
 
-    if (enqAnterior === 'aberto') {
-      if (primeiroNome) {
-        return `Dramatic intense close-up on ${primeiroNome} with focused solemn facial expression and determined gaze under atmospheric lighting`;
+    // 1. Detecta lugar/topônimo no trecho ou no tema do contexto
+    let lugar = '';
+    for (const top of DICIONARIO_TOPONIMOS) {
+      if (top.pt.test(t)) {
+        lugar = top.en;
+        break;
       }
-      return `Macro detail shot on hands gripping ancient rustic implements and weathered materials on dusty ground in solemn reverence`;
+    }
+    if (!lugar) {
+      const temaLower = (contexto.tema || '').toLowerCase();
+      if (/\b(?:carmelo|elias|baal|acabe)\b/i.test(temaLower) || /\b(?:carmelo|baal)\b/i.test(t)) {
+        lugar = 'Mount Carmel';
+      } else if (/\b(?:el[aá]|golias|davi)\b/i.test(temaLower) || /\b(?:el[aá]|golias|davi)\b/i.test(t)) {
+        lugar = 'the Valley of Elah';
+      } else if (/\b(?:merib[aá]|cades|rocha)\b/i.test(temaLower) || /\b(?:merib[aá]|cades)\b/i.test(t)) {
+        lugar = 'the desert wilderness of Kadesh at Meribah';
+      } else if (/\b(?:mar\s+vermelho)\b/i.test(temaLower) || /\b(?:mar\s+vermelho)\b/i.test(t)) {
+        lugar = 'the parted seabed of the Red Sea';
+      } else {
+        lugar = 'the ancient biblical landscape';
+      }
     }
 
-    if (enqAnterior === 'close' || enqAnterior === 'detalhe') {
-      return `Wide panoramic landscape shot of the historic biblical location with ancient encampment under dramatic atmospheric sky`;
+    // 2. Detecta ação física concreta
+    let acao = '';
+
+    // Ciclo de Elias e Baal
+    if (/\b(?:fogo\s+do\s+senhor|fogo\s+do\s+c[eé]u|fogo\s+caiu|fogo\s+desceu|fogo\s+consumiu|fogo|chamas?)\b/i.test(t)) {
+      acao = `Elijah standing in awe as a miraculous pillar of blazing divine fire roars down from the heavens, consuming the stone altar, sacrifice, wood, and water atop ${lugar} in blinding divine glory`;
+    } else if (/\b(?:elias\s+orou|orou|orando|clamou|responde-me|reponde-me|deus\s+de\s+abra[aã]o|s[uú]plica)\b/i.test(t)) {
+      acao = `Elijah kneeling with arms outstretched toward the heavens in earnest fervent prayer beside the stone altar atop ${lugar}`;
+    } else if (/\b(?:sil[eê]ncio|nada\s+aconteceu|sem\s+resposta|ningu[eé]m\s+respondeu|nenhuma\s+voz)\b/i.test(t)) {
+      acao = `weary pagan prophets and Hebrew onlookers standing in stunned, dead silence across ${lugar} under heavy atmospheric overcast skies`;
+    } else if (/\b(?:nuvem|m[aã]o\s+de\s+um\s+homem|chuva|torrencial|vento|escureceu)\b/i.test(t)) {
+      acao = `a small dark cloud rising from the distant sea horizon, gathering heavy wind and torrential rain over the mountain peaks of ${lugar}`;
+    } else if (/\b(?:quisom|ribeiro|executa|desceu\s+ao\s+ribeiro)\b/i.test(t)) {
+      acao = `the solemn rocky banks of the brook Kishon under brooding storm clouds in historical biblical reverence`;
+    } else if (/\b(?:profetas\s+de\s+baal|baal)\b/i.test(t) && /\b(?:dan[cç]avam|gritavam|cortavam|mancavam|clamavam|romper|manh[aã]|unlit)\b/i.test(t)) {
+      acao = `frantic pagan prophets of Baal leaping wildly around their unlit pagan stone altar with ceremonial blades in desperate clamor under bright midday sun`;
+    } else if (/\b(?:reparou|restaurou|doze\s+pedras|altar|rego|valeta|[aá]gua|c[aâ]ntaros)\b/i.test(t)) {
+      acao = `Elijah carefully restoring the ancient broken stone altar of twelve rough stones, pouring jars of fresh water into the deep surrounding trench`;
+    } else if (/\b(?:profetas\s+de\s+baal|baal)\b/i.test(t)) {
+      acao = `frantic pagan prophets of Baal leaping wildly around their unlit pagan stone altar with ceremonial blades in desperate clamor under bright midday sun`;
     }
 
-    if (enqAnterior === 'medio') {
-      return `Dramatic close-up on face and solemn eyes filled with reverence under atmospheric morning sunlight`;
+    // Ciclo Davi e Golias
+    else if (/\b(?:funda|cajado|ribeiro|desceu\s+ao\s+vale|correu|pastor)\b/i.test(t) && /\b(?:davi|david)\b/i.test(t)) {
+      acao = `young David stepping steadily forward across the dry stony stream bed holding a rustic shepherd's staff and leather sling, eyes locked on the giant`;
+    } else if (/\b(?:golias|goliath|gigante|armadura|escarneceu|desafiou|lan[cç]a)\b/i.test(t)) {
+      acao = `towering colossal Philistine warrior Goliath in gleaming bronze scale armor and crested helmet sneering while brandishing a massive iron-headed spear`;
+    } else if (/\b(?:cinco\s+pedras|pedras\s+lisas|alforge|bolsa)\b/i.test(t)) {
+      acao = `young David bending down at the riverbed to select five smooth rounded river stones, placing them carefully into his small leather pouch`;
+    } else if (/\b(?:atirou|lan[cç]ou|acertou|testa|caiu|rosto\s+em\s+terra)\b/i.test(t)) {
+      acao = `the decisive moment of the stone striking the giant's forehead, Goliath staggering backward on the dusty slope under bright sunlight`;
     }
 
-    return `Dynamic medium shot showing authentic figures in ancient biblical garments interacting with solemn dramatic reverence`;
+    // Ciclo Moisés
+    else if (/\b(?:vara|feriu|bateu)\b/i.test(t) && /\brocha\b/i.test(t)) {
+      acao = `Moses raising the wooden shepherd's staff striking the massive cracked desert boulder in ${lugar} before the assembled Hebrew elders`;
+    } else if (/\b(?:[aá]gua|jorrou|brotou|brotaram|beber|sede|gado)\b/i.test(t) && /\brocha\b/i.test(t)) {
+      acao = `crystal fresh spring water gushing forth in torrents from the cleft desert rock, joyful Hebrew families and livestock gathering to drink`;
+    } else if (/\b(?:prostrar|prostraram|rostos?\s+em\s+terra|tenda|tabern[aá]culo)\b/i.test(t)) {
+      acao = `Moses and Aaron prostrated with faces upon the desert ground before the sacred entrance of the Tabernacle tent`;
+    } else if (/\b(?:gl[oó]ria\s+do\s+senhor|gl[oó]ria|apareceu|luz)\b/i.test(t)) {
+      acao = `radiant celestial beam of divine golden glory descending upon the desert sanctuary in awesome supernatural reverence`;
+    }
+
+    // Conclusão / CTA / Canal
+    else if (/\b(?:inscreva-se|canal|notifica[cç][oõ]es|estudo|v[íi]deo|compartilhe)\b/i.test(t)) {
+      acao = `an ancient illuminated parchment scroll unrolled on a rustic cedar table beside a glowing brass oil lamp in solemn evening twilight`;
+    }
+
+    // Ação geral contextual derivada do trecho
+    else {
+      const sujeito = primeiroNome || 'authentic biblical figures';
+      acao = `${sujeito} participating in solemn historical events at ${lugar} under dramatic atmospheric lighting`;
+    }
+
+    // 3. Aplica o enquadramento desejado sobre a ação
+    let enq = enqSugerido;
+    if (!enq || enq === 'outro' || enq === 'padrao') {
+      const numInt = parseInt(numeroCena, 10) || 1;
+      enq = (numInt % 2 === 0) ? 'close' : 'aberto';
+    }
+
+    let descFinal = '';
+    if (enq === 'close') {
+      if (primeiroNome) {
+        descFinal = `Dramatic intense close-up on ${primeiroNome} with focused facial expression and determined gaze as ${acao}`;
+      } else {
+        descFinal = `Dramatic close-up on authentic Hebrew faces with solemn expressions observing ${acao}`;
+      }
+    } else if (enq === 'detalhe') {
+      descFinal = `Macro detail shot capturing the physical textures and intensity of ${acao}`;
+    } else if (enq === 'aberto') {
+      descFinal = `Wide panoramic landscape shot of ${lugar} depicting ${acao}`;
+    } else {
+      descFinal = `Dynamic medium shot showing ${acao}`;
+    }
+
+    // 4. GARANTIA DE UNICIDADE ABSOLUTA:
+    // Duas cenas do mesmo plano NUNCA podem ter descricaoVisual idêntica!
+    if (Array.isArray(descricoesAnteriores) && descricoesAnteriores.length > 0) {
+      let duplicada = false;
+      for (const ant of descricoesAnteriores) {
+        if (!ant) continue;
+        if (ant.trim().toLowerCase() === descFinal.trim().toLowerCase() || calcularSemelhancaDescricoes(descFinal, ant) >= 0.60) {
+          duplicada = true;
+          break;
+        }
+      }
+      if (duplicada) {
+        // Altera perspectiva para garantir 100% de diferenciação
+        const perspectivas = [
+          `from a high-angle aerial perspective looking down over ${lugar}`,
+          `from a low dramatic ground-level angle emphasizing the stony terrain`,
+          `captured in cinematic side-profile lighting at twilight`,
+          `viewed through atmospheric morning mist across the landscape`
+        ];
+        const numInt = parseInt(numeroCena, 10) || 1;
+        const persEscolhida = perspectivas[numInt % perspectivas.length];
+        descFinal = `${descFinal}, ${persEscolhida}`;
+      }
+    }
+
+    return descFinal.trim();
+  }
+
+  function gerarFallbackEnquadramentoAlternativo(trechoPt, numeroCena, enqAnterior, contexto = {}) {
+    const descricoesAcumuladas = contexto.descricoesAnteriores || [];
+    let enqSugerido = 'medio';
+    if (enqAnterior === 'aberto') {
+      enqSugerido = 'close';
+    } else if (enqAnterior === 'close' || enqAnterior === 'detalhe') {
+      enqSugerido = 'aberto';
+    } else {
+      enqSugerido = 'close';
+    }
+    return gerarDescricaoVisualSemantica(trechoPt, numeroCena, enqSugerido, contexto, descricoesAcumuladas);
   }
 
   function detectarTipoEnquadramento(desc) {
@@ -1104,6 +1248,13 @@ ${exemploJson}`;
     // Limpa pontuação final da descrição
     desc = desc.replace(/[.,;:\s]+$/, '');
 
+    // BUG 2: Se desc estiver vazia ou for curta demais (< 5 palavras) ou apenas o nome do personagem,
+    // gera a ação concreta da cena a partir de trechoPt para garantir que a ação NUNCA suma
+    if (contarPalavras(desc) < 5 || /^(?:elijah|david|moses|aaron|goliath|saul|samuel|jonathan|solomon|prophet|king|giant)[\s.:,]*$/i.test(desc)) {
+      desc = gerarDescricaoVisualSemantica(trechoPt, '01', 'medio', contexto);
+      desc = desc.replace(/[.,;:\s]+$/, '');
+    }
+
     return `${PREFIXO_ESTILO_CANAL} Depicting ${blocoFichas}${desc}. ${SUFIXO_ESTILO_SEM_MOLDURA}`;
   }
 
@@ -1112,7 +1263,15 @@ ${exemploJson}`;
    */
   function gerarDescricaoVisualFallback(trechoPt, numeroCena, contexto = {}) {
     const t = (trechoPt || '').toLowerCase();
-    const tema = contexto.tema || 'Moisés';
+    const tema = (contexto.tema || '').toLowerCase();
+    const descricoesAcumuladas = contexto.descricoesAnteriores || [];
+    const numInt = parseInt(numeroCena, 10) || 1;
+    const enqSugerido = (numInt % 2 === 0) ? 'close' : 'aberto';
+
+    // Ciclo de Elias e os profetas de Baal (Mount Carmel)
+    if (/\b(?:elias|baal|carmelo|acabe|jezabel)\b/i.test(t) || /\b(?:elias|baal|carmelo|acabe)\b/i.test(tema)) {
+      return gerarDescricaoVisualSemantica(trechoPt, numeroCena, enqSugerido, contexto, descricoesAcumuladas);
+    }
 
     // Fallback contextual para Davi e Golias (ITEM 4: Cenas 01 e 02 e consecutivas variadas)
     if (/\b(?:golias|davi|goliath|david|filisteu|pastor|funda|gigante|el[aá])\b/i.test(t)) {
@@ -1172,7 +1331,8 @@ ${exemploJson}`;
       return 'hebrew assembly gathered in parched desert camp of Kadesh, elders gesturing with anxiety under harsh desert heat';
     }
 
-    return `historical biblical scene in the arid Wilderness of Zin, authentic ancient Hebrew camp with earthen tents, dramatic desert topography under atmospheric sky`;
+    // BUG 2: Fallback semântico rico usando personagens + ação + lugar citados (NUNCA frase genérica fixa)
+    return gerarDescricaoVisualSemantica(trechoPt, numeroCena, enqSugerido, contexto, descricoesAcumuladas);
   }
 
   /**
@@ -1230,41 +1390,52 @@ ${exemploJson}`;
         const itemIa = localizarItemIaCena(itensLote, c, idx);
         let descVisual = extrairTextoDescricaoVisual(itemIa);
 
+        // Se a IA do lote falhou ou omitiu a cena, registra pendência para permitir regeneração manual ou botão de pendentes
+        if (erroIaLote || !itemIa) {
+          c.status = 'PENDENTE';
+          c.motivoPendente = erroIaLote ? `Erro da IA: ${erroIaLote}` : 'Descrição ausente na resposta da IA.';
+          c.descricaoVisual = '';
+          c.promptIngles = `[PENDENTE: ${c.motivoPendente}]`;
+          continue;
+        }
+
         const contextoValidacao = {
           ...contexto,
           descricoesAnteriores: descricoesAcumuladas
         };
         let validacao = validarDescricaoVisualCena(descVisual, trechoPt, contextoValidacao);
 
-        // PONTO C: Se reprovar por repetição de enquadramento com mesmos personagens (ou semelhança excessiva consecutiva),
-        // gerar de novo essa cena (até 2 tentativas) e, se ainda falhar, usar o fallback trocando o tipo de plano.
-        // NUNCA deixar a cena como PENDENTE por causa dessa regra!
-        const ehRepeticaoEnquadramento = !validacao.valido &&
-          validacao.motivo && (
-            validacao.motivo.includes('Cenas consecutivas não podem repetir') ||
-            validacao.motivo.includes('Semelhança excessiva com cena anterior')
-          );
-
-        if (ehRepeticaoEnquadramento) {
+        // Se a descrição da IA foi rejeitada pelo validador:
+        if (!validacao.valido) {
           let corrigido = false;
           if (typeof chamarIaFn === 'function') {
+            const descAnterior = descricoesAcumuladas[descricoesAcumuladas.length - 1] || '';
+            const enqAnt = detectarTipoEnquadramento(descAnterior);
+            const enqSugerido = (enqAnt === 'aberto') ? 'close' : 'aberto';
+            const persCena = detectarPersonagensNaDescricao(trechoPt);
+
             for (let tent = 1; tent <= 2; tent++) {
               try {
-                const descAnterior = descricoesAcumuladas[descricoesAcumuladas.length - 1] || '';
-                const enqAnt = detectarTipoEnquadramento(descAnterior);
-                const promptTroca = `The visual description for Scene ${c.numero} was rejected because it repeated the same camera framing ("${enqAnt}") with the same characters.
-CRITICAL INSTRUCTION: You MUST use a completely DIFFERENT camera angle (e.g. dramatic extreme close-up on face, macro detail shot on hands/objects, or high-angle aerial view).
+                const motivoRej = validacao.motivo || 'Visual description rejected';
+                const promptTentativa = `You are an expert biblical art director creating ONE visual description for Scene ${c.numero}.
+The previous attempt was rejected: "${motivoRej}".
 Narration excerpt: "${trechoPt}".
-Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
-                const respTroca = await chamarIaFn(promptTroca);
-                const itensTroca = extrairJsonLote(respTroca);
-                const itemTroca = localizarItemIaCena(itensTroca, c, 0);
-                const candDesc = extrairTextoDescricaoVisual(itemTroca);
+Characters present: ${persCena.join(', ') || 'biblical figures'}.
+Camera framing: MUST be ${enqSugerido} (different from previous: "${enqAnt}").
+CRITICAL RULES:
+- Describe the physical concrete action happening in this scene (e.g. praying, fire falling from heaven onto the stone altar, frantic pagan leaping, stunned silence).
+- Characters must be actively engaged in their specific physical action and location, NEVER a static portrait.
+- Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
+
+                const respTentativa = await chamarIaFn(promptTentativa);
+                const itensTentativa = extrairJsonLote(respTentativa);
+                const itemTentativa = localizarItemIaCena(itensTentativa, c, 0);
+                const candDesc = extrairTextoDescricaoVisual(itemTentativa);
                 if (candDesc) {
-                  const valTroca = validarDescricaoVisualCena(candDesc, trechoPt, contextoValidacao);
-                  if (valTroca.valido) {
+                  const valTentativa = validarDescricaoVisualCena(candDesc, trechoPt, contextoValidacao);
+                  if (valTentativa.valido) {
                     descVisual = candDesc;
-                    validacao = valTroca;
+                    validacao = valTentativa;
                     corrigido = true;
                     break;
                   }
@@ -1273,31 +1444,22 @@ Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
             }
           }
 
-          // Se após até 2 tentativas a IA ainda falhar (ou sem IA), aciona fallback trocando o tipo de plano
-          if (!corrigido || !validacao.valido) {
+          // AJUSTE C / BUG 2: Se falhou por repetição de enquadramento ou semelhança excessiva com a anterior,
+          // aciona fallback semântico rico trocando o plano (personagens + ação + lugar citados)
+          const ehRepeticao = validacao.motivo && (
+            validacao.motivo.includes('Cenas consecutivas não podem repetir') ||
+            validacao.motivo.includes('Semelhança excessiva com cena anterior')
+          );
+
+          if (!corrigido && ehRepeticao) {
             const descAnterior = descricoesAcumuladas[descricoesAcumuladas.length - 1] || '';
             const enqAnt = detectarTipoEnquadramento(descAnterior);
-            descVisual = gerarFallbackEnquadramentoAlternativo(trechoPt, c.numero, enqAnt, contexto);
+            descVisual = gerarFallbackEnquadramentoAlternativo(trechoPt, c.numero, enqAnt, {
+              ...contexto,
+              descricoesAnteriores: descricoesAcumuladas
+            });
             validacao = { valido: true, motivo: '' };
           }
-        } else if (!validacao.valido && typeof chamarIaFn === 'function' && itemIa) {
-          // Se a validação falhar por outro motivo (mar indevido, termos de bastidor, português, etc.)
-          try {
-            const promptCorrecao = `The previous visual description for Scene ${c.numero} was rejected because: ${validacao.motivo}.
-Excerpt: "${trechoPt}"
-Write a corrected, strictly factual visual description in English adhering to all rules. Output JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
-            const respCorrigida = await chamarIaFn(promptCorrecao);
-            const itensCorrigidos = extrairJsonLote(respCorrigida);
-            const itemCorrigido = localizarItemIaCena(itensCorrigidos, c, 0);
-            const novaDesc = extrairTextoDescricaoVisual(itemCorrigido);
-            if (novaDesc) {
-              const novaVal = validarDescricaoVisualCena(novaDesc, trechoPt, contextoValidacao);
-              if (novaVal.valido) {
-                descVisual = novaDesc;
-                validacao = novaVal;
-              }
-            }
-          } catch (_) {}
         }
 
         // Se a descrição foi validada com sucesso (ou resolvida via fallback de enquadramento)
@@ -1308,9 +1470,9 @@ Write a corrected, strictly factual visual description in English adhering to al
           c.promptIngles = montarPromptFinalCena(descVisual, trechoPt, contexto);
           descricoesAcumuladas.push(descVisual);
         } else {
-          // NÃO USAR FALLBACK EM SILÊNCIO: Marca como PENDENTE com motivo real
+          // Marca como PENDENTE com motivo real
           c.status = 'PENDENTE';
-          c.motivoPendente = erroIaLote ? `Erro da IA: ${erroIaLote}` : (validacao.motivo || 'Descrição não gerada ou rejeitada pelo validador');
+          c.motivoPendente = validacao.motivo || 'Descrição rejeitada pelo validador';
           c.descricaoVisual = '';
           c.promptIngles = `[PENDENTE: ${c.motivoPendente}]`;
         }
@@ -1384,6 +1546,15 @@ Write a corrected, strictly factual visual description in English adhering to al
       for (let idx = 0; idx < lote.length; idx++) {
         const c = lote[idx];
         const trechoPt = c.frases.join(' ');
+
+        if (erroIaLote) {
+          c.status = 'PENDENTE';
+          c.motivoPendente = `Erro da IA: ${erroIaLote}`;
+          c.descricaoVisual = '';
+          c.promptIngles = `[PENDENTE: ${c.motivoPendente}]`;
+          continue;
+        }
+
         const itemIa = localizarItemIaCena(itensLote, c, idx);
         let descVisual = extrairTextoDescricaoVisual(itemIa);
 
@@ -1393,43 +1564,53 @@ Write a corrected, strictly factual visual description in English adhering to al
         };
         let validacao = validarDescricaoVisualCena(descVisual, trechoPt, contextoValidacao);
 
-        // PONTO C: Se reprovar por repetição de enquadramento (ou semelhança consecutiva), tenta até 2 vezes ou usa fallback alternativo
-        const ehRepeticaoEnquadramento = !validacao.valido &&
-          validacao.motivo && (
-            validacao.motivo.includes('Cenas consecutivas não podem repetir') ||
-            validacao.motivo.includes('Semelhança excessiva com cena anterior')
-          );
-
-        if (ehRepeticaoEnquadramento) {
+        // Se a descrição foi rejeitada na regeneração ou veio ausente:
+        if (!validacao.valido || !descVisual) {
           let corrigido = false;
-          for (let tent = 1; tent <= 2; tent++) {
-            try {
-              const descAnterior = descricoesConcluidas[descricoesConcluidas.length - 1] || '';
-              const enqAnt = detectarTipoEnquadramento(descAnterior);
-              const promptTroca = `The visual description for Scene ${c.numero} was rejected because it repeated the camera framing ("${enqAnt}") with the same characters.
-CRITICAL INSTRUCTION: You MUST use a completely DIFFERENT camera angle (e.g. dramatic extreme close-up on face, macro detail shot on hands/objects, or high-angle aerial view).
+          if (typeof chamarIaFn === 'function') {
+            const descAnterior = descricoesConcluidas[descricoesConcluidas.length - 1] || '';
+            const enqAnt = detectarTipoEnquadramento(descAnterior);
+            const enqSugerido = (enqAnt === 'aberto') ? 'close' : 'aberto';
+            const persCena = detectarPersonagensNaDescricao(trechoPt);
+
+            for (let tent = 1; tent <= 2; tent++) {
+              try {
+                const motivoRej = validacao.motivo || 'Scene missing from regeneration batch or empty';
+                const promptTroca = `You are an expert biblical art director creating ONE visual description for Scene ${c.numero}.
+The previous attempt was rejected: "${motivoRej}".
 Narration excerpt: "${trechoPt}".
-Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
-              const respTroca = await chamarIaFn(promptTroca);
-              const itensTroca = extrairJsonLote(respTroca);
-              const itemTroca = localizarItemIaCena(itensTroca, c, 0);
-              const candDesc = extrairTextoDescricaoVisual(itemTroca);
-              if (candDesc) {
-                const valTroca = validarDescricaoVisualCena(candDesc, trechoPt, contextoValidacao);
-                if (valTroca.valido) {
-                  descVisual = candDesc;
-                  validacao = valTroca;
-                  corrigido = true;
-                  break;
+Characters present: ${persCena.join(', ') || 'biblical figures'}.
+Camera framing: MUST be ${enqSugerido} (different from previous: "${enqAnt}").
+CRITICAL RULES:
+- Describe the physical concrete action happening in this scene (e.g. praying, fire falling from heaven onto the stone altar, frantic pagan leaping, stunned silence).
+- Characters must be actively engaged in their specific physical action and location, NEVER a static portrait.
+- Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
+
+                const respTroca = await chamarIaFn(promptTroca);
+                const itensTroca = extrairJsonLote(respTroca);
+                const itemTroca = localizarItemIaCena(itensTroca, c, 0);
+                const candDesc = extrairTextoDescricaoVisual(itemTroca);
+                if (candDesc) {
+                  const valTroca = validarDescricaoVisualCena(candDesc, trechoPt, contextoValidacao);
+                  if (valTroca.valido) {
+                    descVisual = candDesc;
+                    validacao = valTroca;
+                    corrigido = true;
+                    break;
+                  }
                 }
-              }
-            } catch (_) {}
+              } catch (_) {}
+            }
           }
 
+          // Se após as tentativas ainda não validou, aciona fallback semântico rico
           if (!corrigido || !validacao.valido) {
             const descAnterior = descricoesConcluidas[descricoesConcluidas.length - 1] || '';
             const enqAnt = detectarTipoEnquadramento(descAnterior);
-            descVisual = gerarFallbackEnquadramentoAlternativo(trechoPt, c.numero, enqAnt, contexto);
+            descVisual = gerarFallbackEnquadramentoAlternativo(trechoPt, c.numero, enqAnt, {
+              ...contexto,
+              descricoesAnteriores: descricoesConcluidas
+            });
             validacao = { valido: true, motivo: '' };
           }
         }
@@ -1462,11 +1643,16 @@ Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
   function gerarDescricoesVisuaisOffline(cenas, narracaoLimpa, contexto = {}) {
     if (!cenas || !Array.isArray(cenas)) return cenas;
 
+    const descricoesAcumuladas = [];
     for (const c of cenas) {
       const trechoPt = c.frases.join(' ');
-      const descVisual = gerarDescricaoVisualFallback(trechoPt, c.numero, contexto);
+      const descVisual = gerarDescricaoVisualFallback(trechoPt, c.numero, {
+        ...contexto,
+        descricoesAnteriores: descricoesAcumuladas
+      });
       c.descricaoVisual = descVisual;
       c.promptIngles = montarPromptFinalCena(descVisual, trechoPt, contexto);
+      descricoesAcumuladas.push(descVisual);
     }
     return cenas;
   }
@@ -1510,16 +1696,25 @@ Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
   /**
    * Expande a frase inicial caso tenha menos de 5 palavras:
    * Pega a frase completa MAIS o começo da frase seguinte até dar pelo menos 5 palavras.
-   * NUNCA introduz quebras de linha no trecho da linha.
+   * NUNCA introduz quebras de linha no trecho da linha e NUNCA contém colchetes [ ].
    */
   function expandirTrechoParaMinimoPalavras(fraseInicio, textoBase, minPalavras = 5) {
-    let trecho = (fraseInicio || '').replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+    let trecho = (fraseInicio || '')
+      .replace(/\*{0,2}\[[^\]\r\n]*\]\*{0,2}\s*:?/g, '')
+      .replace(/[\[\]]/g, '')
+      .replace(/[\r\n]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
     let palavras = trecho.match(/\S+/g) || [];
     if (palavras.length >= minPalavras) {
       return trecho;
     }
 
-    const baseNorm = (textoBase || '').replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ');
+    const baseNorm = (textoBase || '')
+      .replace(/\*{0,2}\[[^\]\r\n]*\]\*{0,2}\s*:?/g, '')
+      .replace(/[\[\]]/g, '')
+      .replace(/[\r\n]+/g, ' ')
+      .replace(/\s+/g, ' ');
     const idx = baseNorm.indexOf(trecho);
     if (idx !== -1) {
       const restante = baseNorm.slice(idx);
@@ -1535,13 +1730,18 @@ Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
    * Gera o conteúdo do arquivo cenas.txt:
    * Formato estrito: NN | Frase exata (>= 5 palavras).
    * Sem quebras de linha internas dentro de cada linha.
+   * NUNCA contém colchetes [ ou ].
    */
   function gerarCenasTxt(cenas, narracaoLimpa) {
     if (!cenas || !Array.isArray(cenas)) return '';
-    const textoBase = narracaoLimpa || '';
+    const textoBase = (narracaoLimpa || '')
+      .replace(/\*{0,2}\[[^\]\r\n]*\]\*{0,2}\s*:?/g, '')
+      .replace(/[\[\]]/g, '')
+      .trim();
 
     const linhas = cenas.map(c => {
-      const trechoFinal = expandirTrechoParaMinimoPalavras(c.fraseInicio, textoBase, 5);
+      let trechoFinal = expandirTrechoParaMinimoPalavras(c.fraseInicio, textoBase, 5);
+      trechoFinal = trechoFinal.replace(/[\[\]]/g, '').trim();
       return `${c.numero} | ${trechoFinal}`;
     });
 
@@ -1873,6 +2073,7 @@ Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
     detectarTipoEnquadramento,
     detectarPersonagensNaDescricao,
     montarPromptFinalCena,
+    gerarDescricaoVisualSemantica,
     gerarDescricaoVisualFallback,
     gerarFallbackEnquadramentoAlternativo,
     extrairOuGerarFichasDoRoteiro,
