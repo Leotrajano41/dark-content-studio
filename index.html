@@ -11823,6 +11823,9 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
       const audioEl = document.getElementById('audio-player-element');
       if (audioEl && audioEl.duration && !isNaN(audioEl.duration) && audioEl.duration > 0) {
         duracaoAudioSeg = Math.round(audioEl.duration);
+      } else if (typeof currentAudioBlob !== 'undefined' && currentAudioBlob && currentAudioBlob.size > 0) {
+        // Plano B: calcula pelos bytes reais do MP3 caso o navegador não entregue metadados (aba oculta/segundo plano)
+        duracaoAudioSeg = Math.round(currentAudioBlob.size / 16000);
       }
 
       const pacote = modulo.gerarPacotePublicacao({
@@ -12065,8 +12068,14 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
             }
             const buf = new Uint8Array(await resp.arrayBuffer());
 
-            // Checagem de duração: compara com a esperada calibrada pela voz real com tolerância de 75%
-            const duracao = await obterDuracaoMp3Buffer(buf);
+            // Checagem de duração: calcula imediatamente pelos quadros MP3; fallback com timeout
+            let duracao = 0;
+            if (typeof NarracaoModule !== 'undefined' && typeof NarracaoModule.calcularDuracaoMp3 === 'function') {
+              duracao = NarracaoModule.calcularDuracaoMp3(buf);
+            }
+            if (!duracao || duracao <= 0) {
+              duracao = await obterDuracaoMp3Buffer(buf);
+            }
             if (duracao > 0 && numPalavrasParte > 0) {
               const ppmCalibrado = NarracaoModule.calibrarVelocidade(historicoPartesCompletas);
               const checagem = NarracaoModule.validarDuracaoParte(duracao, textoParte, ppmCalibrado, 0.75);
@@ -12212,18 +12221,40 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
       mostrarProgressoLeg();
 
       const duracaoDoMp3 = (bytes) => new Promise((resolve) => {
-        const url = URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
-        const a = new Audio();
-        const fim = (d) => { URL.revokeObjectURL(url); resolve(d); };
-        a.preload = 'metadata';
-        a.onloadedmetadata = () => fim(isFinite(a.duration) ? a.duration : 0);
-        a.onerror = () => fim(0);
-        a.src = url;
+        if (!bytes || bytes.length === 0) return resolve(0);
+        let resolvido = false;
+        let timer = null;
+        let url = null;
+        const fim = (d) => {
+          if (resolvido) return;
+          resolvido = true;
+          if (timer) clearTimeout(timer);
+          if (url) {
+            try { URL.revokeObjectURL(url); } catch (_) {}
+          }
+          resolve(isFinite(d) && d > 0 ? Number(d) : 0);
+        };
+        // Timeout estrito de 800ms: NUNCA deixa a Promise pendente se o navegador não disparar metadados
+        timer = setTimeout(() => fim(0), 800);
+        try {
+          url = URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
+          const a = new Audio();
+          a.preload = 'metadata';
+          a.onloadedmetadata = () => fim(a.duration);
+          a.oncanplaythrough = () => fim(a.duration);
+          a.onerror = () => fim(0);
+          a.src = url;
+          if (typeof a.load === 'function') a.load();
+        } catch (_) {
+          fim(0);
+        }
       });
 
       const transcreverParte = async (indice) => {
         let ultimoErro = null;
         for (let tentativa = 1; tentativa <= 2; tentativa++) {
+          const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+          const fetchTimer = controller ? setTimeout(() => controller.abort(), 60000) : null;
           try {
             const textoParteOriginal = (currentAudioTextParts && currentAudioTextParts[indice]) || '';
             const headerTextoBase64 = textoParteOriginal
@@ -12236,8 +12267,11 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
                 'Content-Type': 'audio/mpeg',
                 ...(headerTextoBase64 ? { 'x-texto-limpo': headerTextoBase64 } : {})
               }),
-              body: new Blob([partesAudio[indice]], { type: 'audio/mpeg' })
+              body: new Blob([partesAudio[indice]], { type: 'audio/mpeg' }),
+              signal: controller ? controller.signal : undefined
             });
+            if (fetchTimer) clearTimeout(fetchTimer);
+
             if (resp.status === 404 || resp.status === 405) {
               throw new Error('Esta funcionalidade requer que a ferramenta esteja rodando via Vercel (dark-content-studio.vercel.app). Não está disponível na versão do GitHub Pages ou local estática.');
             }
@@ -12246,12 +12280,29 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
               throw new Error(errJson.error || `Erro na transcrição de legendas (HTTP ${resp.status})`);
             }
             const srtParte = await resp.text();
-            const duracao = (await duracaoDoMp3(partesAudio[indice])) || (NarracaoModule.ultimoFimDoSrt(srtParte) + 0.3);
+
+            // 1. Duração oficial retornada pela AssemblyAI no header HTTP
+            const durHeader = parseFloat(resp.headers.get('x-audio-duration') || '0');
+
+            // 2. Plano B determinístico pelo cabeçalho binário do MP3 (sem depender de DOM ou aba visível)
+            let durCalculada = durHeader > 0 ? durHeader : 0;
+            if (durCalculada <= 0 && typeof NarracaoModule !== 'undefined' && typeof NarracaoModule.calcularDuracaoMp3 === 'function') {
+              durCalculada = NarracaoModule.calcularDuracaoMp3(partesAudio[indice]);
+            }
+
+            // 3. Fallback com timeout estrito
+            if (durCalculada <= 0) {
+              durCalculada = await duracaoDoMp3(partesAudio[indice]);
+            }
+
+            // 4. Plano B final: fim da última palavra do SRT (+ 0.2s)
+            const duracao = durCalculada > 0 ? durCalculada : (NarracaoModule.ultimoFimDoSrt(srtParte) + 0.2);
             resultados[indice] = { srt: srtParte, duracaoSegundos: duracao };
             concluidasLeg++;
             mostrarProgressoLeg();
             return;
           } catch (e) {
+            if (fetchTimer) clearTimeout(fetchTimer);
             ultimoErro = e;
             if (/requer que a ferramenta|C[óo]digo de acesso|Acesso negado/.test(e.message)) break;
           }
@@ -12268,6 +12319,13 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
       };
       await Promise.all(Array.from({ length: Math.min(2, partesAudio.length) }, trabalhadorLeg));
 
+      // Garante que todas as partes de legenda foram preenchidas
+      for (let i = 0; i < partesAudio.length; i++) {
+        if (!resultados[i] || !resultados[i].srt) {
+          throw new Error(`Parte ${i + 1} de ${partesAudio.length} da legenda não pôde ser gerada.`);
+        }
+      }
+
       const srtText = NarracaoModule.juntarSrtDasPartes(resultados);
 
       currentSrtContent = srtText;
@@ -12278,13 +12336,15 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
 
       atualizarSeloAba(5, true);
       UI.showToast('Legenda (.srt) gerada com texto 100% alinhado à Narração Limpa!');
-      AutoSave.save();
+      try { AutoSave.save(); } catch (_) {}
     } catch (err) {
       console.error('Erro ao gerar legenda:', err);
-      UI.showToast(err.message, 'error');
+      UI.showToast(`Erro na transcrição de legendas: ${err.message || 'Falha no serviço.'}`, 'error');
     } finally {
       UI.setButtonLoading(btnGerarLegenda, false);
       if (legendasLoadingNotice) legendasLoadingNotice.classList.add('hidden');
+      const progressoLegenda = document.getElementById('legendas-progresso-partes');
+      if (progressoLegenda) progressoLegenda.textContent = '';
     }
   });
 

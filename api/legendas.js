@@ -305,7 +305,7 @@ module.exports = async function handler(req, res) {
     }
 
     let srtContent = '';
-    const duracaoAprox = (transcript.words[transcript.words.length - 1]?.end || 0) / 1000;
+    const duracaoAprox = Number(transcript.audio_duration) || ((transcript.words[transcript.words.length - 1]?.end || 0) / 1000);
 
     if (textoLimpo && NarracaoModule && typeof NarracaoModule.alinharLegendaComTextoLimpo === 'function') {
       console.log(`[legendas] Alinhando texto oficial da Narração Limpa (${textoLimpo.length} chars) com ${transcript.words.length} palavras da AssemblyAI...`);
@@ -314,8 +314,11 @@ module.exports = async function handler(req, res) {
       srtContent = generateSRT(transcript.words);
     }
 
+    res.setHeader('x-audio-duration', String(duracaoAprox.toFixed(2)));
+    res.setHeader('Access-Control-Expose-Headers', 'x-audio-duration');
+
     if (req.headers['x-retornar-words'] === 'true' || req.headers['accept'] === 'application/json') {
-      return res.status(200).json({ srt: srtContent, words: transcript.words });
+      return res.status(200).json({ srt: srtContent, words: transcript.words, audio_duration: duracaoAprox });
     }
 
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');

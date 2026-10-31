@@ -309,7 +309,97 @@
   }
 
   /**
+   * Calcula a duração em segundos de um buffer MP3 sem depender do navegador ou DOM.
+   * Suporta:
+   * 1. Varredura dos frames MPEG-1 / MPEG-2 Audio Layer III
+   * 2. Leitura do bitrate do primeiro frame válido
+   * 3. Fallback determinístico por bitrate médio de locução TTS (128 kbps = 16.000 bytes/s)
+   * @param {Uint8Array|ArrayBuffer} bytesOuBuffer
+   * @returns {number} Duração em segundos (float)
+   */
+  function calcularDuracaoMp3(bytesOuBuffer) {
+    if (!bytesOuBuffer) return 0;
+    const u8 = bytesOuBuffer instanceof Uint8Array ? bytesOuBuffer : new Uint8Array(bytesOuBuffer);
+    if (u8.length === 0) return 0;
+
+    // 1. Pula tag ID3v2 se presente
+    let offset = 0;
+    if (u8.length >= 10 && u8[0] === 0x49 && u8[1] === 0x44 && u8[2] === 0x33) {
+      const id3Size = ((u8[6] & 0x7f) << 21) | ((u8[7] & 0x7f) << 14) | ((u8[8] & 0x7f) << 7) | (u8[9] & 0x7f);
+      offset = 10 + id3Size;
+    }
+
+    const BITRATES_MPEG1_L3 = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320];
+    const BITRATES_MPEG2_L3 = [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160];
+    const SAMPLE_RATES = {
+      1: [44100, 48000, 32000],       // MPEG-1
+      2: [22050, 24000, 16000],       // MPEG-2
+      2.5: [11025, 12000, 8000]       // MPEG-2.5
+    };
+
+    let totalFrames = 0;
+    let totalSamples = 0;
+    let taxaAmostragemGlobal = 0;
+    let primeiroBitrate = 0;
+    let bytesVarredura = 0;
+
+    let pos = offset;
+    while (pos < u8.length - 4 && totalFrames < 4000) {
+      if (u8[pos] === 0xFF && (u8[pos + 1] & 0xE0) === 0xE0) {
+        const mpegVerBits = (u8[pos + 1] >> 3) & 0x03;
+        const layerBits = (u8[pos + 1] >> 1) & 0x03;
+
+        if (layerBits === 0x01) {
+          const mpegVer = mpegVerBits === 0x03 ? 1 : (mpegVerBits === 0x02 ? 2 : 2.5);
+          const bitrateIdx = (u8[pos + 2] >> 4) & 0x0F;
+          const sampleRateIdx = (u8[pos + 2] >> 2) & 0x03;
+          const padding = (u8[pos + 2] >> 1) & 0x01;
+
+          if (bitrateIdx > 0 && bitrateIdx < 15 && sampleRateIdx < 3) {
+            const bitrateList = mpegVer === 1 ? BITRATES_MPEG1_L3 : BITRATES_MPEG2_L3;
+            const bitrateKbps = bitrateList[bitrateIdx];
+            const sampleRate = SAMPLE_RATES[mpegVer][sampleRateIdx];
+            const samplesPorFrame = mpegVer === 1 ? 1152 : 576;
+            const frameSize = Math.floor((samplesPorFrame / 8 * (bitrateKbps * 1000)) / sampleRate) + padding;
+
+            if (frameSize >= 24 && pos + frameSize <= u8.length) {
+              if (primeiroBitrate === 0) primeiroBitrate = bitrateKbps;
+              if (taxaAmostragemGlobal === 0) taxaAmostragemGlobal = sampleRate;
+              totalFrames++;
+              totalSamples += samplesPorFrame;
+              bytesVarredura += frameSize;
+              pos += frameSize;
+              continue;
+            }
+          }
+        }
+      }
+      pos++;
+    }
+
+    if (totalFrames > 5 && taxaAmostragemGlobal > 0) {
+      const tamanhoUtil = Math.max(0, u8.length - offset);
+      if (bytesVarredura > 0 && bytesVarredura < tamanhoUtil && totalFrames >= 100) {
+        const duracaoVarredura = totalSamples / taxaAmostragemGlobal;
+        return Number(((duracaoVarredura / bytesVarredura) * tamanhoUtil).toFixed(2));
+      }
+      return Number((totalSamples / taxaAmostragemGlobal).toFixed(2));
+    }
+
+    if (primeiroBitrate > 0) {
+      const tamanhoUtil = Math.max(0, u8.length - offset);
+      const bytesPorSegundo = (primeiroBitrate * 1000) / 8;
+      return Number((tamanhoUtil / bytesPorSegundo).toFixed(2));
+    }
+
+    // Fallback padrão TTS (128 kbps = 16.000 bytes/s)
+    const tamanhoUtil = Math.max(0, u8.length - offset);
+    return Number((tamanhoUtil / 16000).toFixed(2));
+  }
+
+  /**
    * Junta os SRT das partes do áudio: desloca os tempos pela duração acumulada das partes anteriores e renumera.
+   * PLANO B: se duracaoSegundos for 0 ou ausente, usa o fim da última palavra da parte anterior (+ 0.1s).
    * @param {{srt:string, duracaoSegundos:number}[]} partes
    */
   function juntarSrtDasPartes(partes) {
@@ -329,7 +419,14 @@
         const texto = linhas.slice(idxTempo + 1).join('\n');
         blocosFinais.push(`${numero++}\n${formatarTempoSrt(ini)} --> ${formatarTempoSrt(fim)}\n${texto}`);
       }
-      deslocamento += Number(parte.duracaoSegundos) || 0;
+      // Duração efetiva para deslocamento da próxima parte
+      const duracaoInformada = Number(parte.duracaoSegundos) || 0;
+      const duracaoFimLegenda = ultimoFimDoSrt(parte.srt);
+      const duracaoEfetiva = duracaoInformada > 0
+        ? duracaoInformada
+        : (duracaoFimLegenda > 0 ? duracaoFimLegenda + 0.1 : 0);
+
+      deslocamento += duracaoEfetiva;
     }
     return blocosFinais.join('\n\n') + '\n';
   }
@@ -347,6 +444,7 @@
     ultimoFimDoSrt,
     formatarTempoSrt,
     juntarSrtDasPartes,
+    calcularDuracaoMp3,
     alinharLegendaComTextoLimpo,
     normalizarPalavraParaMatch,
     contarPalavras,
