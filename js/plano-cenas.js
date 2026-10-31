@@ -2213,26 +2213,23 @@ CRITICAL RULES:
       }
     }
 
-    // 4. Desfecho completo do episódio bíblico presente antes da conclusão/CTA
-    const temaLower = `${contexto.tema || ''} ${contexto.ideia || ''} ${contexto.titulo || ''} ${texto.slice(0, 300)}`.toLowerCase();
-    const textoLower = texto.toLowerCase();
+    // 4. Validação genérica de desfecho (válida para qualquer história bíblica)
+    // O último trecho antes do CTA precisa concluir a narrativa e não terminar no meio da ação
+    const linhasNarrativas = linhas.filter(l => !/\b(?:inscreva-se|canal|notifica[cç][oõ]es|compartilhe|deixe\s+seu\s+like|curta|fortaleceu\s+sua\s+f[eé])\b/i.test(l));
 
-    // Verificação de desfecho para ciclo de Elias no Carmelo / profetas de Baal
-    const ehCicloEliasCarmelo = /\b(?:elias|carmelo|baal)\b/i.test(temaLower);
-    if (ehCicloEliasCarmelo) {
-      const narrouFogo = /\b(?:fogo\s+(?:do\s+senhor|do\s+c[eé]u|caiu|desceu|consumiu)|chamas?\s+(?:do\s+senhor|consumir(?:am)?))\b/i.test(textoLower);
-      const narrouReacaoPovo = /\b(?:povo\s+(?:viu|caiu|prostr(?:ou|aram)|declarou|gritou|clamou)|rostos?\s+em\s+terra|o\s+senhor\s+[eé]\s+deus)\b/i.test(textoLower);
-      if (!narrouFogo || !narrouReacaoPovo) {
-        erros.push('Roteiro incompleto: falta o desfecho completo do episódio (o fogo do Senhor caindo do céu e a reação do povo se prostrando e proclamando que o Senhor é Deus).');
-      }
-    }
+    if (linhasNarrativas.length > 0) {
+      const ultimaNarrativa = linhasNarrativas[linhasNarrativas.length - 1];
 
-    // Verificação de desfecho para Davi e Golias
-    const ehCicloDaviGolias = /\b(?:davi|golias|goliath)\b/i.test(temaLower);
-    if (ehCicloDaviGolias) {
-      const narrouPedraOuQueda = /\b(?:pedra\s+(?:cravou|afundou|acertou|atingiu)|caiu\s+com\s+o\s+rosto|gigante\s+caiu|tombou|morto)\b/i.test(textoLower);
-      if (!narrouPedraOuQueda) {
-        erros.push('Roteiro incompleto: falta o desfecho de Davi e Golias (o impacto decisivo da pedra na testa e a queda do gigante).');
+      // Detecta se terminou no meio da ação (pontuação suspensiva ou conjunção/fala interrompida)
+      const terminaEmSuspensiva = /[:,\—\-]\s*$/.test(ultimaNarrativa) || /\.{3,}\s*$/.test(ultimaNarrativa);
+      const terminaEmConjuncaoOuVerboFala = /\b(?:quando|enquanto|mas|por[eé]m|e\s+ent[aã]o|no\s+momento\s+em\s+que)\s*[:,\s]*$/i.test(ultimaNarrativa);
+      const terminaEmAspasAbertas = /"\s*$/.test(ultimaNarrativa) && (ultimaNarrativa.match(/"/g) || []).length % 2 !== 0;
+
+      // O roteiro antes do CTA não pode terminar em uma oração/fala de desafio sem nenhuma resolução posterior narrada
+      const terminaEmOracaoOuClamor = /\b(?:orou|clamou|suplicou|disse|bradou|pediu)\s*:\s*["“][^"”]+["”]\s*(?:\([^\)]+\))?\s*[.:]?\s*$/i.test(ultimaNarrativa);
+
+      if (terminaEmSuspensiva || terminaEmConjuncaoOuVerboFala || terminaEmAspasAbertas || terminaEmOracaoOuClamor) {
+        erros.push('Roteiro incompleto: o episódio bíblico parece interrompido antes do desfecho final.');
       }
     }
 
