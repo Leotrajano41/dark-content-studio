@@ -72,7 +72,9 @@ const descricoesVariadas = [
   "crouched armor bearer lifting a wide rectangular wooden shield covered in dark leather hides",
   "imposing giant shouting challenges toward the trembling Hebrew camp with booming anger",
   "close-up of Saul seated inside royal royal tent his weathered face gripped by grim anxiety",
-  "pastor boy carrying woven wicker basket filled with flat loaves of bread into military camp"
+  "pastor boy carrying woven wicker basket filled with flat loaves of bread into military camp",
+  "extreme close-up on young David with fearless eyes holding a leather sling and five smooth stones",
+  "panoramic view of the two armies shouting on opposing ridges above the deep Valley of Elah"
 ];
 
 // 3. Teste de correspondência quando a IA devolve números exatos em formato de array
@@ -83,10 +85,12 @@ const descricoesVariadas = [
     narracao14Cenas,
     async (prompt) => {
       if (prompt.includes('[Cena 11]')) {
-        return JSON.stringify([
-          { numero: "11", descricaoVisual: descricoesVariadas[10] },
-          { numero: "12", descricaoVisual: descricoesVariadas[11] }
-        ]);
+        return JSON.stringify(
+          cenasLote2.map((c, idx) => ({
+            numero: c.numero,
+            descricaoVisual: descricoesVariadas[10 + idx] || 'serene twilight over the biblical camp'
+          }))
+        );
       }
       // Lote 1 (01 a 10)
       return JSON.stringify(
@@ -111,10 +115,12 @@ const descricoesVariadas = [
     narracao14Cenas,
     async (prompt) => {
       if (prompt.includes('[Cena 11]')) {
-        return JSON.stringify([
-          { numero: "01", descricaoVisual: "close-up of Saul seated inside royal tent his face gripped by anxiety" },
-          { numero: "02", descricaoVisual: "pastor boy carrying woven wicker basket filled with loaves into camp" }
-        ]);
+        return JSON.stringify(
+          cenasLote2.map((c, idx) => ({
+            numero: String(idx + 1).padStart(2, '0'),
+            descricaoVisual: descricoesVariadas[10 + idx] || 'serene twilight over the biblical camp'
+          }))
+        );
       }
       return JSON.stringify(
         Array.from({ length: 10 }, (_, i) => ({
@@ -139,10 +145,10 @@ const descricoesVariadas = [
     async (prompt) => {
       if (prompt.includes('[Cena 11]')) {
         return JSON.stringify({
-          scenes: [
-            { scene: 11, description: "close-up of Saul inside royal military pavilion staring into distance" },
-            { scene: 12, visual_description: "young shepherd stepping through perimeter of tents carrying provisions" }
-          ]
+          scenes: cenasLote2.map((c, idx) => ({
+            scene: parseInt(c.numero, 10),
+            description: descricoesVariadas[10 + idx] || 'serene twilight over the biblical camp'
+          }))
         });
       }
       return JSON.stringify(

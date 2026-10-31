@@ -31,6 +31,18 @@
     'Joshua': "Joshua: young energetic commander, short dark beard, bronze scale armor, dark mantle, spear",
     'Josué': "Joshua: young energetic commander, short dark beard, bronze scale armor, dark mantle, spear",
     'Josue': "Joshua: young energetic commander, short dark beard, bronze scale armor, dark mantle, spear",
+    'David': "David: young Hebrew youth in late teens, determined handsome youthful face, bright piercing eyes, short wavy reddish-brown hair, wearing a simple rustic tan sheep wool tunic, leather belt with small shepherd pouch and leather sling, no armor",
+    'Davi': "David: young Hebrew youth in late teens, determined handsome youthful face, bright piercing eyes, short wavy reddish-brown hair, wearing a simple rustic tan sheep wool tunic, leather belt with small shepherd pouch and leather sling, no armor",
+    'Goliath': "Goliath: colossal towering Philistine giant warrior over nine feet tall, ferocious scarred weathered middle-aged face, thick dark coarse beard, cropped dark hair under heavy bronze crested helmet, massive bronze scale armor coat gleaming, bronze greaves on legs, large bronze spear with massive iron head and heavy round bronze shield",
+    'Golias': "Goliath: colossal towering Philistine giant warrior over nine feet tall, ferocious scarred weathered middle-aged face, thick dark coarse beard, cropped dark hair under heavy bronze crested helmet, massive bronze scale armor coat gleaming, bronze greaves on legs, large bronze spear with massive iron head and heavy round bronze shield",
+    'Saul': "Saul: tall imposing Hebrew king in late forties, weathered brooding countenance, greying dark beard, ornate royal bronze crown, royal purple mantle over chainmail, holding tall royal spear",
+    'Samuel': "Samuel: venerable elderly prophet, long flowing silver white beard, piercing visionary eyes, simple coarse linen mantle, rough woolen robe",
+    'Jonathan': "Jonathan: athletic noble young prince in early twenties, trim dark beard, royal blue tunic with gold embroidery, bronze chestplate, leather quiver and composite bow",
+    'Jônatas': "Jonathan: athletic noble young prince in early twenties, trim dark beard, royal blue tunic with gold embroidery, bronze chestplate, leather quiver and composite bow",
+    'Jonatas': "Jonathan: athletic noble young prince in early twenties, trim dark beard, royal blue tunic with gold embroidery, bronze chestplate, leather quiver and composite bow",
+    'Solomon': "Solomon: young wise king in late twenties, dignified serene face, neatly groomed dark beard, ornate golden royal crown, opulent crimson and gold embroidered robes",
+    'Salomão': "Solomon: young wise king in late twenties, dignified serene face, neatly groomed dark beard, ornate golden royal crown, opulent crimson and gold embroidered robes",
+    'Salomao': "Solomon: young wise king in late twenties, dignified serene face, neatly groomed dark beard, ornate golden royal crown, opulent crimson and gold embroidered robes",
     'Miriam': "Miriam: elderly Hebrew prophetess, weathered dignified face, dark woven veil, linen robes",
     'Miriã': "Miriam: elderly Hebrew prophetess, weathered dignified face, dark woven veil, linen robes",
     'Eleazar': "Eleazar: dignified young high priest, sacred linen garments, ceremonial priestly vestments",
@@ -99,27 +111,39 @@
 
   /**
    * ITEM 2: Nome do .ZIP baseado exclusivamente no TEMA do vídeo ou título da ideia escolhida.
-   * NUNCA usa o nome da categoria do menu.
+   * NUNCA usa o nome da categoria do menu e NUNCA usa valor fantasma de sessão anterior.
    */
   function gerarNomeZipScriptorium(temaOuOpcoes) {
     let temaFinal = '';
 
     if (typeof temaOuOpcoes === 'object' && temaOuOpcoes !== null) {
-      const custom = (temaOuOpcoes.temaCustom || '').trim();
       const ideia = (temaOuOpcoes.ideiaEscolhida || '').trim();
+      const custom = (temaOuOpcoes.temaCustom || '').trim();
+      const cat = (temaOuOpcoes.categoria || temaOuOpcoes.tema || '').trim();
       const thumb = (temaOuOpcoes.temaThumb || '').trim();
       const seo = (temaOuOpcoes.temaSeo || '').trim();
       const personagem = (temaOuOpcoes.personagemPrincipal || '').trim();
-      const cat = (temaOuOpcoes.categoria || temaOuOpcoes.tema || '').trim();
 
-      if (custom) {
+      // PRIORIDADE: Título/tema ATUAL do projeto
+      // 1. Ideia escolhida do projeto atual (limpando eventuais prefixos de lista "1.", "Ideia 2:", etc.)
+      // 2. Tema customizado (se preenchido e a categoria do menu for "Personalizável" ou não houver ideia)
+      // 3. Tema de thumbnail ou tema de SEO
+      // 4. Personagem principal
+      // 5. Categoria específica do menu (se não estiver na lista de categorias genéricas a ignorar)
+      if (ideia) {
+        temaFinal = ideia
+          .replace(/^#?\s*(?:ideia\s+)?\d+[\.:\)\-]\s*/i, '')
+          .replace(/^[\*\_\#\s]+/, '')
+          .split(/\r?\n/)[0]
+          .trim();
+      } else if (cat === 'Personalizável' && custom) {
         temaFinal = custom;
-      } else if (ideia) {
-        temaFinal = ideia;
       } else if (thumb) {
         temaFinal = thumb;
       } else if (seo) {
         temaFinal = seo;
+      } else if (custom) {
+        temaFinal = custom;
       } else if (personagem) {
         temaFinal = personagem;
       } else if (cat && !CATEGORIAS_MENU_IGNORAR.some(c => c === cat.toLowerCase())) {
@@ -291,6 +315,53 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
   }
 
   /**
+   * ITEM 3: No gancho (primeiros ~15s), quebra frases longas em frases curtas
+   * por pontuações intermediárias (; : — ,) para garantir uma cena nova a cada 4 a 6s.
+   * Frases sem qualquer pontuação intermediária são preservadas como bloco único para emitir aviso.
+   */
+  function quebrarFrasesParaGancho(frases, limiteSegundosGancho = 18) {
+    if (!Array.isArray(frases)) return [];
+    const resultado = [];
+    let tempoEstimado = 0;
+
+    for (const frase of frases) {
+      const qtdPalavras = contarPalavras(frase);
+      const duracao = qtdPalavras / 2.5;
+
+      // Se ainda estamos dentro do gancho e a frase tem mais de 15 palavras (> 6s)
+      // E contém pontuação intermediária (; : — ,)
+      const temPontuacaoIntermediaria = /[;:—,]/.test(frase);
+      if (tempoEstimado < limiteSegundosGancho && qtdPalavras > 15 && temPontuacaoIntermediaria) {
+        // Divide por pontuação intermediária (; : — ,) preservando o sinal
+        const pedacos = frase.match(/[^;:—,\n]+(?:[;:—,]+["'”»]?|$)/g) || [frase];
+        let acumulado = '';
+
+        for (const pedaco of pedacos) {
+          const candidato = acumulado ? `${acumulado} ${pedaco.trim()}` : pedaco.trim();
+          const qtdCandidato = contarPalavras(candidato);
+
+          if (acumulado && qtdCandidato > 15 && contarPalavras(acumulado) >= 7) {
+            resultado.push(acumulado.trim());
+            tempoEstimado += contarPalavras(acumulado) / 2.5;
+            acumulado = pedaco.trim();
+          } else {
+            acumulado = candidato;
+          }
+        }
+        if (acumulado.trim()) {
+          resultado.push(acumulado.trim());
+          tempoEstimado += contarPalavras(acumulado) / 2.5;
+        }
+      } else {
+        resultado.push(frase);
+        tempoEstimado += duracao;
+      }
+    }
+
+    return resultado;
+  }
+
+  /**
    * Agrupa as frases em cenas com base no tempo acumulado e nas 3 faixas de ritmo:
    * 1) 0s - 30s: 4 a 6s por cena (~10 a 15 palavras)
    * 2) 30s - 180s (3min): 12 a 18s por cena (~30 a 45 palavras)
@@ -300,6 +371,7 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
    * prefere cortar na fronteira entre os acontecimentos.
    */
   function agruparFrasesEmCenas(frases, textoCompleto) {
+    const frasesProcessadas = quebrarFrasesParaGancho(frases, 18);
     const cenas = [];
     const avisos = [];
     let tempoAcumuladoTotal = 0;
@@ -316,8 +388,8 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
       }
     };
 
-    for (let i = 0; i < frases.length; i++) {
-      const frase = frases[i];
+    for (let i = 0; i < frasesProcessadas.length; i++) {
+      const frase = frasesProcessadas[i];
       const qtdPalavras = contarPalavras(frase);
       const duracaoFrase = qtdPalavras / 2.5;
 
@@ -444,6 +516,54 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
     return Number((comuns / uniao).toFixed(2));
   }
 
+  const NOMES_PERSONAGENS_NORMALIZADOS = {
+    'moises': 'Moses', 'móises': 'Moses', 'moses': 'Moses',
+    'arao': 'Aaron', 'arão': 'Aaron', 'aaron': 'Aaron',
+    'josue': 'Joshua', 'josué': 'Joshua', 'joshua': 'Joshua',
+    'miriam': 'Miriam', 'miriã': 'Miriam',
+    'eleazar': 'Eleazar',
+    'farao': 'Pharaoh', 'faraó': 'Pharaoh', 'pharaoh': 'Pharaoh',
+    'davi': 'David', 'david': 'David',
+    'golias': 'Goliath', 'goliath': 'Goliath',
+    'saul': 'Saul',
+    'samuel': 'Samuel',
+    'jonatas': 'Jonathan', 'jônatas': 'Jonathan', 'jonathan': 'Jonathan',
+    'salomao': 'Solomon', 'salomão': 'Solomon', 'solomon': 'Solomon'
+  };
+
+  function detectarTipoEnquadramento(desc) {
+    if (!desc || typeof desc !== 'string') return 'outro';
+    const d = desc.toLowerCase();
+    if (/\b(?:wide|panoramic|landscape|vast|establishing|aerial|high-angle|birds-eye|distant|broad\s+valley|expansive)\b/i.test(d)) {
+      return 'aberto';
+    }
+    if (/\b(?:extreme\s+close-up|close-up|portrait|face|eyes|expression|profile|gaze)\b/i.test(d)) {
+      return 'close';
+    }
+    if (/\b(?:macro|detail\s+shot|hands|fingers|grip|sling|leather\s+sling|stone|smooth\s+stone|sandals|feet|spear\s+tip|spearhead|blade|armor\s+greaves)\b/i.test(d)) {
+      return 'detalhe';
+    }
+    if (/\b(?:medium\s+shot|waist-up|two\s+figures|side\s+by\s+side|standing\s+opposite|facing\s+each\s+other|confrontation)\b/i.test(d)) {
+      return 'medio';
+    }
+    return 'padrao';
+  }
+
+  function detectarPersonagensNaDescricao(desc) {
+    if (!desc || typeof desc !== 'string') return [];
+    const d = desc.toLowerCase();
+    const pers = [];
+    if (/\b(?:david|davi|young\s+shepherd)\b/i.test(d)) pers.push('david');
+    if (/\b(?:goliath|golias|giant|colossus)\b/i.test(d)) pers.push('goliath');
+    if (/\b(?:saul|rei\s+saul)\b/i.test(d)) pers.push('saul');
+    if (/\b(?:samuel)\b/i.test(d)) pers.push('samuel');
+    if (/\b(?:jonathan|j[oô]natas)\b/i.test(d)) pers.push('jonathan');
+    if (/\b(?:moses|mois[eé]s)\b/i.test(d)) pers.push('moses');
+    if (/\b(?:aaron|ar[aã]o)\b/i.test(d)) pers.push('aaron');
+    if (/\b(?:pharaoh|fara[oó])\b/i.test(d)) pers.push('pharaoh');
+    return pers.sort();
+  }
+
   /**
    * Constrói o prompt de comando para a IA gerar descrições visuais em lotes de até 10 cenas.
    * ITEM 4 e 5: Exige variedade de enquadramento, proíbe ação antecipada e referências a público.
@@ -459,6 +579,23 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
       blocoAnteriores = `\nPREVIOUSLY USED SCENE DESCRIPTIONS (DO NOT REPEAT THESE COMPOSITIONS, FRAMINGS OR MOTIFS):\n${ultimas.map((d, i) => `- Previous: "${d}"`).join('\n')}\n`;
     }
 
+    // Identifica fichas de personagens presentes para injetar no prompt da IA (ITEM 2)
+    const textoLote = loteCenas.map(c => `${c.trecho}`).join(' ').toLowerCase();
+    const fichasPresentes = [];
+    for (const [chave, fichaCanon] of Object.entries(FICHAS_PERSONAGENS)) {
+      const nomeEn = NOMES_PERSONAGENS_NORMALIZADOS[chave.toLowerCase()];
+      if (nomeEn && !fichasPresentes.some(f => f.nome === nomeEn)) {
+        const reg = new RegExp(`\\b${chave}\\b`, 'i');
+        if (reg.test(textoLote)) {
+          fichasPresentes.push({ nome: nomeEn, ficha: fichaCanon });
+        }
+      }
+    }
+    let blocoFichasIa = '';
+    if (fichasPresentes.length > 0) {
+      blocoFichasIa = `\nCHARACTER CANONICAL IDENTITY (MANDATORY TO PRESERVE EXACT SAME AGE, HAIR, FACE, CLOTHES, COLORS IN EVERY SCENE):\n${fichasPresentes.map(f => `- ${f.ficha}`).join('\n')}\n`;
+    }
+
     const primeiroNum = loteCenas[0]?.numero || '01';
     const segundoNum = loteCenas[1]?.numero || '02';
     const exemploJson = loteCenas.length > 1
@@ -470,30 +607,31 @@ For each narration excerpt below, write ONE concise, vivid visual description in
 
 CRITICAL RULES:
 1. Describe ONLY what physically happens within the given excerpt (visible people, concrete actions, physical environment, objects).
-2. MANDATORY FRAMING VARIETY (NEVER REPEAT SIMILAR FRAMINGS):
-   - You MUST vary the camera angle/framing between consecutive scenes:
-     * Wide panoramic landscape shot (vast desert, expansive camp, towering mountains)
-     * Medium character action shot (waist-up, figures interacting)
-     * Dramatic close-up on face, eyes, and solemn facial expression
-     * Macro detail shot on hands, rustic wooden staff, cracked rock, parchment, feet on dusty path
-     * High-angle aerial perspective looking down at the camp or terrain
-   - Consecutive scenes MUST have completely different compositions and focal points.
+2. MANDATORY FRAMING VARIETY & CONSECUTIVE SCENE RULE (SCENE 1 & 2 VARIETY):
+   - TWO CONSECUTIVE SCENES MUST NEVER REPEAT THE SAME FRAMING TYPE + SAME CHARACTERS!
+   - If the first scene is an establishing wide shot (e.g. landscape of the Valley of Elah with both figures or armies), the second scene MUST NOT be another shot of both David and Goliath standing in the valley. The next scene MUST vary drastically: e.g. dramatic extreme close-up on Goliath's sneering face/eyes, or macro detail shot on David's hand selecting smooth river stones and holding the leather sling.
+   - Alternate camera perspectives:
+     * Wide panoramic landscape shot (vast valley, army camps on rolling hills)
+     * Dramatic close-up on face, eyes, and solemn fearless expression
+     * Macro detail shot on hands, rustic sling, smooth river stones, spearhead, armor greaves
+     * Dynamic medium action shot (waist-up, winding sling, raising staff)
+     * High-angle aerial perspective looking down at terrain or battle lines
 3. STRICT CHRONOLOGICAL ISOLATION (NO PREMATURE ACTION):
    - Illustrate ONLY the specific action mentioned in this scene's excerpt.
-   - NEVER illustrate actions that only happen in subsequent excerpts (e.g. if raising the staff or striking the rock is only narrated in a later scene, DO NOT depict it in earlier scenes).
+   - NEVER illustrate actions that only happen in subsequent excerpts (e.g. if the sling release or stone strike is only narrated in a later scene, DO NOT depict it in earlier scenes).
 4. NO AUDIENCE, CHANNEL OR PRODUCTION REFERENCES:
    - FORBIDDEN to mention 'viewers', 'audience', 'subscribe', 'channel', 'video', 'followers', or 'strengthen faith'.
    - For call-to-action or conclusion excerpts, depict a concrete historical object/setting (e.g. an ancient illuminated parchment scroll unrolled on a rustic cedar table beside a glowing bronze oil lamp, or serene twilight horizon over the desert).
 5. DOMINANT EVENT RULE:
    - If an excerpt contains more than one action or subject, depict the primary event that occupies the majority of the text.
-6. FORBIDDEN to include elements from other biblical events or stories (e.g., NEVER include sea, ocean waves, or shore if the text is about a desert, rock, camp, or mountain).
-7. Use strictly biblical English names: Moses, Aaron, Miriam, Joshua, Eleazar, Pharaoh, David, Goliath, Saul, Samuel, Jonathan; Meribah, Kadesh, Mount Hor, Mount Nebo, Mount Sinai, Jordan River, Canaan, Valley of Elah.
+6. FORBIDDEN to include elements from other biblical events or stories (e.g., NEVER include sea, ocean waves, or shore if the text is about a valley, desert, rock, camp, or mountain).
+7. Use strictly biblical English names and respect CANONICAL CHARACTER IDENTITY: David, Goliath, Saul, Samuel, Jonathan, Solomon, Moses, Aaron, Miriam, Joshua, Eleazar, Pharaoh.
 8. FORBIDDEN to depict God as a human figure, face, or humanoid shadow. Depict divine presence through glorious radiant celestial light, glowing illumination, pillar of cloud or fire.
 9. Do NOT include Portuguese words.
 10. Do NOT use generic placeholders like "biblical tableau", "artistic depiction" or "scene representing". Describe the physical concrete action.
 11. CRITICAL SCENE NUMBERING RULE: You MUST PRESERVE the exact scene numbers from INPUT SCENES: [${numerosEsperados}]. DO NOT restart numbering from "01" if scenes are ${numerosEsperados}!
 12. Output EXCLUSIVELY a valid JSON array of objects with "numero" and "descricaoVisual".
-${blocoAnteriores}
+${blocoFichasIa}${blocoAnteriores}
 INPUT SCENES:
 ${cenasFormatadas}
 
@@ -687,6 +825,28 @@ ${exemploJson}`;
       }
     }
 
+    // 7. ITEM 4: Proibição de repetição de enquadramento com mesmos personagens em cenas consecutivas
+    if (contexto && Array.isArray(contexto.descricoesAnteriores) && contexto.descricoesAnteriores.length > 0) {
+      const descAnterior = contexto.descricoesAnteriores[contexto.descricoesAnteriores.length - 1];
+      if (descAnterior) {
+        const enqAtual = detectarTipoEnquadramento(desc);
+        const enqAnt = detectarTipoEnquadramento(descAnterior);
+        const persAtual = detectarPersonagensNaDescricao(desc);
+        const persAnt = detectarPersonagensNaDescricao(descAnterior);
+
+        const mesmosPersonagens = persAtual.length > 0 && persAnt.length > 0 &&
+          persAtual.length === persAnt.length &&
+          persAtual.every(p => persAnt.includes(p));
+
+        if (enqAtual !== 'outro' && enqAtual !== 'padrao' && enqAtual === enqAnt && mesmosPersonagens) {
+          return {
+            valido: false,
+            motivo: `Cenas consecutivas não podem repetir o mesmo tipo de plano (${enqAtual}) e os mesmos personagens (${persAtual.join(', ')}). Exige variar (ex.: plano aberto do vale → close no rosto ou detalhe).`
+          };
+        }
+      }
+    }
+
     if (contarPalavras(desc) < 4) {
       return { valido: false, motivo: 'Descrição curta demais (menos de 4 palavras).' };
     }
@@ -697,7 +857,7 @@ ${exemploJson}`;
   /**
    * Injeta os elementos fixos de consistência após a descrição visual:
    * 1. Prefixo do estilo do canal no início.
-   * 2. Ficha canônica do personagem quando ele aparece.
+   * 2. Ficha canônica do personagem quando ele aparece (ITEM 2).
    * 3. Sufixo "Full bleed image, no border, no frame, no decorative corners. No text." no final.
    */
   function montarPromptFinalCena(descricaoVisual, trechoPt, contexto = {}) {
@@ -708,16 +868,9 @@ ${exemploJson}`;
     desc = desc.replace(/Full bleed image[^.]*\.?\s*$/i, '');
     desc = desc.replace(/^Depicting\s+/i, '');
 
-    // Identifica personagens presentes
+    // Identifica personagens presentes com ficha canônica única e consistente
     const personagensEncontrados = [];
-    const nomesNormalizados = {
-      'moises': 'Moses', 'móises': 'Moses', 'moses': 'Moses',
-      'arao': 'Aaron', 'arão': 'Aaron', 'aaron': 'Aaron',
-      'josue': 'Joshua', 'josué': 'Joshua', 'joshua': 'Joshua',
-      'miriam': 'Miriam', 'miriã': 'Miriam',
-      'eleazar': 'Eleazar',
-      'farao': 'Pharaoh', 'faraó': 'Pharaoh', 'pharaoh': 'Pharaoh'
-    };
+    const nomesNormalizados = NOMES_PERSONAGENS_NORMALIZADOS;
 
     const textoCombinado = `${trechoPt} ${desc}`.toLowerCase();
     for (const [chave, fichaCanon] of Object.entries(FICHAS_PERSONAGENS)) {
@@ -747,6 +900,30 @@ ${exemploJson}`;
   function gerarDescricaoVisualFallback(trechoPt, numeroCena, contexto = {}) {
     const t = (trechoPt || '').toLowerCase();
     const tema = contexto.tema || 'Moisés';
+
+    // Fallback contextual para Davi e Golias (ITEM 4: Cenas 01 e 02 e consecutivas variadas)
+    if (/\b(?:golias|davi|goliath|david|filisteu|pastor|funda|gigante|el[aá])\b/i.test(t)) {
+      const numInt = parseInt(numeroCena, 10);
+      if (numInt === 1) {
+        return 'Wide panoramic shot of the sunlit Valley of Elah with Philistine and Hebrew armies camped on opposing rocky slopes, deep tension in the morning haze';
+      }
+      if (numInt === 2) {
+        return 'Dramatic close-up on young David with fearless focused eyes, rustic sheep wool tunic, natural leather sling held firmly in hand';
+      }
+      if (numInt === 3) {
+        return 'Colossal towering Philistine giant Goliath sneering in heavy gleaming bronze scale armor coat and helmet, grasping a massive iron-tipped spear';
+      }
+      if (numInt === 4) {
+        return 'Macro detail shot on young David selecting five smooth rounded river stones from the brook, placing them inside a small leather pouch';
+      }
+      if (numInt === 5) {
+        return 'Dynamic medium action shot of young David swinging the rustic leather sling overhead, running forward across the dry dusty stream bed';
+      }
+      if (numInt % 2 === 0) {
+        return 'Dramatic close-up on intense facial expressions and dusty battlefield atmosphere with ancient weapons in solemn historical reverence';
+      }
+      return 'Wide landscape view of the Valley of Elah under dramatic sunlit sky with rolling stony ridges and ancient military encampment';
+    }
 
     if (/\b(?:vara|feriu|bateu)\b/i.test(t) && /\brocha\b/i.test(t)) {
       return 'Moses raising a rustic wooden staff striking the dry desert boulder in Kadesh, tense Hebrew multitude watching in silence under parched sunlight';

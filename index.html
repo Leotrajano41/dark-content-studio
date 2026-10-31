@@ -8416,6 +8416,13 @@ const AutoSave = window.AutoSave = {
         }
       });
 
+      // Se select-tema restaurado não for Personalizável, limpa input-tema-custom para não reter tema antigo
+      const selTemaEl = document.getElementById('select-tema');
+      const inTemaCustomEl = document.getElementById('input-tema-custom');
+      if (selTemaEl && selTemaEl.value !== 'Personalizável' && inTemaCustomEl) {
+        inTemaCustomEl.value = '';
+      }
+
       // Se havia legenda salva, exibe o card de legenda
       const legendaOutput = document.getElementById('output-legenda-srt');
       const cardLegenda = document.getElementById('card-legenda-output');
@@ -9326,7 +9333,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  if (selectTema) selectTema.addEventListener('change', syncTema);
+  if (selectTema) {
+    selectTema.addEventListener('change', () => {
+      // Se não for Personalizável, limpa o input customizado para não manter tema antigo de outra sessão
+      if (selectTema.value !== 'Personalizável' && inputTemaCustom) {
+        inputTemaCustom.value = '';
+      }
+      syncTema();
+    });
+  }
   if (inputTemaCustom) inputTemaCustom.addEventListener('input', syncTema);
   if (inputIdeiaEscolhida) {
     inputIdeiaEscolhida.addEventListener('input', () => {
@@ -11527,10 +11542,13 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       arquivosZip.push({ nome: 'legenda.srt', conteudo: currentSrtContent });
     }
 
-    // ITEM 2: Nome do ZIP vem do tema do vídeo ou título da ideia escolhida, NUNCA da categoria do menu
-    const temaCustom = document.getElementById('input-tema-custom')?.value?.trim();
-    const ideiaEscolhida = document.getElementById('input-ideia-escolhida')?.value?.trim();
+    // ITEM 2: Nome do ZIP vem do tema do vídeo ou título da ideia escolhida, NUNCA da categoria do menu nem de tema antigo
     const categoriaMenu = document.getElementById('select-tema')?.value?.trim();
+    const containerCustom = document.getElementById('container-tema-custom');
+    const temaCustom = (categoriaMenu === 'Personalizável' || (containerCustom && !containerCustom.classList.contains('hidden')))
+      ? (document.getElementById('input-tema-custom')?.value?.trim() || '')
+      : '';
+    const ideiaEscolhida = document.getElementById('input-ideia-escolhida')?.value?.trim();
     const temaThumb = document.getElementById('input-tema-thumb')?.value?.trim();
     const temaSeo = document.getElementById('input-tema-seo')?.value?.trim();
     const personagem = document.getElementById('input-personagem-principal')?.value?.trim();
