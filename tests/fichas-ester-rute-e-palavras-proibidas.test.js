@@ -1,9 +1,14 @@
 // tests/fichas-ester-rute-e-palavras-proibidas.test.js
-// Validação estrita dos 2 pontos:
-// 1) Fichas dinâmicas criadas para personagens fora da lista fixa (ex.: Ester, Assuero, Hamã, Mardoqueu e Rute, Boaz)
+// Validação estrita dos pontos:
+// 1) Fichas dinâmicas criadas para personagens bíblicos:
+//    - Categoria e palavras genéricas (Personagens Bíblicos, Bíblia, Deus, Senhor, Israel, povo, rei, rainha, profeta) NUNCA viram ficha
+//    - Chaves duplicadas com maiúscula/minúscula (Haman / haman) unificadas em uma chave canônica
 //    - Isolamento por sessão (zeramento e transição de Ester para Rute)
 //    - Retry na chamada à IA com emissão de aviso amarelo (nunca fica vazio)
-// 2) Auto-recuperação de termos proibidos (viewers/audience/subscribe/channel)
+// 2) Cena de reserva SEM elementos de outra história:
+//    - "Essas palavras colocaram uma rainha judia diante da escolha entre o silêncio seguro e a intervenção arriscada"
+//      Gera cena com Esther e Palácio de Susã, SEM "prophets", "pagan", "Baal" ou "Carmel"
+// 3) Auto-recuperação de termos proibidos (viewers/audience/subscribe/channel):
 //    - Termo legítimo "royal audience with the king" preservado/sanitizado sem reprovação
 //    - Termos proibidos meta são sanitizados e aprovados (nunca PENDENTE)
 
@@ -28,8 +33,9 @@ if (typeof global.window === 'undefined') {
 
 // ===========================================================================
 // TESTE 1: TEMA ESTER FORA DA LISTA FIXA (Esther, Ahasuerus, Haman, Mordecai)
+//          + NUNCA CRIAR FICHA PARA CATEGORIA / GENÉRICOS + UNIFICAÇÃO DE CHAVES
 // ===========================================================================
-console.log('--- TESTE 1: Fichas dinâmicas para Ester diante do rei Assuero ---');
+console.log('--- TESTE 1: Fichas dinâmicas para Ester diante do rei Assuero & Unificação ---');
 
 const narracaoEster = `No palácio de Susã, o rei Assuero reinava sobre cento e vinte e sete províncias.
 Mardoqueu descobriu a conspiração de Hamã para destruir todo o povo judeu.
@@ -42,18 +48,33 @@ O rei ordenou que Hamã fosse punido e exaltou Mardoqueu como primeiro-ministro.
 
 const planoEster = PlanoCenasModule.gerarPlanoDeCenas(narracaoEster, {
   tema: 'Ester diante do rei Assuero',
-  personagemPrincipal: 'Ester'
+  personagemPrincipal: 'Personagens Bíblicos' // Simula passagem da categoria do select-tema
 });
 
 const fichasEster = global.window._fichasPersonagensAtual;
 checar(Boolean(fichasEster && Object.keys(fichasEster).length > 0), 'window._fichasPersonagensAtual preenchido com fichas (não vazio)');
 
-// Conferir se contém Esther, Ahasuerus, Haman e Mordecai
-const chavesEster = Object.keys(fichasEster).map(k => k.toLowerCase());
-checar(chavesEster.includes('esther') || chavesEster.includes('ester'), 'Fichas contêm Esther/Ester');
-checar(chavesEster.includes('ahasuerus') || chavesEster.includes('assuero'), 'Fichas contêm Ahasuerus/Assuero');
-checar(chavesEster.includes('haman') || chavesEster.includes('hama'), 'Fichas contêm Haman/Hamã');
-checar(chavesEster.includes('mordecai') || chavesEster.includes('mardoqueu'), 'Fichas contêm Mordecai/Mardoqueu');
+// AJUSTE 1: Categoria e termos genéricos NUNCA viram ficha
+const chavesEsterRaw = Object.keys(fichasEster);
+checar(!chavesEsterRaw.includes('Personagens Bíblicos') && !chavesEsterRaw.includes('personagens bíblicos'), 'NUNCA cria ficha para categoria "Personagens Bíblicos"');
+checar(!chavesEsterRaw.includes('Bíblia') && !chavesEsterRaw.includes('biblia'), 'NUNCA cria ficha para "Bíblia"');
+checar(!chavesEsterRaw.includes('Deus') && !chavesEsterRaw.includes('deus'), 'NUNCA cria ficha para "Deus"');
+checar(!chavesEsterRaw.includes('Senhor') && !chavesEsterRaw.includes('senhor'), 'NUNCA cria ficha para "Senhor"');
+checar(!chavesEsterRaw.includes('Israel') && !chavesEsterRaw.includes('israel'), 'NUNCA cria ficha para "Israel"');
+checar(!chavesEsterRaw.includes('povo') && !chavesEsterRaw.includes('Povo'), 'NUNCA cria ficha para "povo"');
+checar(!chavesEsterRaw.includes('rei') && !chavesEsterRaw.includes('Rei'), 'NUNCA cria ficha para substantivo comum isolado "rei"');
+checar(!chavesEsterRaw.includes('rainha') && !chavesEsterRaw.includes('Rainha'), 'NUNCA cria ficha para substantivo comum isolado "rainha"');
+checar(!chavesEsterRaw.includes('profeta') && !chavesEsterRaw.includes('Profeta'), 'NUNCA cria ficha para substantivo comum isolado "profeta"');
+
+// AJUSTE 1: Juntar chaves duplicadas com maiúscula/minúscula (Haman / haman)
+checar(chavesEsterRaw.includes('Haman'), 'Fichas contêm chave canônica "Haman"');
+checar(!chavesEsterRaw.includes('haman'), 'Chave duplicada minúscula "haman" NÃO existe (unificada em "Haman")');
+checar(chavesEsterRaw.includes('Esther'), 'Fichas contêm chave canônica "Esther"');
+checar(!chavesEsterRaw.includes('esther'), 'Chave duplicada minúscula "esther" NÃO existe (unificada em "Esther")');
+checar(chavesEsterRaw.includes('Ahasuerus'), 'Fichas contêm chave canônica "Ahasuerus"');
+checar(!chavesEsterRaw.includes('ahasuerus'), 'Chave duplicada minúscula "ahasuerus" NÃO existe (unificada em "Ahasuerus")');
+checar(chavesEsterRaw.includes('Mordecai'), 'Fichas contêm chave canônica "Mordecai"');
+checar(!chavesEsterRaw.includes('mordecai'), 'Chave duplicada minúscula "mordecai" NÃO existe (unificada em "Mordecai")');
 
 // Conferir consistência das fichas nas cenas onde cada um aparece
 let cenasComEsther = 0;
@@ -90,6 +111,29 @@ checar(cenasComEsther >= 2, `Esther aparece com ficha em pelo menos 2 cenas (${c
 checar(cenasComAhasuerus >= 2, `Ahasuerus aparece com ficha em pelo menos 2 cenas (${cenasComAhasuerus} cenas)`);
 
 // ===========================================================================
+// TESTE 1B (AJUSTE 2): CENA DE RESERVA SEM ELEMENTOS DE OUTRA HISTÓRIA
+// ===========================================================================
+console.log('\n--- TESTE 1B: Cena de reserva de Ester não vaza profetas de Baal nem Carmelo ---');
+
+const fraseCena02Ester = 'Essas palavras colocaram uma rainha judia diante da escolha entre o silêncio seguro e a intervenção arriscada.';
+const planoCena02 = PlanoCenasModule.gerarPlanoDeCenas(fraseCena02Ester, {
+  tema: 'Ester diante do rei Assuero'
+});
+
+const cena02Reserva = planoCena02.cenas[0];
+const desc02Lower = cena02Reserva.descricaoVisual.toLowerCase();
+const prompt02Lower = cena02Reserva.promptIngles.toLowerCase();
+
+checar(
+  desc02Lower.includes('esther') || desc02Lower.includes('queen') || desc02Lower.includes('susa') || desc02Lower.includes('palace'),
+  'Descrição de reserva da cena 02 da Ester refere-se a Esther ou ao palácio de Susã'
+);
+checar(!desc02Lower.includes('prophet') && !prompt02Lower.includes('prophet'), 'Cena da Ester NÃO contém "prophets"');
+checar(!desc02Lower.includes('pagan') && !prompt02Lower.includes('pagan'), 'Cena da Ester NÃO contém "pagan"');
+checar(!desc02Lower.includes('baal') && !prompt02Lower.includes('baal'), 'Cena da Ester NÃO contém "Baal"');
+checar(!desc02Lower.includes('carmel') && !prompt02Lower.includes('carmel'), 'Cena da Ester NÃO contém "Carmel"');
+
+// ===========================================================================
 // TESTE 2: SESSÃO SEQUENCIAL COM NOVO TEMA FORA DA LISTA (Rute e Boaz)
 // ===========================================================================
 console.log('\n--- TESTE 2: Transição de sessão para 2º tema (Rute e Boaz) ---');
@@ -114,7 +158,7 @@ checar(!chavesRute.includes('haman') && !chavesRute.includes('hama'), 'Fichas de
 checar(!chavesRute.includes('mordecai') && !chavesRute.includes('mardoqueu'), 'Fichas de Rute NÃO contêm Mordecai do projeto anterior');
 
 // Deve conter Ruth e Boaz
-checar(chavesRute.includes('ruth') || chavesRute.includes('rute'), 'Fichas de Rute contêm Ruth');
+checar(chavesRute.includes('ruth'), 'Fichas de Rute contêm Ruth');
 checar(chavesRute.includes('boaz'), 'Fichas de Rute contêm Boaz');
 
 // Cenas de Boaz e Rute devem receber as fichas no prompt
@@ -195,7 +239,7 @@ const contextoTeste = {
 
   // Simula regeneração onde a IA ainda devolveria palavra proibida
   const chamarIaTeimosa = async () => '[{"numero": "11", "descricaoVisual": "Dramatic wide shot of the throne room with majestic columns for our channel audience."}]';
-  
+
   PlanoCenasModule.regenerarCenasPendentes([cenaComProblema], 'Ester se ajoelhou diante do trono.', chamarIaTeimosa).then(resultado => {
     const cenasRegeradas = resultado.cenas;
     const cena11 = cenasRegeradas.find(c => String(c.numero) === '11');

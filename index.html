@@ -11354,10 +11354,13 @@ ${resultText}`;
         delete AutoSave.session._fichasPersonagensAtual;
       }
 
-      const inputTema = document.getElementById('input-tema-custom')?.value?.trim() ||
-                        document.getElementById('select-tema')?.value?.trim() ||
-                        'Tema Bíblico';
-      const personagem = document.getElementById('input-personagem-principal')?.value?.trim() || inputTema;
+      const rawCustom = document.getElementById('input-tema-custom')?.value?.trim() || '';
+      const rawSelect = document.getElementById('select-tema')?.value?.trim() || '';
+      const rawIdeia = document.getElementById('input-ideia-escolhida')?.value?.trim() || '';
+      const ehCategoriaGenerica = (str) => /^(?:personagens?\s+b[íi]blicos?|temas?\s+b[íi]blicos?|epis[oó]dios?\s+b[íi]blicos?|hist[oó]rias?\s+b[íi]blicas?|categoria)$/i.test((str || '').trim());
+      const inputTema = rawCustom || (!ehCategoriaGenerica(rawSelect) ? rawSelect : '') || rawIdeia || 'Tema Bíblico';
+      const rawPersonagem = document.getElementById('input-personagem-principal')?.value?.trim() || '';
+      const personagem = (!ehCategoriaGenerica(rawPersonagem) ? rawPersonagem : '');
 
       const plano = PlanoCenasModule.gerarPlanoDeCenas(narracaoLimpa, {
         tema: inputTema,
@@ -11493,11 +11496,13 @@ ${resultText}`;
     UI.showToast(`Regenerando ${pendentes.length} cena(s) pendente(s) com IA...`, 'info');
 
     try {
-      const inputTema = document.getElementById('input-tema-custom')?.value?.trim() ||
-                        document.getElementById('input-ideia-escolhida')?.value?.trim() ||
-                        document.getElementById('select-tema')?.value?.trim() ||
-                        'Tema Bíblico';
-      const personagem = document.getElementById('input-personagem-principal')?.value?.trim() || inputTema;
+      const rawCustom = document.getElementById('input-tema-custom')?.value?.trim() || '';
+      const rawIdeia = document.getElementById('input-ideia-escolhida')?.value?.trim() || '';
+      const rawSelect = document.getElementById('select-tema')?.value?.trim() || '';
+      const ehCategoriaGenerica = (str) => /^(?:personagens?\s+b[íi]blicos?|temas?\s+b[íi]blicos?|epis[oó]dios?\s+b[íi]blicos?|hist[oó]rias?\s+b[íi]blicas?|categoria)$/i.test((str || '').trim());
+      const inputTema = rawCustom || rawIdeia || (!ehCategoriaGenerica(rawSelect) ? rawSelect : '') || 'Tema Bíblico';
+      const rawPersonagem = document.getElementById('input-personagem-principal')?.value?.trim() || '';
+      const personagem = (!ehCategoriaGenerica(rawPersonagem) ? rawPersonagem : '');
 
       const chamarIaFn = async (promptLote) => {
         const modelo = typeof OpenRouterAPI.getModelMediaPrompts === 'function'

@@ -678,8 +678,78 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
     { pt: 'João', en: 'John', altPt: 'Joao' }
   ];
 
+  const NOMES_GENERICOS_PROIBIDOS_FICHAS = new Set([
+    'personagens bíblicos', 'personagens biblicos', 'personagem bíblico', 'personagem biblico',
+    'tema bíblico', 'tema biblico', 'categoria', 'personalizável', 'personalizavel',
+    'episódios bíblicos', 'episodios biblicos', 'histórias bíblicas', 'historias biblicas',
+    'bíblia', 'biblia', 'bible', 'scripture', 'scriptures',
+    'deus', 'senhor', 'god', 'lord', 'yahweh', 'jeová', 'jeova', 'espírito santo', 'espirito santo', 'holy spirit',
+    'anjo', 'anjos', 'angel', 'angels',
+    'israel', 'povo', 'hebreus', 'judeus', 'multidão', 'multidao', 'people', 'crowd', 'multitude', 'assembly',
+    'ancião', 'anciao', 'anciãos', 'anciaos', 'elders',
+    'rei', 'rainha', 'king', 'queen', 'profeta', 'propheta', 'prophet', 'profetas', 'prophets',
+    'sacerdote', 'sacerdotes', 'priest', 'priests', 'governador', 'governor', 'juiz', 'judge',
+    'exército', 'exercito', 'soldados', 'soldiers', 'army', 'filisteus', 'philistines',
+    'babilônia', 'babilonia', 'babylon', 'pérsia', 'persia', 'egito', 'egypt', 'moabe', 'moab',
+    'homem', 'mulher', 'criança', 'crianca', 'jovem', 'man', 'woman', 'child',
+    'cenas', 'cena', 'scene', 'scenes', 'prompt', 'prompts'
+  ]);
+
+  function ehNomeProprioValidoPersonagem(nome) {
+    if (!nome || typeof nome !== 'string') return false;
+    const limpo = nome.trim().replace(/^\[+|\]+$/g, '').trim();
+    if (limpo.length < 2) return false;
+    const lower = limpo.toLowerCase();
+    if (NOMES_GENERICOS_PROIBIDOS_FICHAS.has(lower)) return false;
+
+    // Se começar com ou contiver prefixos genéricos de categoria
+    if (/\b(?:personagens?\s+b[íi]blicos?|temas?\s+b[íi]blicos?|hist[oó]rias?\s+b[íi]blicas?|epis[oó]dios?\s+b[íi]blicos?)\b/i.test(lower)) {
+      return false;
+    }
+
+    // Títulos isolados sem nome próprio não são personagens (ex: "rei", "rainha", "o rei", "a rainha")
+    if (/^(?:o\s+|a\s+|the\s+)?(?:rei|rainha|king|queen|profeta|prophet|sacerdote|priest|governador|governor|ancião|anciao|elder|povo|israel)$/i.test(lower)) {
+      return false;
+    }
+
+    // Deuses e entidades divinas
+    if (/^(?:deus|senhor|god|lord|yahweh|jeov[aá]|esp[íi]rito\s+santo|holy\s+spirit)$/i.test(lower)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  function normalizarNomePersonagemCanonico(nome) {
+    if (!nome || typeof nome !== 'string') return '';
+    const limpo = nome.trim().replace(/^\[+|\]+$/g, '').trim();
+    const lower = limpo.toLowerCase();
+
+    // Procura no dicionário léxico
+    for (const item of DICIONARIO_LEXICO_PERSONAGENS) {
+      if (item.en.toLowerCase() === lower || item.pt.toLowerCase() === lower || (item.altPt && item.altPt.toLowerCase() === lower)) {
+        return item.en;
+      }
+    }
+
+    // Procura na normalização de nomes
+    if (NOMES_PERSONAGENS_NORMALIZADOS[lower]) {
+      const n = NOMES_PERSONAGENS_NORMALIZADOS[lower];
+      return n.charAt(0).toUpperCase() + n.slice(1);
+    }
+
+    // Capitalização simples
+    return limpo.charAt(0).toUpperCase() + limpo.slice(1);
+  }
+
   function gerarFichaDeterministica(nomeEn, nomePt, textoRoteiro = '') {
+    if (!ehNomeProprioValidoPersonagem(nomeEn) && !ehNomeProprioValidoPersonagem(nomePt)) {
+      return '';
+    }
     const n = (nomeEn || '').toLowerCase();
+    if (FICHAS_PERSONAGENS[n] || FICHAS_PERSONAGENS[nomeEn] || FICHAS_PERSONAGENS[nomePt]) {
+      return FICHAS_PERSONAGENS[n] || FICHAS_PERSONAGENS[nomeEn] || FICHAS_PERSONAGENS[nomePt];
+    }
     if (n === 'esther' || n === 'ester') {
       return 'Esther: graceful young Persian-Hebrew queen in her early twenties, radiant almond-shaped eyes, elegant raven-black hair with ornate royal golden tiara, modest royal turquoise and gold silk robes';
     }
@@ -840,10 +910,14 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
     }
 
     // 2. Detecta os personagens do roteiro atual
-    const personagensDetectados = detectarPersonagensNoRoteiro(narracaoLimpa, contexto);
+    const personagensDetectados = detectarPersonagensNoRoteiro(narracaoLimpa, contexto)
+      .filter(p => ehNomeProprioValidoPersonagem(p.en) && ehNomeProprioValidoPersonagem(p.pt));
 
     // Verifica se algum personagem detectado ainda não tem ficha resolvida pela lista fixa
-    const personagensSemFicha = personagensDetectados.filter(p => !fichas[p.en] && !fichas[p.pt]);
+    const personagensSemFicha = personagensDetectados.filter(p => {
+      const canon = normalizarNomePersonagemCanonico(p.en);
+      return !fichas[canon] && !fichas[p.en] && !fichas[p.pt];
+    });
 
     // 3. Cria a ficha de cada um (lista fixa ou IA)
     // Se houver qualquer personagem fora da lista fixa, aciona a IA para criar as fichas.
@@ -855,15 +929,16 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
 Identify ALL historical and biblical human characters who actively appear in this story.
 CRITICAL RULES:
 1. Do NOT include names cited only in prayers, theological formulas or genealogies (e.g. "God of Abraham", "house of Judah").
-2. FORBIDDEN to include elements from other biblical events.
-3. For EACH active character, create a concise 1-line visual identity card in English (exact format: "Name: age, face, hair, beard, clothes, colors").
-4. Return EXCLUSIVELY a JSON object where keys include BOTH the English name and Portuguese name of each character (e.g. "Esther", "Ester", "Ahasuerus", "Assuero", "Haman", "Hamã", "Mordecai", "Mardoqueu", or "Ruth", "Boaz", etc.), with each key mapped to their 1-line description.
+2. FORBIDDEN to create sheets for generic categories, groups, deities or common titles (e.g. "Personagens Bíblicos", "Bíblia", "Deus", "Senhor", "Israel", "povo", "rei", "rainha", "profeta", "ancião"). ONLY individual named historical human characters who physically appear.
+3. FORBIDDEN to include elements from other biblical events.
+4. For EACH active character, create a concise 1-line visual identity card in English (exact format: "Name: age, face, hair, beard, clothes, colors").
+5. Return EXCLUSIVELY a JSON object where keys are the capitalized proper names of each character (e.g. "Esther", "Ahasuerus", "Haman", "Mordecai", or "Ruth", "Boaz", etc.), with each key mapped to their 1-line description.
 Example output:
 {
   "Esther": "Esther: graceful young Persian-Hebrew queen in her early twenties, radiant almond-shaped eyes, elegant raven-black hair with ornate royal golden tiara, modest royal turquoise and gold silk robes",
-  "Ester": "Esther: graceful young Persian-Hebrew queen in her early twenties, radiant almond-shaped eyes, elegant raven-black hair with ornate royal golden tiara, modest royal turquoise and gold silk robes",
   "Ahasuerus": "Ahasuerus: imposing Persian king in his late forties, regal sculpted beard, ornate gold Persian crown, opulent royal crimson and violet robes with gold embroidery, holding a golden scepter",
-  "Assuero": "Ahasuerus: imposing Persian king in his late forties, regal sculpted beard, ornate gold Persian crown, opulent royal crimson and violet robes with gold embroidery, holding a golden scepter"
+  "Haman": "Haman: proud arrogant Persian prime minister in his fifties, sharp piercing gaze, trimmed dark beard, lavish robes with golden medallion",
+  "Mordecai": "Mordecai: dignified Hebrew elder in his late fifties, wise compassionate eyes, full grey beard, humble dark linen tunic and wool mantle"
 }`;
 
       // Se a chamada à IA para as fichas falhar, tenta de novo 1 vez
@@ -885,22 +960,11 @@ Example output:
 
           let encontrou = 0;
           for (const [k, v] of Object.entries(parsedMap)) {
-            if (typeof v === 'string' && v.trim().length > 15) {
+            if (ehNomeProprioValidoPersonagem(k) && typeof v === 'string' && v.trim().length > 15) {
               const linhaFicha = v.trim();
-              fichas[k] = linhaFicha;
-              const kNorm = NOMES_PERSONAGENS_NORMALIZADOS[k.toLowerCase()] || k;
-              fichas[kNorm] = linhaFicha;
+              const canon = normalizarNomePersonagemCanonico(k);
+              fichas[canon] = linhaFicha;
               encontrou++;
-            }
-          }
-
-          // Vincula pares correspondentes do dicionário léxico
-          for (const item of DICIONARIO_LEXICO_PERSONAGENS) {
-            if (fichas[item.en] && !fichas[item.pt]) {
-              fichas[item.pt] = fichas[item.en];
-            }
-            if (fichas[item.pt] && !fichas[item.en]) {
-              fichas[item.en] = fichas[item.pt];
             }
           }
 
@@ -928,23 +992,41 @@ Example output:
 
     // 4. Garante ficha determinística para qualquer personagem detectado que ainda não tenha recebido
     for (const item of personagensDetectados) {
-      if (!fichas[item.en] && !fichas[item.pt]) {
-        const fichaFallback = gerarFichaDeterministica(item.en, item.pt, texto);
-        fichas[item.en] = fichaFallback;
-        fichas[item.pt] = fichaFallback;
+      const canon = normalizarNomePersonagemCanonico(item.en);
+      if (ehNomeProprioValidoPersonagem(canon) && !fichas[canon]) {
+        const fichaFallback = gerarFichaDeterministica(canon, item.pt, texto);
+        if (fichaFallback) {
+          fichas[canon] = fichaFallback;
+        }
       }
     }
 
-    // 5. Atualiza contexto e variável global do projeto
-    contexto.fichasPersonagens = fichas;
+    // 5. Sanitiza e unifica as chaves das fichas:
+    // - Remove categorias e palavras genéricas (Personagens Bíblicos, Bíblia, Deus, Senhor, Israel, povo, rei, rainha, etc.)
+    // - Junta chaves duplicadas com maiúscula/minúscula diferentes (Haman / haman -> Haman)
+    const fichasUnificadas = {};
+    for (const [k, v] of Object.entries(fichas)) {
+      if (!ehNomeProprioValidoPersonagem(k)) continue;
+      if (typeof v !== 'string' || v.trim().length < 10) continue;
+
+      const canon = normalizarNomePersonagemCanonico(k);
+      if (!ehNomeProprioValidoPersonagem(canon)) continue;
+
+      if (!fichasUnificadas[canon]) {
+        fichasUnificadas[canon] = v.trim();
+      }
+    }
+
+    // 6. Atualiza contexto e variável global do projeto
+    contexto.fichasPersonagens = fichasUnificadas;
     if (typeof window !== 'undefined') {
-      window._fichasPersonagensAtual = fichas;
+      window._fichasPersonagensAtual = fichasUnificadas;
       if (window.AutoSave && typeof window.AutoSave.save === 'function') {
         window.AutoSave.save();
       }
     }
 
-    return fichas;
+    return fichasUnificadas;
   }
 
   /**
@@ -992,89 +1074,113 @@ Example output:
       }
     }
 
-    // 2. Detecta ação física concreta
+    // 2. Detecta ação física concreta respeitando ESTRITAMENTE o ciclo do roteiro ATUAL
     let acao = '';
 
-    // Ciclo de Elias e Baal
-    if (/\b(?:fogo\s+do\s+senhor|fogo\s+do\s+c[eé]u|fogo\s+caiu|fogo\s+desceu|fogo\s+consumiu|fogo|chamas?)\b/i.test(t)) {
-      acao = `Elijah standing in awe as a miraculous pillar of blazing divine fire roars down from the heavens, consuming the stone altar, sacrifice, wood, and water atop ${lugar} in blinding divine glory`;
-    } else if (/\b(?:elias\s+orou|orou|orando|clamou|responde-me|reponde-me|deus\s+de\s+abra[aã]o|s[uú]plica)\b/i.test(t)) {
-      acao = `Elijah kneeling with arms outstretched toward the heavens in earnest fervent prayer beside the stone altar atop ${lugar}`;
-    } else if (/\b(?:sil[eê]ncio|nada\s+aconteceu|sem\s+resposta|ningu[eé]m\s+respondeu|nenhuma\s+voz)\b/i.test(t)) {
-      acao = `weary pagan prophets and Hebrew onlookers standing in stunned, dead silence across ${lugar} under heavy atmospheric overcast skies`;
-    } else if (/\b(?:nuvem|m[aã]o\s+de\s+um\s+homem|chuva|torrencial|vento|escureceu)\b/i.test(t)) {
-      acao = `a small dark cloud rising from the distant sea horizon, gathering heavy wind and torrential rain over the mountain peaks of ${lugar}`;
-    } else if (/\b(?:quisom|ribeiro|executa|desceu\s+ao\s+ribeiro)\b/i.test(t)) {
-      acao = `the solemn rocky banks of the brook Kishon under brooding storm clouds in historical biblical reverence`;
-    } else if (/\b(?:profetas\s+de\s+baal|baal)\b/i.test(t) && /\b(?:dan[cç]avam|gritavam|cortavam|mancavam|clamavam|romper|manh[aã]|unlit)\b/i.test(t)) {
-      acao = `frantic pagan prophets of Baal leaping wildly around their unlit pagan stone altar with ceremonial blades in desperate clamor under bright midday sun`;
-    } else if (/\b(?:reparou|restaurou|doze\s+pedras|altar|rego|valeta|[aá]gua|c[aâ]ntaros)\b/i.test(t)) {
-      acao = `Elijah carefully restoring the ancient broken stone altar of twelve rough stones, pouring jars of fresh water into the deep surrounding trench`;
-    } else if (/\b(?:profetas\s+de\s+baal|baal)\b/i.test(t)) {
-      acao = `frantic pagan prophets of Baal leaping wildly around their unlit pagan stone altar with ceremonial blades in desperate clamor under bright midday sun`;
+    const temaLower = (contexto.tema || '').toLowerCase();
+    const ehCicloElias = /\b(?:elias|baal|carmelo|acabe|jezabel)\b/i.test(temaLower) || /\b(?:elias|baal|carmelo|acabe|jezabel)\b/i.test(t);
+    const ehCicloDavi = /\b(?:golias|davi|goliath|david|filisteu|el[aá])\b/i.test(temaLower) || /\b(?:golias|davi|goliath|david|el[aá])\b/i.test(t);
+    const ehCicloDaniel = /\b(?:daniel|dario|darius|cova|le[oõ]es|babil[oô]nia|persa|p[eé]rsia)\b/i.test(temaLower) || /\b(?:daniel|dario|darius|le[oõ]es)\b/i.test(t);
+    const ehCicloEster = /\b(?:ester|esther|assuero|ahasuerus|ham[aã]|haman|mardoqueu|mordecai|sus[aã]|purim)\b/i.test(temaLower) || /\b(?:ester|esther|assuero|ahasuerus|ham[aã]|haman|mardoqueu|mordecai|rainha\s+judia)\b/i.test(t);
+    const ehCicloRute = /\b(?:rute|ruth|boaz|noemi|naomi|bel[eé]m)\b/i.test(temaLower) || /\b(?:rute|ruth|boaz|noemi|naomi)\b/i.test(t);
+    const ehCicloMoises = /\b(?:mois[eé]s|ar[aã]o|kadesh|cades|merib[aá]|tabern[aá]culo|deserto|mar\s+vermelho)\b/i.test(temaLower) || /\b(?:mois[eé]s|ar[aã]o)\b/i.test(t);
+
+    // Ciclo de Ester e Assuero (Palácio de Susã)
+    if (ehCicloEster) {
+      if (/\b(?:cetro|estendeu|tocou|alcan[cç]ar|ponta\s+do\s+cetro)\b/i.test(t)) {
+        acao = `King Ahasuerus extending the golden royal scepter from the elevated throne as Queen Esther steps forward to touch the tip of the scepter`;
+      } else if (/\b(?:banquete|banquet|vinho|mesa|peti[cç][aã]o)\b/i.test(t)) {
+        acao = `Queen Esther presenting her petition before King Ahasuerus and troubled Haman at the lavish imperial banquet table`;
+      } else if (/\b(?:sil[eê]ncio|escolha|arriscada|interven[cç][aã]o|coragem|seguro|rainha\s+judia)\b/i.test(t)) {
+        acao = `Queen Esther standing in deep contemplative silence in the ornate corridors of the Persian imperial palace of Susa, facing a fateful decision between safety and sacrifice`;
+      } else if (/\b(?:forca|gallows|madeiro|enforc|cinquenta\s+c[oó]vados)\b/i.test(t)) {
+        acao = `the high wooden gallows standing in the courtyard under dramatic cloudy sky in solemn historical justice`;
+      } else if (/\b(?:cavalo|vestes\s+reais|pra[cç]a|honra|honrar|proclam)\b/i.test(t)) {
+        acao = `Haman leading Mordecai clothed in royal purple and blue upon the king's white stallion through the bustling imperial square of Susa`;
+      } else if (/\b(?:jejuai|jejum|ora[cç][aã]o|orou|cinza|saco|pranto|s[uú]plica)\b/i.test(t)) {
+        acao = `Queen Esther kneeling in earnest prayer and fasting in her private royal chamber with solemn faith`;
+      } else if (/\b(?:decreto|edito|assinado|cartas|leis|selo)\b/i.test(t)) {
+        acao = `the royal decree parchment sealed with the king's signet ring displayed in the imperial court of Susa`;
+      } else if (/\b(?:diante\s+do\s+rei|audi[eê]ncia|p[aá]tio\s+interior|entrou)\b/i.test(t)) {
+        acao = `Queen Esther dressed in royal robes standing with quiet courage in the inner court before King Ahasuerus seated upon the throne`;
+      } else {
+        acao = `Queen Esther and court figures within the ornate stone corridors of the Persian imperial palace of Susa under dramatic cinematic lighting`;
+      }
+    }
+
+    // Ciclo de Elias e os profetas de Baal (Mount Carmel)
+    else if (ehCicloElias) {
+      if (/\b(?:fogo\s+do\s+senhor|fogo\s+do\s+c[eé]u|fogo\s+caiu|fogo\s+desceu|fogo\s+consumiu|fogo|chamas?)\b/i.test(t)) {
+        acao = `Elijah standing in awe as a miraculous pillar of blazing divine fire roars down from the heavens, consuming the stone altar, sacrifice, wood, and water atop ${lugar} in blinding divine glory`;
+      } else if (/\b(?:elias\s+orou|orou|orando|clamou|responde-me|reponde-me|deus\s+de\s+abra[aã]o|s[uú]plica)\b/i.test(t)) {
+        acao = `Elijah kneeling with arms outstretched toward the heavens in earnest fervent prayer beside the stone altar atop ${lugar}`;
+      } else if (/\b(?:sil[eê]ncio|nada\s+aconteceu|sem\s+resposta|ningu[eé]m\s+respondeu|nenhuma\s+voz)\b/i.test(t)) {
+        acao = `Elijah and Hebrew onlookers standing in stunned, dead silence across ${lugar} under heavy atmospheric overcast skies`;
+      } else if (/\b(?:nuvem|m[aã]o\s+de\s+um\s+homem|chuva|torrencial|vento|escureceu)\b/i.test(t)) {
+        acao = `a small dark cloud rising from the distant sea horizon, gathering heavy wind and torrential rain over the mountain peaks of ${lugar}`;
+      } else if (/\b(?:quisom|ribeiro|executa|desceu\s+ao\s+ribeiro)\b/i.test(t)) {
+        acao = `the solemn rocky banks of the brook Kishon under brooding storm clouds in historical biblical reverence`;
+      } else if (/\b(?:profetas\s+de\s+baal|baal)\b/i.test(t)) {
+        acao = `frantic pagan prophets of Baal leaping wildly around their unlit pagan stone altar with ceremonial blades in desperate clamor under bright midday sun`;
+      } else if (/\b(?:reparou|restaurou|doze\s+pedras|altar|rego|valeta|[aá]gua|c[aâ]ntaros)\b/i.test(t)) {
+        acao = `Elijah carefully restoring the ancient broken stone altar of twelve rough stones, pouring jars of fresh water into the deep surrounding trench`;
+      }
     }
 
     // Ciclo Davi e Golias
-    else if (/\b(?:funda|cajado|ribeiro|desceu\s+ao\s+vale|correu|pastor)\b/i.test(t) && /\b(?:davi|david)\b/i.test(t)) {
-      acao = `young David stepping steadily forward across the dry stony stream bed holding a rustic shepherd's staff and leather sling, eyes locked on the giant`;
-    } else if (/\b(?:golias|goliath|gigante|armadura|escarneceu|desafiou|lan[cç]a)\b/i.test(t)) {
-      acao = `towering colossal Philistine warrior Goliath in gleaming bronze scale armor and crested helmet sneering while brandishing a massive iron-headed spear`;
-    } else if (/\b(?:cinco\s+pedras|pedras\s+lisas|alforge|bolsa)\b/i.test(t)) {
-      acao = `young David bending down at the riverbed to select five smooth rounded river stones, placing them carefully into his small leather pouch`;
-    } else if (/\b(?:atirou|lan[cç]ou|acertou|testa|caiu|rosto\s+em\s+terra)\b/i.test(t)) {
-      acao = `the decisive moment of the stone striking the giant's forehead, Goliath staggering backward on the dusty slope under bright sunlight`;
+    else if (ehCicloDavi) {
+      if (/\b(?:funda|cajado|ribeiro|desceu\s+ao\s+vale|correu|pastor)\b/i.test(t) && /\b(?:davi|david)\b/i.test(t)) {
+        acao = `young David stepping steadily forward across the dry stony stream bed holding a rustic shepherd's staff and leather sling, eyes locked on the giant`;
+      } else if (/\b(?:golias|goliath|gigante|armadura|escarneceu|desafiou|lan[cç]a)\b/i.test(t)) {
+        acao = `towering colossal Philistine warrior Goliath in gleaming bronze scale armor and crested helmet sneering while brandishing a massive iron-headed spear`;
+      } else if (/\b(?:cinco\s+pedras|pedras\s+lisas|alforge|bolsa)\b/i.test(t)) {
+        acao = `young David bending down at the riverbed to select five smooth rounded river stones, placing them carefully into his small leather pouch`;
+      } else if (/\b(?:atirou|lan[cç]ou|acertou|testa|caiu|rosto\s+em\s+terra)\b/i.test(t)) {
+        acao = `the decisive moment of the stone striking the giant's forehead, Goliath staggering backward on the dusty slope under bright sunlight`;
+      }
     }
 
     // Ciclo Daniel e Dario
-    else if (/\b(?:decreto|assinou|assinar|edito|lei\s+dos\s+medos|proibia|trinta\s+dias)\b/i.test(t) && /\b(?:dario|darius|rei)\b/i.test(t)) {
-      acao = `King Darius seated upon the Persian royal throne affixing the royal seal to the parchment decree in solemn authority`;
-    } else if (/\b(?:jejuou|noite|vig[ií]lia|ins[oô]nia|ang[uú]stia)\b/i.test(t) && /\b(?:dario|darius|rei)\b/i.test(t)) {
-      acao = `troubled King Darius pacing his imperial bedchamber in sleepless fasting and anxious vigil beside a dim brass lamp`;
-    } else if (/\b(?:correu|apressou|pela\s+manh[aã]|chamou)\b/i.test(t) && /\b(?:dario|darius|rei)\b/i.test(t)) {
-      acao = `King Darius rushing anxiously at dawn to the sealed stone mouth of the lions' den calling out into the depths`;
-    } else if (/\b(?:ordenou|tirar|tirassem|j[uú]bilo)\b/i.test(t) && /\b(?:dario|darius|rei)\b/i.test(t)) {
-      acao = `King Darius rejoicing with relief as faithful Daniel is brought up unharmed from the lions' den`;
-    } else if (/\b(?:cova|le[oõ]es|anjo|fechou\s+a\s+boca)\b/i.test(t)) {
-      acao = `Daniel standing peacefully among docile resting lions in the dim stony den under celestial divine light`;
-    } else if (/\b(?:conspir|acus|s[aá]trapas|governadores)\b/i.test(t)) {
-      acao = `scheming Persian satraps and officials whispering in the palace corridors plotting deceit in shadow`;
-    }
-
-    // Ciclo Ester e Assuero
-    else if (/\b(?:cetro|estendeu|tocou|alcan[cç]ar|ponta\s+do\s+cetro)\b/i.test(t)) {
-      acao = `King Ahasuerus extending the golden royal scepter from the elevated throne as Queen Esther steps forward to touch the tip of the scepter`;
-    } else if (/\b(?:banquete|banquet|vinho|mesa|peti[cç][aã]o)\b/i.test(t) && /\b(?:ester|esther|assuero|ahasuerus|ham[aã]|haman)\b/i.test(t)) {
-      acao = `Queen Esther presenting her petition before King Ahasuerus and troubled Haman at the lavish imperial banquet table`;
-    } else if (/\b(?:forca|gallows|madeiro|enforc|cinquenta\s+c[oó]vados)\b/i.test(t)) {
-      acao = `the high wooden gallows standing in the courtyard under dramatic cloudy sky in solemn historical justice`;
-    } else if (/\b(?:cavalo|vestes\s+reais|pra[cç]a|honra|honrar|proclam)\b/i.test(t) && /\b(?:mardoqueu|mordecai|ham[aã]|haman)\b/i.test(t)) {
-      acao = `Haman leading Mordecai clothed in royal purple and blue upon the king's white stallion through the bustling imperial square of Susa`;
-    } else if (/\b(?:jejuai|jejum|ora[cç][aã]o|cinza|saco|pranto)\b/i.test(t)) {
-      acao = `Queen Esther kneeling in earnest prayer and fasting in her private royal chamber with solemn faith`;
-    } else if (/\b(?:diante\s+do\s+rei|audi[eê]ncia|p[aá]tio\s+interior|entrou)\b/i.test(t) && /\b(?:ester|esther)\b/i.test(t)) {
-      acao = `Queen Esther dressed in royal robes standing with quiet courage in the inner court before King Ahasuerus seated upon the throne`;
+    else if (ehCicloDaniel) {
+      if (/\b(?:decreto|assinou|assinar|edito|lei\s+dos\s+medos|proibia|trinta\s+dias)\b/i.test(t)) {
+        acao = `King Darius seated upon the Persian royal throne affixing the royal seal to the parchment decree in solemn authority`;
+      } else if (/\b(?:jejuou|noite|vig[ií]lia|ins[oô]nia|ang[uú]stia)\b/i.test(t)) {
+        acao = `troubled King Darius pacing his imperial bedchamber in sleepless fasting and anxious vigil beside a dim brass lamp`;
+      } else if (/\b(?:correu|apressou|pela\s+manh[aã]|chamou)\b/i.test(t)) {
+        acao = `King Darius rushing anxiously at dawn to the sealed stone mouth of the lions' den calling out into the depths`;
+      } else if (/\b(?:ordenou|tirar|tirassem|j[uú]bilo)\b/i.test(t)) {
+        acao = `King Darius rejoicing with relief as faithful Daniel is brought up unharmed from the lions' den`;
+      } else if (/\b(?:cova|le[oõ]es|anjo|fechou\s+a\s+boca)\b/i.test(t)) {
+        acao = `Daniel standing peacefully among docile resting lions in the dim stony den under celestial divine light`;
+      } else if (/\b(?:conspir|acus|s[aá]trapas|governadores)\b/i.test(t)) {
+        acao = `scheming Persian satraps and officials whispering in the palace corridors plotting deceit in shadow`;
+      }
     }
 
     // Ciclo Rute e Boaz
-    else if (/\b(?:respigar|espigas|ceifeiros|campo|colheita)\b/i.test(t) && /\b(?:rute|ruth)\b/i.test(t)) {
-      acao = `Ruth gleaning fallen ears of golden barley behind the harvesters in the sun-drenched fields of Bethlehem`;
-    } else if (/\b(?:boaz|encontrou|falou|bondade|gr[aã]os|sede|[aá]gua)\b/i.test(t) && /\b(?:rute|ruth|campo)\b/i.test(t)) {
-      acao = `noble Boaz speaking kindly to Ruth among the barley sheaves, offering roasted grain and water`;
-    } else if (/\b(?:eira|p[eé]s|noite|deitou|madrugada)\b/i.test(t)) {
-      acao = `Ruth resting respectfully at the feet of Boaz at the quiet threshing floor under a starlit night sky`;
-    } else if (/\b(?:porta|anci[aã]os|resgate|sand[aá]lia|testemunhas)\b/i.test(t) && /\b(?:boaz)\b/i.test(t)) {
-      acao = `Boaz standing before ten elders at the city gate of Bethlehem in solemn legal redemption before witnesses`;
+    else if (ehCicloRute) {
+      if (/\b(?:respigar|espigas|ceifeiros|campo|colheita)\b/i.test(t)) {
+        acao = `Ruth gleaning fallen ears of golden barley behind the harvesters in the sun-drenched fields of Bethlehem`;
+      } else if (/\b(?:boaz|encontrou|falou|bondade|gr[aã]os|sede|[aá]gua)\b/i.test(t)) {
+        acao = `noble Boaz speaking kindly to Ruth among the barley sheaves, offering roasted grain and water`;
+      } else if (/\b(?:eira|p[eé]s|noite|deitou|madrugada)\b/i.test(t)) {
+        acao = `Ruth resting respectfully at the feet of Boaz at the quiet threshing floor under a starlit night sky`;
+      } else if (/\b(?:porta|anci[aã]os|resgate|sand[aá]lia|testemunhas)\b/i.test(t)) {
+        acao = `Boaz standing before ten elders at the city gate of Bethlehem in solemn legal redemption before witnesses`;
+      }
     }
 
     // Ciclo Moisés
-    else if (/\b(?:vara|feriu|bateu)\b/i.test(t) && /\brocha\b/i.test(t)) {
-      acao = `Moses raising the wooden shepherd's staff striking the massive cracked desert boulder in ${lugar} before the assembled Hebrew elders`;
-    } else if (/\b(?:[aá]gua|jorrou|brotou|brotaram|beber|sede|gado)\b/i.test(t) && /\brocha\b/i.test(t)) {
-      acao = `crystal fresh spring water gushing forth in torrents from the cleft desert rock, joyful Hebrew families and livestock gathering to drink`;
-    } else if (/\b(?:prostrar|prostraram|rostos?\s+em\s+terra|tenda|tabern[aá]culo)\b/i.test(t)) {
-      acao = `Moses and Aaron prostrated with faces upon the desert ground before the sacred entrance of the Tabernacle tent`;
-    } else if (/\b(?:gl[oó]ria\s+do\s+senhor|gl[oó]ria|apareceu|luz)\b/i.test(t)) {
-      acao = `radiant celestial beam of divine golden glory descending upon the desert sanctuary in awesome supernatural reverence`;
+    else if (ehCicloMoises) {
+      if (/\b(?:vara|feriu|bateu)\b/i.test(t) && /\brocha\b/i.test(t)) {
+        acao = `Moses raising the wooden shepherd's staff striking the massive cracked desert boulder in ${lugar} before the assembled Hebrew elders`;
+      } else if (/\b(?:[aá]gua|jorrou|brotou|brotaram|beber|sede|gado)\b/i.test(t) && /\brocha\b/i.test(t)) {
+        acao = `crystal fresh spring water gushing forth in torrents from the cleft desert rock, joyful Hebrew families and livestock gathering to drink`;
+      } else if (/\b(?:prostrar|prostraram|rostos?\s+em\s+terra|tenda|tabern[aá]culo)\b/i.test(t)) {
+        acao = `Moses and Aaron prostrated with faces upon the desert ground before the sacred entrance of the Tabernacle tent`;
+      } else if (/\b(?:gl[oó]ria\s+do\s+senhor|gl[oó]ria|apareceu|luz)\b/i.test(t)) {
+        acao = `radiant celestial beam of divine golden glory descending upon the desert sanctuary in awesome supernatural reverence`;
+      }
     }
 
     // Conclusão / CTA / Canal
@@ -1082,10 +1188,20 @@ Example output:
       acao = `an ancient illuminated parchment scroll unrolled on a rustic cedar table beside a glowing brass oil lamp in solemn evening twilight`;
     }
 
-    // Ação geral contextual derivada do trecho
-    else {
-      const sujeito = primeiroNome || 'authentic biblical figures';
-      acao = `${sujeito} participating in solemn historical events at ${lugar} under dramatic atmospheric lighting`;
+    // Ações contextuais universais (sem vincular a histórias ou personagens alheios)
+    if (!acao) {
+      const sujeito = (primeiroNome && ehNomeProprioValidoPersonagem(primeiroNome)) ? primeiroNome : 'authentic biblical figures';
+      if (/\b(?:sil[eê]ncio|nada\s+aconteceu|sem\s+resposta|ningu[eé]m\s+respondeu|nenhuma\s+voz)\b/i.test(t)) {
+        acao = `${sujeito} standing in profound, breathless silence at ${lugar} under dramatic atmospheric lighting`;
+      } else if (/\b(?:orou|orando|clamou|s[uú]plica|prece)\b/i.test(t)) {
+        acao = `${sujeito} kneeling with hands outstretched in solemn earnest prayer at ${lugar}`;
+      } else if (/\b(?:fogo|chamas?)\b/i.test(t)) {
+        acao = `${sujeito} standing before blazing sacred fire illuminating ${lugar} under dramatic evening skies`;
+      } else if (/\b(?:decreto|edito|lei)\b/i.test(t)) {
+        acao = `${sujeito} reading an official sealed parchment decree at ${lugar}`;
+      } else {
+        acao = `${sujeito} participating in solemn historical events at ${lugar} under dramatic atmospheric lighting`;
+      }
     }
 
     // 3. PONTO 2: Seleção e alternância de enquadramento evitando repetição no vídeo inteiro
@@ -1611,11 +1727,21 @@ ${exemploJson}`;
       desc = desc.replace(/[.,;:\s]+$/, '');
     }
 
-    // Combina fichas canônicas prontas (reserva) com fichas geradas do roteiro atual (PONTO B)
-    const fichasDisponiveis = {
-      ...FICHAS_PERSONAGENS,
-      ...(contexto.fichasPersonagens || (typeof window !== 'undefined' ? window._fichasPersonagensAtual : null) || {})
-    };
+    // Combina catálogo canônico (reserva fixa) com fichas do projeto atual (com chaves canônicas)
+    const fichasDisponiveis = {};
+    for (const [k, v] of Object.entries(FICHAS_PERSONAGENS)) {
+      if (ehNomeProprioValidoPersonagem(k)) {
+        const canon = normalizarNomePersonagemCanonico(k);
+        fichasDisponiveis[canon] = v;
+      }
+    }
+    const fichasProjeto = contexto.fichasPersonagens || (typeof window !== 'undefined' ? window._fichasPersonagensAtual : null) || {};
+    for (const [k, v] of Object.entries(fichasProjeto)) {
+      if (ehNomeProprioValidoPersonagem(k)) {
+        const canon = normalizarNomePersonagemCanonico(k);
+        fichasDisponiveis[canon] = v;
+      }
+    }
 
     const personagensEncontrados = [];
     const nomesNormalizados = {
@@ -1631,29 +1757,36 @@ ${exemploJson}`;
     // gera a ficha (lista fixa ou determinística) antes de montar os prompts
     const persDetectadosNaDesc = detectarPersonagensNaDescricao(descLowerLimpa);
     for (const pers of persDetectadosNaDesc) {
-      const nomeEn = nomesNormalizados[pers.toLowerCase()] || pers;
-      if (!fichasDisponiveis[nomeEn] && !fichasDisponiveis[pers]) {
-        const fichaNova = FICHAS_PERSONAGENS[pers.toLowerCase()] || gerarFichaDeterministica(nomeEn, pers, trechoPt);
-        fichasDisponiveis[nomeEn] = fichaNova;
-        fichasDisponiveis[pers] = fichaNova;
-        if (contexto.fichasPersonagens) {
-          contexto.fichasPersonagens[nomeEn] = fichaNova;
-          contexto.fichasPersonagens[pers] = fichaNova;
-        }
-        if (typeof window !== 'undefined' && window._fichasPersonagensAtual) {
-          window._fichasPersonagensAtual[nomeEn] = fichaNova;
-          window._fichasPersonagensAtual[pers] = fichaNova;
+      if (!ehNomeProprioValidoPersonagem(pers)) continue;
+      const canon = normalizarNomePersonagemCanonico(pers);
+      if (!ehNomeProprioValidoPersonagem(canon)) continue;
+
+      if (!fichasDisponiveis[canon]) {
+        const fichaNova = FICHAS_PERSONAGENS[pers.toLowerCase()] || FICHAS_PERSONAGENS[canon.toLowerCase()] || gerarFichaDeterministica(canon, pers, trechoPt);
+        if (fichaNova) {
+          fichasDisponiveis[canon] = fichaNova;
+          if (contexto.fichasPersonagens) {
+            contexto.fichasPersonagens[canon] = fichaNova;
+          }
+          if (typeof window !== 'undefined' && window._fichasPersonagensAtual) {
+            window._fichasPersonagensAtual[canon] = fichaNova;
+          }
         }
       }
     }
 
     for (const [chave, fichaCanon] of Object.entries(fichasDisponiveis)) {
-      const nomeEn = nomesNormalizados[chave.toLowerCase()] || chave;
-      if (nomeEn && !personagensEncontrados.some(p => p.nome.toLowerCase() === nomeEn.toLowerCase())) {
-        const reg = new RegExp(`\\b${chave}\\b`, 'i');
+      if (!ehNomeProprioValidoPersonagem(chave)) continue;
+      const canon = normalizarNomePersonagemCanonico(chave);
+      if (!personagensEncontrados.some(p => p.nome.toLowerCase() === canon.toLowerCase())) {
+        const itemLex = DICIONARIO_LEXICO_PERSONAGENS.find(it => it.en.toLowerCase() === canon.toLowerCase() || it.pt.toLowerCase() === canon.toLowerCase());
+        let reg = new RegExp(`\\b${chave}\\b`, 'i');
+        if (itemLex) {
+          reg = new RegExp(`\\b(?:${itemLex.en}|${itemLex.pt}${itemLex.altPt ? '|' + itemLex.altPt : ''})\\b`, 'i');
+        }
         // Busca EXCLUSIVAMENTE na descrição visual da cena (descLowerLimpa)
         if (reg.test(descLowerLimpa)) {
-          personagensEncontrados.push({ nome: nomeEn, ficha: fichaCanon });
+          personagensEncontrados.push({ nome: canon, ficha: fichaCanon });
         }
       }
     }
@@ -1681,6 +1814,11 @@ ${exemploJson}`;
 
     // Ciclo de Elias e os profetas de Baal (Mount Carmel)
     if (/\b(?:elias|baal|carmelo|acabe|jezabel)\b/i.test(t) || /\b(?:elias|baal|carmelo|acabe)\b/i.test(tema)) {
+      return gerarDescricaoVisualSemantica(trechoPt, numeroCena, enqSugerido, contexto, descricoesAcumuladas);
+    }
+
+    // Ciclo de Ester e Assuero (Susã)
+    if (/\b(?:ester|esther|assuero|ahasuerus|ham[aã]|haman|mardoqueu|mordecai|sus[aã]|purim)\b/i.test(t) || /\b(?:ester|esther|assuero|ahasuerus|ham[aã]|haman|mardoqueu|mordecai)\b/i.test(tema)) {
       return gerarDescricaoVisualSemantica(trechoPt, numeroCena, enqSugerido, contexto, descricoesAcumuladas);
     }
 
@@ -1745,7 +1883,7 @@ ${exemploJson}`;
     if (/\b(?:inscreva-se|canal|notifica[cç][oõ]es|estudo)\b/i.test(t)) {
       return 'ancient illuminated manuscript scroll resting on rustic cedar desk beside an antique brass oil lamp glowing warm in evening twilight';
     }
-    if (/\b(?:rebel|contenda|queix|clamar|reuni)\b/i.test(t)) {
+    if (ehCicloMoises && /\b(?:rebel|contenda|queix|clamar|reuni)\b/i.test(t)) {
       return 'hebrew assembly gathered in parched desert camp of Kadesh, elders gesturing with anxiety under harsh desert heat';
     }
 
@@ -2657,6 +2795,8 @@ CRITICAL RULES:
     sanitizarTermosAudienciaLegitimos,
     limparPalavrasProibidasAudiencia,
     detectarPersonagensNoRoteiro,
+    ehNomeProprioValidoPersonagem,
+    normalizarNomePersonagemCanonico,
     DICIONARIO_LEXICO_PERSONAGENS,
     detectarTipoEnquadramento,
     detectarPersonagensNaDescricao,
