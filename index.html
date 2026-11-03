@@ -11348,6 +11348,12 @@ ${resultText}`;
     UI.setButtonLoading(btnGerar, true);
 
     try {
+      // (1) Zera fichas antigas antes de iniciar o novo plano de cenas
+      window._fichasPersonagensAtual = null;
+      if (typeof AutoSave !== 'undefined' && AutoSave.session) {
+        delete AutoSave.session._fichasPersonagensAtual;
+      }
+
       const inputTema = document.getElementById('input-tema-custom')?.value?.trim() ||
                         document.getElementById('select-tema')?.value?.trim() ||
                         'Tema Bíblico';

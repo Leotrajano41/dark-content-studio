@@ -601,8 +601,63 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
     'joao': 'John', 'joão': 'John', 'john': 'John',
     'daniel': 'Daniel',
     'dario': 'Darius', 'dário': 'Darius', 'darius': 'Darius',
-    'rei dario': 'Darius', 'king darius': 'Darius'
+    'rei dario': 'Darius', 'king darius': 'Darius',
+    'esther': 'Esther', 'ester': 'Esther', 'rainha ester': 'Esther', 'queen esther': 'Esther',
+    'ahasuerus': 'Ahasuerus', 'assuero': 'Ahasuerus', 'rei assuero': 'Ahasuerus', 'king ahasuerus': 'Ahasuerus',
+    'haman': 'Haman', 'hamã': 'Haman', 'hama': 'Haman',
+    'mordecai': 'Mordecai', 'mardoqueu': 'Mordecai',
+    'ruth': 'Ruth', 'rute': 'Ruth',
+    'boaz': 'Boaz',
+    'naomi': 'Naomi', 'noemi': 'Naomi'
   };
+
+  const DICIONARIO_LEXICO_PERSONAGENS = [
+    { pt: 'Ester', en: 'Esther' },
+    { pt: 'Assuero', en: 'Ahasuerus' },
+    { pt: 'Hamã', en: 'Haman', altPt: 'Hama' },
+    { pt: 'Mardoqueu', en: 'Mordecai' },
+    { pt: 'Rute', en: 'Ruth' },
+    { pt: 'Boaz', en: 'Boaz' },
+    { pt: 'Noemi', en: 'Naomi' },
+    { pt: 'Sansão', en: 'Samson', altPt: 'Sansao' },
+    { pt: 'Dalila', en: 'Delilah' },
+    { pt: 'Gideão', en: 'Gideon', altPt: 'Gideao' },
+    { pt: 'Débora', en: 'Deborah', altPt: 'Debora' },
+    { pt: 'Baraque', en: 'Barak' },
+    { pt: 'Josué', en: 'Joshua', altPt: 'Josue' },
+    { pt: 'Raabe', en: 'Rahab' },
+    { pt: 'Jó', en: 'Job', altPt: 'Jo' },
+    { pt: 'Jonas', en: 'Jonah' },
+    { pt: 'Neemias', en: 'Nehemiah' },
+    { pt: 'Esdras', en: 'Ezra' },
+    { pt: 'Elias', en: 'Elijah' },
+    { pt: 'Acabe', en: 'Ahab' },
+    { pt: 'Jezabel', en: 'Jezebel' },
+    { pt: 'Eliseu', en: 'Elisha' },
+    { pt: 'Daniel', en: 'Daniel' },
+    { pt: 'Dario', en: 'Darius', altPt: 'Dário' },
+    { pt: 'Nabucodonosor', en: 'Nebuchadnezzar' },
+    { pt: 'Abraão', en: 'Abraham', altPt: 'Abraao' },
+    { pt: 'Sara', en: 'Sarah' },
+    { pt: 'Isaque', en: 'Isaac' },
+    { pt: 'Rebeca', en: 'Rebekah' },
+    { pt: 'Jacó', en: 'Jacob', altPt: 'Jaco' },
+    { pt: 'Raquel', en: 'Rachel' },
+    { pt: 'Lia', en: 'Leah' },
+    { pt: 'José', en: 'Joseph', altPt: 'Jose' },
+    { pt: 'Moisés', en: 'Moses', altPt: 'Moises' },
+    { pt: 'Arão', en: 'Aaron', altPt: 'Arao' },
+    { pt: 'Miriam', en: 'Miriam', altPt: 'Miriã' },
+    { pt: 'Davi', en: 'David' },
+    { pt: 'Golias', en: 'Goliath' },
+    { pt: 'Saul', en: 'Saul' },
+    { pt: 'Samuel', en: 'Samuel' },
+    { pt: 'Jônatas', en: 'Jonathan', altPt: 'Jonatas' },
+    { pt: 'Salomão', en: 'Solomon', altPt: 'Salomao' },
+    { pt: 'Pedro', en: 'Peter' },
+    { pt: 'Paulo', en: 'Paul' },
+    { pt: 'João', en: 'John', altPt: 'Joao' }
+  ];
 
   const NOMES_PERSONAGENS_EXTRA_CANONICOS = [
     { pt: 'Elias', en: 'Elijah' },
@@ -625,6 +680,27 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
 
   function gerarFichaDeterministica(nomeEn, nomePt, textoRoteiro = '') {
     const n = (nomeEn || '').toLowerCase();
+    if (n === 'esther' || n === 'ester') {
+      return 'Esther: graceful young Persian-Hebrew queen in her early twenties, radiant almond-shaped eyes, elegant raven-black hair with ornate royal golden tiara, modest royal turquoise and gold silk robes';
+    }
+    if (n === 'ahasuerus' || n === 'assuero') {
+      return 'Ahasuerus: imposing Persian king in his late forties, regal sculpted beard, ornate gold Persian crown, opulent royal crimson and violet robes with gold embroidery, holding a golden scepter';
+    }
+    if (n === 'haman' || n === 'hamã' || n === 'hama') {
+      return 'Haman: proud arrogant Persian prime minister in his fifties, sharp piercing gaze, trimmed dark beard, lavish robes with golden medallion';
+    }
+    if (n === 'mordecai' || n === 'mardoqueu') {
+      return 'Mordecai: dignified Hebrew elder in his late fifties, wise compassionate eyes, full grey beard, humble dark linen tunic and wool mantle';
+    }
+    if (n === 'ruth' || n === 'rute') {
+      return 'Ruth: virtuous young Moabite woman in her twenties, earnest gentle gaze, dark braided hair under simple linen headscarf, humble rustic harvest tunic';
+    }
+    if (n === 'boaz') {
+      return 'Boaz: noble wealthy landowner of Bethlehem in his late forties, kind benevolent face, trimmed brown beard with grey streaks, fine linen tunic with woven wool mantle';
+    }
+    if (n === 'naomi' || n === 'noemi') {
+      return 'Naomi: venerable elderly Hebrew matriarch in her sixties, weathered sorrowful yet hopeful face, grey hair under dark wool veil, humble traveler mantle';
+    }
     if (n === 'elijah' || n === 'elias') {
       return 'Elijah: robust elderly Hebrew prophet in his late sixties, intense piercing visionary eyes, weathered sun-browned face, wild unkempt grey beard and shoulder-length grey hair, coarse dark camel-hair mantle, thick leather girdle belt';
     }
@@ -671,9 +747,67 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
       .replace(/\b(?:god|lord)\s+of\s+(?:your|our|their)\s+fathers\b/gi, '');
   }
 
-  async function extrairOuGerarFichasDoRoteiro(narracaoLimpa, chamarIaFn, contexto = {}) {
-    // Inicia mapa novo para garantir isolamento estrito entre projetos.
-    // NUNCA herda fichas de outros projetos ou sessões anteriores.
+  function detectarPersonagensNoRoteiro(narracaoLimpa, contexto = {}) {
+    if (!narracaoLimpa || typeof narracaoLimpa !== 'string') return [];
+    const texto = limparExpressoesGenealogicas(narracaoLimpa);
+    const textoLower = texto.toLowerCase();
+    const pers = [];
+    const jaAdicionados = new Set();
+
+    // 1. Busca no dicionário léxico amplo de personagens bíblicos
+    for (const item of DICIONARIO_LEXICO_PERSONAGENS) {
+      const regPt = new RegExp(`\\b${item.pt}\\b`, 'i');
+      const regEn = new RegExp(`\\b${item.en}\\b`, 'i');
+      const regAlt = item.altPt ? new RegExp(`\\b${item.altPt}\\b`, 'i') : null;
+      if (regPt.test(textoLower) || regEn.test(textoLower) || (regAlt && regAlt.test(textoLower))) {
+        if (!jaAdicionados.has(item.en.toLowerCase())) {
+          pers.push(item);
+          jaAdicionados.add(item.en.toLowerCase());
+          jaAdicionados.add(item.pt.toLowerCase());
+        }
+      }
+    }
+
+    // 2. Detecção por qualificadores reais / proféticos / judiciais seguidos de nome próprio (rei X, rainha Y, etc.)
+    const regexQual = /\b(?:rei|rainha|queen|king|profeta|prophet|sacerdote|priest|governador|governor)\s+([A-ZÀ-Ú][a-zà-ú]+)\b/g;
+    let mQual;
+    while ((mQual = regexQual.exec(texto)) !== null) {
+      const nomeEncontrado = mQual[1];
+      const nomeNorm = NOMES_PERSONAGENS_NORMALIZADOS[nomeEncontrado.toLowerCase()] || nomeEncontrado;
+      if (!jaAdicionados.has(nomeNorm.toLowerCase()) && !jaAdicionados.has(nomeEncontrado.toLowerCase())) {
+        pers.push({ pt: nomeEncontrado, en: nomeNorm });
+        jaAdicionados.add(nomeNorm.toLowerCase());
+        jaAdicionados.add(nomeEncontrado.toLowerCase());
+      }
+    }
+
+    // 3. Personagem principal do contexto, se fornecido
+    if (contexto && contexto.personagemPrincipal) {
+      const pp = contexto.personagemPrincipal.trim();
+      const ppNorm = NOMES_PERSONAGENS_NORMALIZADOS[pp.toLowerCase()] || pp;
+      if (!jaAdicionados.has(ppNorm.toLowerCase()) && !jaAdicionados.has(pp.toLowerCase())) {
+        pers.push({ pt: pp, en: ppNorm });
+        jaAdicionados.add(ppNorm.toLowerCase());
+      }
+    }
+
+    return pers;
+  }
+
+  async function extrairOuGerarFichasDoRoteiro(narracaoLimpa, param2, param3 = {}) {
+    let chamarIaFn = null;
+    let contexto = {};
+    if (typeof param2 === 'function') {
+      chamarIaFn = param2;
+      contexto = (typeof param3 === 'object' && param3 !== null) ? param3 : {};
+    } else if (typeof param3 === 'function') {
+      chamarIaFn = param3;
+      contexto = (typeof param2 === 'object' && param2 !== null) ? param2 : {};
+    } else {
+      contexto = (typeof param2 === 'object' && param2 !== null) ? param2 : {};
+    }
+
+    // 1. Zera fichas antigas para garantir isolamento estrito entre projetos
     const fichas = {};
 
     // PONTO 1: Filtra expressões genealógicas e teológicas para não criar fichas de quem é apenas citado em oração
@@ -693,7 +827,7 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
       }
     }
 
-    // 1. Identifica quais personagens do catálogo canônico (reserva fixa) estão presentes
+    // Identifica quais personagens do catálogo canônico (reserva fixa) estão presentes
     for (const [chave, fichaCanon] of Object.entries(FICHAS_PERSONAGENS)) {
       const reg = new RegExp(`\\b${chave}\\b`, 'i');
       if (reg.test(texto)) {
@@ -705,61 +839,95 @@ Responda EXCLUSIVAMENTE com a frase reescrita corrigida, sem aspas e sem explica
       }
     }
 
-    // 2. Identifica personagens mencionados no roteiro que NÃO estão no catálogo canônico
-    const personagensNovos = [];
-    for (const item of NOMES_PERSONAGENS_EXTRA_CANONICOS) {
-      const regPt = new RegExp(`\\b${item.pt}\\b`, 'i');
-      const regEn = new RegExp(`\\b${item.en}\\b`, 'i');
-      const regAlt = item.altPt ? new RegExp(`\\b${item.altPt}\\b`, 'i') : null;
-      if ((regPt.test(texto) || regEn.test(texto) || (regAlt && regAlt.test(texto))) && !fichas[item.en] && !fichas[item.pt]) {
-        personagensNovos.push(item);
-      }
-    }
+    // 2. Detecta os personagens do roteiro atual
+    const personagensDetectados = detectarPersonagensNoRoteiro(narracaoLimpa, contexto);
 
-    // 3. Se houver callback da IA e personagens novos para descrever
-    if (typeof chamarIaFn === 'function' && personagensNovos.length > 0) {
-      try {
-        const nomesParaPedir = personagensNovos.map(p => `${p.en} (${p.pt})`).join(', ');
-        const promptFichas = `You are an expert biblical art director. In this script excerpt:
-"${(narracaoLimpa || '').slice(0, 1500)}"
-For each character listed (${nomesParaPedir}), create a concise 1-line visual identity card in English (exact format: "Name: age, face, hair, beard, clothes, colors").
-Return EXCLUSIVELY a JSON object where keys are the character names and values are the 1-line descriptions. Example:
+    // Verifica se algum personagem detectado ainda não tem ficha resolvida pela lista fixa
+    const personagensSemFicha = personagensDetectados.filter(p => !fichas[p.en] && !fichas[p.pt]);
+
+    // 3. Cria a ficha de cada um (lista fixa ou IA)
+    // Se houver qualquer personagem fora da lista fixa, aciona a IA para criar as fichas.
+    if (personagensSemFicha.length > 0 && typeof chamarIaFn === 'function') {
+      let obteveComSucesso = false;
+      const promptFichasGerais = `You are an expert biblical art director. In this narration script:
+"${(narracaoLimpa || '').slice(0, 3000)}"
+
+Identify ALL historical and biblical human characters who actively appear in this story.
+CRITICAL RULES:
+1. Do NOT include names cited only in prayers, theological formulas or genealogies (e.g. "God of Abraham", "house of Judah").
+2. FORBIDDEN to include elements from other biblical events.
+3. For EACH active character, create a concise 1-line visual identity card in English (exact format: "Name: age, face, hair, beard, clothes, colors").
+4. Return EXCLUSIVELY a JSON object where keys include BOTH the English name and Portuguese name of each character (e.g. "Esther", "Ester", "Ahasuerus", "Assuero", "Haman", "Hamã", "Mordecai", "Mardoqueu", or "Ruth", "Boaz", etc.), with each key mapped to their 1-line description.
+Example output:
 {
-  "Elijah": "Elijah: robust elderly Hebrew prophet in his late sixties, intense piercing visionary eyes, weathered sun-browned face, wild unkempt grey beard and shoulder-length grey hair, coarse dark camel-hair mantle, thick leather girdle belt",
-  "Ahab": "Ahab: arrogant middle-aged Hebrew monarch in his late forties, conflicted brooding face, neatly trimmed black beard, royal bronze circlet crown, royal purple linen tunic with gold embroidery, ornate ceremonial dagger at belt"
+  "Esther": "Esther: graceful young Persian-Hebrew queen in her early twenties, radiant almond-shaped eyes, elegant raven-black hair with ornate royal golden tiara, modest royal turquoise and gold silk robes",
+  "Ester": "Esther: graceful young Persian-Hebrew queen in her early twenties, radiant almond-shaped eyes, elegant raven-black hair with ornate royal golden tiara, modest royal turquoise and gold silk robes",
+  "Ahasuerus": "Ahasuerus: imposing Persian king in his late forties, regal sculpted beard, ornate gold Persian crown, opulent royal crimson and violet robes with gold embroidery, holding a golden scepter",
+  "Assuero": "Ahasuerus: imposing Persian king in his late forties, regal sculpted beard, ornate gold Persian crown, opulent royal crimson and violet robes with gold embroidery, holding a golden scepter"
 }`;
-        const respFichas = await chamarIaFn(promptFichas);
-        const objFichas = extrairJsonLote(respFichas);
-        let parsedMap = {};
-        if (typeof objFichas === 'object' && objFichas !== null && !Array.isArray(objFichas)) {
-          parsedMap = objFichas;
-        } else if (Array.isArray(objFichas)) {
-          for (const item of objFichas) {
-            if (item && (item.name || item.personagem || item.character)) {
-              const k = item.name || item.personagem || item.character;
-              parsedMap[k] = item.card || item.ficha || item.description || item.descricaoVisual;
-            }
-          }
-        }
-        for (const [k, v] of Object.entries(parsedMap)) {
-          if (typeof v === 'string' && v.trim().length > 15) {
-            const linhaFicha = v.trim();
-            fichas[k] = linhaFicha;
-            for (const item of NOMES_PERSONAGENS_EXTRA_CANONICOS) {
-              if (item.en.toLowerCase() === k.toLowerCase() || item.pt.toLowerCase() === k.toLowerCase()) {
-                fichas[item.en] = linhaFicha;
-                fichas[item.pt] = linhaFicha;
+
+      // Se a chamada à IA para as fichas falhar, tenta de novo 1 vez
+      for (let tent = 1; tent <= 2; tent++) {
+        try {
+          const respFichas = await chamarIaFn(promptFichasGerais);
+          const objFichas = extrairJsonLote(respFichas);
+          let parsedMap = {};
+          if (typeof objFichas === 'object' && objFichas !== null && !Array.isArray(objFichas)) {
+            parsedMap = objFichas;
+          } else if (Array.isArray(objFichas)) {
+            for (const item of objFichas) {
+              if (item && (item.name || item.personagem || item.character)) {
+                const k = item.name || item.personagem || item.character;
+                parsedMap[k] = item.card || item.ficha || item.description || item.descricaoVisual;
               }
             }
           }
+
+          let encontrou = 0;
+          for (const [k, v] of Object.entries(parsedMap)) {
+            if (typeof v === 'string' && v.trim().length > 15) {
+              const linhaFicha = v.trim();
+              fichas[k] = linhaFicha;
+              const kNorm = NOMES_PERSONAGENS_NORMALIZADOS[k.toLowerCase()] || k;
+              fichas[kNorm] = linhaFicha;
+              encontrou++;
+            }
+          }
+
+          // Vincula pares correspondentes do dicionário léxico
+          for (const item of DICIONARIO_LEXICO_PERSONAGENS) {
+            if (fichas[item.en] && !fichas[item.pt]) {
+              fichas[item.pt] = fichas[item.en];
+            }
+            if (fichas[item.pt] && !fichas[item.en]) {
+              fichas[item.en] = fichas[item.pt];
+            }
+          }
+
+          if (encontrou > 0) {
+            obteveComSucesso = true;
+            break;
+          }
+        } catch (e) {
+          console.warn(`[PlanoCenas] Tentativa ${tent} de obter fichas com IA falhou:`, e);
         }
-      } catch (e) {
-        console.warn('[PlanoCenas] Falha ao solicitar fichas à IA, usando gerador determinístico:', e);
+      }
+
+      // Se a chamada à IA falhar após 2 tentativas, mostra aviso amarelo e nunca segue em silêncio sem ficha
+      if (!obteveComSucesso) {
+        const msgAviso = 'Atenção: A IA não gerou fichas para os personagens após 2 tentativas. Fichas geradas via fallback contextual.';
+        if (contexto.avisos && Array.isArray(contexto.avisos)) {
+          contexto.avisos.push(msgAviso);
+        }
+        const uiObj = contexto.UI || (typeof window !== 'undefined' ? window.UI : null);
+        if (uiObj && typeof uiObj.showToast === 'function') {
+          uiObj.showToast(msgAviso, 'warning');
+        }
       }
     }
 
-    // 4. Garante ficha determinística para qualquer personagem novo que ainda não tenha recebido
-    for (const item of personagensNovos) {
+    // 4. Garante ficha determinística para qualquer personagem detectado que ainda não tenha recebido
+    for (const item of personagensDetectados) {
       if (!fichas[item.en] && !fichas[item.pt]) {
         const fichaFallback = gerarFichaDeterministica(item.en, item.pt, texto);
         fichas[item.en] = fichaFallback;
@@ -813,6 +981,10 @@ Return EXCLUSIVELY a JSON object where keys are the character names and values a
         lugar = 'the desert wilderness of Kadesh at Meribah';
       } else if (/\b(?:daniel|dario|darius|le[oõ]es|babil[oô]nia|p[eé]rsia|persa)\b/i.test(temaLower) || /\b(?:daniel|dario|darius|le[oõ]es)\b/i.test(t)) {
         lugar = 'the ancient Persian royal court of Babylon';
+      } else if (/\b(?:ester|esther|assuero|ahasuerus|ham[aã]|haman|mardoqueu|mordecai|sus[aã])\b/i.test(temaLower) || /\b(?:ester|esther|assuero|ahasuerus|ham[aã]|haman|mardoqueu|mordecai)\b/i.test(t)) {
+        lugar = 'the Persian imperial palace of Susa (Shushan)';
+      } else if (/\b(?:rute|ruth|boaz|noemi|naomi|bel[eé]m)\b/i.test(temaLower) || /\b(?:rute|ruth|boaz|noemi|naomi)\b/i.test(t)) {
+        lugar = 'the sunlit barley fields of Bethlehem';
       } else if (/\b(?:mar\s+vermelho)\b/i.test(temaLower) || /\b(?:mar\s+vermelho)\b/i.test(t)) {
         lugar = 'the parted seabed of the Red Sea';
       } else {
@@ -866,6 +1038,32 @@ Return EXCLUSIVELY a JSON object where keys are the character names and values a
       acao = `Daniel standing peacefully among docile resting lions in the dim stony den under celestial divine light`;
     } else if (/\b(?:conspir|acus|s[aá]trapas|governadores)\b/i.test(t)) {
       acao = `scheming Persian satraps and officials whispering in the palace corridors plotting deceit in shadow`;
+    }
+
+    // Ciclo Ester e Assuero
+    else if (/\b(?:cetro|estendeu|tocou|alcan[cç]ar|ponta\s+do\s+cetro)\b/i.test(t)) {
+      acao = `King Ahasuerus extending the golden royal scepter from the elevated throne as Queen Esther steps forward to touch the tip of the scepter`;
+    } else if (/\b(?:banquete|banquet|vinho|mesa|peti[cç][aã]o)\b/i.test(t) && /\b(?:ester|esther|assuero|ahasuerus|ham[aã]|haman)\b/i.test(t)) {
+      acao = `Queen Esther presenting her petition before King Ahasuerus and troubled Haman at the lavish imperial banquet table`;
+    } else if (/\b(?:forca|gallows|madeiro|enforc|cinquenta\s+c[oó]vados)\b/i.test(t)) {
+      acao = `the high wooden gallows standing in the courtyard under dramatic cloudy sky in solemn historical justice`;
+    } else if (/\b(?:cavalo|vestes\s+reais|pra[cç]a|honra|honrar|proclam)\b/i.test(t) && /\b(?:mardoqueu|mordecai|ham[aã]|haman)\b/i.test(t)) {
+      acao = `Haman leading Mordecai clothed in royal purple and blue upon the king's white stallion through the bustling imperial square of Susa`;
+    } else if (/\b(?:jejuai|jejum|ora[cç][aã]o|cinza|saco|pranto)\b/i.test(t)) {
+      acao = `Queen Esther kneeling in earnest prayer and fasting in her private royal chamber with solemn faith`;
+    } else if (/\b(?:diante\s+do\s+rei|audi[eê]ncia|p[aá]tio\s+interior|entrou)\b/i.test(t) && /\b(?:ester|esther)\b/i.test(t)) {
+      acao = `Queen Esther dressed in royal robes standing with quiet courage in the inner court before King Ahasuerus seated upon the throne`;
+    }
+
+    // Ciclo Rute e Boaz
+    else if (/\b(?:respigar|espigas|ceifeiros|campo|colheita)\b/i.test(t) && /\b(?:rute|ruth)\b/i.test(t)) {
+      acao = `Ruth gleaning fallen ears of golden barley behind the harvesters in the sun-drenched fields of Bethlehem`;
+    } else if (/\b(?:boaz|encontrou|falou|bondade|gr[aã]os|sede|[aá]gua)\b/i.test(t) && /\b(?:rute|ruth|campo)\b/i.test(t)) {
+      acao = `noble Boaz speaking kindly to Ruth among the barley sheaves, offering roasted grain and water`;
+    } else if (/\b(?:eira|p[eé]s|noite|deitou|madrugada)\b/i.test(t)) {
+      acao = `Ruth resting respectfully at the feet of Boaz at the quiet threshing floor under a starlit night sky`;
+    } else if (/\b(?:porta|anci[aã]os|resgate|sand[aá]lia|testemunhas)\b/i.test(t) && /\b(?:boaz)\b/i.test(t)) {
+      acao = `Boaz standing before ten elders at the city gate of Bethlehem in solemn legal redemption before witnesses`;
     }
 
     // Ciclo Moisés
@@ -1017,30 +1215,67 @@ Return EXCLUSIVELY a JSON object where keys are the character names and values a
     return 'padrao';
   }
 
-  function detectarPersonagensNaDescricao(desc) {
+  function sanitizarTermosAudienciaLegitimos(desc) {
+    if (!desc || typeof desc !== 'string') return '';
+    return desc
+      .replace(/\broyal\s+audience\b/gi, 'royal hearing')
+      .replace(/\b(?:an\s+)?audience\s+with\s+(?:the\s+)?king\b/gi, 'royal hearing before the king')
+      .replace(/\b(?:an\s+)?audience\s+before\s+(?:the\s+)?king\b/gi, 'appearance before the king')
+      .replace(/\bgranted\s+(?:an\s+)?audience\b/gi, 'granted a royal hearing')
+      .replace(/\bprivate\s+audience\b/gi, 'private hearing')
+      .replace(/\bformal\s+audience\b/gi, 'formal hearing');
+  }
+
+  function limparPalavrasProibidasAudiencia(desc) {
+    if (!desc || typeof desc !== 'string') return '';
+    return desc
+      .replace(/\broyal\s+audience\b/gi, 'royal hearing')
+      .replace(/\b(?:an\s+)?audience\s+with\s+(?:the\s+)?king\b/gi, 'royal hearing before the king')
+      .replace(/\b(?:an\s+)?audience\s+before\s+(?:the\s+)?king\b/gi, 'appearance before the king')
+      .replace(/\bgranted\s+(?:an\s+)?audience\b/gi, 'granted a royal hearing')
+      .replace(/\bprivate\s+audience\b/gi, 'private hearing')
+      .replace(/\bformal\s+audience\b/gi, 'formal hearing')
+      .replace(/\b(?:viewers?|audience|subscribers?|subscribe|channel|video|followers?|encouraging\s+viewers)\b/gi, '')
+      .replace(/[^\S\r\n]{2,}/g, ' ')
+      .trim();
+  }
+
+  function detectarPersonagensNaDescricao(desc, contexto = {}) {
     if (!desc || typeof desc !== 'string') return [];
     const d = desc.toLowerCase();
     const pers = [];
-    if (/\b(?:david|davi|young\s+shepherd)\b/i.test(d)) pers.push('david');
-    if (/\b(?:goliath|golias|giant|colossus)\b/i.test(d)) pers.push('goliath');
-    if (/\b(?:saul|rei\s+saul)\b/i.test(d)) pers.push('saul');
-    if (/\b(?:samuel)\b/i.test(d)) pers.push('samuel');
-    if (/\b(?:jonathan|j[oô]natas)\b/i.test(d)) pers.push('jonathan');
-    if (/\b(?:solomon|salom[aã]o)\b/i.test(d)) pers.push('solomon');
-    if (/\b(?:moses|mois[eé]s)\b/i.test(d)) pers.push('moses');
-    if (/\b(?:aaron|ar[aã]o)\b/i.test(d)) pers.push('aaron');
-    if (/\b(?:joshua|josu[eé])\b/i.test(d)) pers.push('joshua');
-    if (/\b(?:miriam|miri[aã])\b/i.test(d)) pers.push('miriam');
-    if (/\b(?:pharaoh|fara[oó])\b/i.test(d)) pers.push('pharaoh');
-    if (/\b(?:elijah|elias)\b/i.test(d)) pers.push('elijah');
-    if (/\b(?:ahab|acabe)\b/i.test(d)) pers.push('ahab');
-    if (/\b(?:jezebel|jezabel)\b/i.test(d)) pers.push('jezebel');
-    if (/\b(?:elisha|eliseu)\b/i.test(d)) pers.push('elisha');
-    if (/\b(?:peter|pedro)\b/i.test(d)) pers.push('peter');
-    if (/\b(?:paul|paulo)\b/i.test(d)) pers.push('paul');
-    if (/\b(?:john|jo[aã]o)\b/i.test(d)) pers.push('john');
-    if (/\b(?:daniel)\b/i.test(d)) pers.push('daniel');
-    if (/\b(?:darius|dario|dário|king\s+darius|rei\s+dario)\b/i.test(d)) pers.push('darius');
+    const jaAdicionados = new Set();
+
+    // 1. Chaves de fichas existentes no contexto ou na sessão atual
+    const fichasRef = {
+      ...(contexto.fichasPersonagens || {}),
+      ...(typeof window !== 'undefined' && window._fichasPersonagensAtual ? window._fichasPersonagensAtual : {})
+    };
+    for (const k of Object.keys(fichasRef)) {
+      const kNorm = (NOMES_PERSONAGENS_NORMALIZADOS[k.toLowerCase()] || k).toLowerCase();
+      if (!jaAdicionados.has(kNorm)) {
+        const reg = new RegExp(`\\b${k}\\b`, 'i');
+        if (reg.test(d)) {
+          pers.push(kNorm);
+          jaAdicionados.add(kNorm);
+        }
+      }
+    }
+
+    // 2. Dicionário léxico de personagens bíblicos
+    for (const item of DICIONARIO_LEXICO_PERSONAGENS) {
+      const kNorm = item.en.toLowerCase();
+      if (!jaAdicionados.has(kNorm)) {
+        const regEn = new RegExp(`\\b${item.en}\\b`, 'i');
+        const regPt = new RegExp(`\\b${item.pt}\\b`, 'i');
+        const regAlt = item.altPt ? new RegExp(`\\b${item.altPt}\\b`, 'i') : null;
+        if (regEn.test(d) || regPt.test(d) || (regAlt && regAlt.test(d))) {
+          pers.push(kNorm);
+          jaAdicionados.add(kNorm);
+        }
+      }
+    }
+
     return pers.sort();
   }
 
@@ -1251,7 +1486,8 @@ ${exemploJson}`;
       return { valido: false, motivo: 'Descrição visual vazia.' };
     }
 
-    const desc = descricaoVisual.trim();
+    // Sanitiza usos legítimos de "audience" (audiência real com o rei) em vez de reprovar
+    let desc = sanitizarTermosAudienciaLegitimos(descricaoVisual.trim());
 
     // 1. Detecção de falso mar / águas indevidas
     const temMarNaDescricao = /\b(?:sea|ocean|waves?)\b/i.test(desc);
@@ -1283,7 +1519,11 @@ ${exemploJson}`;
 
     // 4. Detecção de termos de audiência / bastidor no prompt (ITEM 5)
     if (/\b(?:viewers?|audience|subscribers?|subscribe|channel|video|followers?|encouraging\s+viewers)\b/i.test(desc)) {
-      return { valido: false, motivo: 'Contém termos de audiência ou bastidor proibidos no prompt visual ("viewers"/"audience"/"subscribe"/"channel").' };
+      return {
+        valido: false,
+        motivo: 'Contém termos de audiência ou bastidor proibidos no prompt visual (viewers/audience/subscribe/channel).',
+        descSanitizada: desc
+      };
     }
 
     // 5. Detecção de representação humana de Deus
@@ -1347,7 +1587,7 @@ ${exemploJson}`;
       return { valido: false, motivo: 'Descrição curta demais (menos de 4 palavras).' };
     }
 
-    return { valido: true, motivo: '' };
+    return { valido: true, motivo: '', descSanitizada: desc };
   }
 
   /**
@@ -1586,7 +1826,47 @@ ${exemploJson}`;
         // Se a descrição da IA foi rejeitada pelo validador:
         if (!validacao.valido) {
           let corrigido = false;
-          if (typeof chamarIaFn === 'function') {
+
+          // BUG 2: Se foi reprovada por termos de audiência ou bastidor (viewers/audience/subscribe/channel)
+          const ehTermosAudiencia = validacao.motivo && validacao.motivo.includes('termos de audiência ou bastidor proibidos');
+          if (ehTermosAudiencia) {
+            if (typeof chamarIaFn === 'function') {
+              for (let tent = 1; tent <= 2; tent++) {
+                try {
+                  const promptAud = `You are an expert biblical art director creating ONE visual description for Scene ${c.numero}.
+The previous attempt was rejected because it contained forbidden meta/audience words.
+CRITICAL INSTRUCTION: You MUST NOT use words like 'viewers', 'audience', 'subscribe', 'channel', or 'video'. Describe ONLY physical ancient historical action and biblical characters.
+Narration excerpt: "${trechoPt}".
+Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
+                  const respAud = await chamarIaFn(promptAud);
+                  const itensAud = extrairJsonLote(respAud);
+                  const itemAud = localizarItemIaCena(itensAud, c, 0);
+                  const candAud = extrairTextoDescricaoVisual(itemAud);
+                  if (candAud) {
+                    const valAud = validarDescricaoVisualCena(candAud, trechoPt, contextoValidacao);
+                    if (valAud.valido) {
+                      descVisual = valAud.descSanitizada || candAud;
+                      validacao = valAud;
+                      corrigido = true;
+                      break;
+                    }
+                  }
+                } catch (_) {}
+              }
+            }
+
+            // Se ainda falhar (ou sem IA), remove as palavras proibidas da descrição e aprova. NUNCA deixar PENDENTE por esse motivo!
+            if (!corrigido || !validacao.valido) {
+              descVisual = limparPalavrasProibidasAudiencia(descVisual || trechoPt);
+              if (contarPalavras(descVisual) < 4) {
+                descVisual = gerarDescricaoVisualFallback(trechoPt, c.numero, contexto);
+              }
+              validacao = { valido: true, motivo: '' };
+              corrigido = true;
+            }
+          }
+
+          if (!corrigido && typeof chamarIaFn === 'function') {
             const descAnterior = descricoesAcumuladas[descricoesAcumuladas.length - 1] || '';
             const enqAnt = detectarTipoEnquadramento(descAnterior);
             const enqSugerido = (enqAnt === 'aberto') ? 'close' : 'aberto';
@@ -1745,7 +2025,47 @@ CRITICAL RULES:
         // Se a descrição foi rejeitada na regeneração ou veio ausente:
         if (!validacao.valido || !descVisual) {
           let corrigido = false;
-          if (typeof chamarIaFn === 'function') {
+
+          // BUG 2: Se foi reprovada por termos de audiência ou bastidor (viewers/audience/subscribe/channel)
+          const ehTermosAudiencia = validacao.motivo && validacao.motivo.includes('termos de audiência ou bastidor proibidos');
+          if (ehTermosAudiencia) {
+            if (typeof chamarIaFn === 'function') {
+              for (let tent = 1; tent <= 2; tent++) {
+                try {
+                  const promptAud = `You are an expert biblical art director creating ONE visual description for Scene ${c.numero}.
+The previous attempt was rejected because it contained forbidden meta/audience words.
+CRITICAL INSTRUCTION: You MUST NOT use words like 'viewers', 'audience', 'subscribe', 'channel', or 'video'. Describe ONLY physical ancient historical action and biblical characters.
+Narration excerpt: "${trechoPt}".
+Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
+                  const respAud = await chamarIaFn(promptAud);
+                  const itensAud = extrairJsonLote(respAud);
+                  const itemAud = localizarItemIaCena(itensAud, c, 0);
+                  const candAud = extrairTextoDescricaoVisual(itemAud);
+                  if (candAud) {
+                    const valAud = validarDescricaoVisualCena(candAud, trechoPt, contextoValidacao);
+                    if (valAud.valido) {
+                      descVisual = valAud.descSanitizada || candAud;
+                      validacao = valAud;
+                      corrigido = true;
+                      break;
+                    }
+                  }
+                } catch (_) {}
+              }
+            }
+
+            // Se ainda falhar (ou sem IA), remove as palavras proibidas da descrição e aprova. NUNCA deixar PENDENTE por esse motivo!
+            if (!corrigido || !validacao.valido) {
+              descVisual = limparPalavrasProibidasAudiencia(descVisual || trechoPt);
+              if (contarPalavras(descVisual) < 4) {
+                descVisual = gerarDescricaoVisualFallback(trechoPt, c.numero, contexto);
+              }
+              validacao = { valido: true, motivo: '' };
+              corrigido = true;
+            }
+          }
+
+          if (!corrigido && typeof chamarIaFn === 'function') {
             const descAnterior = descricoesConcluidas[descricoesConcluidas.length - 1] || '';
             const enqAnt = detectarTipoEnquadramento(descAnterior);
             const enqSugerido = (enqAnt === 'aberto') ? 'close' : 'aberto';
@@ -2334,6 +2654,10 @@ CRITICAL RULES:
     localizarItemIaCena,
     extrairTextoDescricaoVisual,
     validarDescricaoVisualCena,
+    sanitizarTermosAudienciaLegitimos,
+    limparPalavrasProibidasAudiencia,
+    detectarPersonagensNoRoteiro,
+    DICIONARIO_LEXICO_PERSONAGENS,
     detectarTipoEnquadramento,
     detectarPersonagensNaDescricao,
     montarPromptFinalCena,
