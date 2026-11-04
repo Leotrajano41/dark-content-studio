@@ -1337,7 +1337,7 @@ textarea.h-180 {
         <div class="form-group">
           <label for="input-api-model-ideias">
             Modelo para Ideias/SEO
-            <span class="tooltip-wrapper" data-tooltip="Usado em: Etapa 1 (10 Ideias Virais), Etapa 2 (Keywords de Mídia e Prompts Visuais), Etapa 3 (Prompts de Thumbnails A/B/C) e Etapa 4 (SEO Completo e Descrição). Padrão recomendado: openai/gpt-4o-mini.">?</span>
+            <span class="tooltip-wrapper" data-tooltip="Usado em: Etapa 1 (10 Ideias Virais, Avaliador e Revisor de Fatos de Ideias), Revisão Automática / Citações, Etapa 2 (Keywords de Mídia), Etapa 3 (Prompts de Thumbnails) e Etapa 4 (SEO Completo e Descrição). Padrão recomendado: openai/gpt-4o-mini.">?</span>
           </label>
           <input type="text" id="input-api-model-ideias" class="form-control" placeholder="openai/gpt-4o-mini">
         </div>
@@ -1345,9 +1345,17 @@ textarea.h-180 {
         <div class="form-group">
           <label for="input-api-model-roteiro">
             Modelo para Roteiro
-            <span class="tooltip-wrapper" data-tooltip="Usado em: Etapa 1 (Geração do Esboço, 7 Seções do Roteiro, Filtro de Clichês e Revisor Automático de Integridade). Padrão recomendado: anthropic/claude-sonnet-4.5.">?</span>
+            <span class="tooltip-wrapper" data-tooltip="Usado estritamente em: Geração do Roteiro Completo (7 seções ou catálogo) e Regeneração Automática do Roteiro em caso de falha estrutural. Padrão recomendado: anthropic/claude-sonnet-4.5.">?</span>
           </label>
           <input type="text" id="input-api-model-roteiro" class="form-control" placeholder="anthropic/claude-sonnet-4.5">
+        </div>
+
+        <div class="form-group">
+          <label for="input-api-model-cenas">
+            Modelo para Cenas
+            <span class="tooltip-wrapper" data-tooltip="Usado em: Plano de Cenas (Lotes 1 e 2), Regeneração de Cenas Pendentes/Reprovadas e Fichas de Personagens. Padrão recomendado: openai/gpt-4o-mini.">?</span>
+          </label>
+          <input type="text" id="input-api-model-cenas" class="form-control" placeholder="openai/gpt-4o-mini">
         </div>
 
         <div class="form-group form-group-btn">
@@ -3218,9 +3226,11 @@ const OpenRouterAPI = {
   KEY_STORAGE_KEY: 'dark_studio_openrouter_api_key',
   MODEL_IDEAS_STORAGE_KEY: 'dark_studio_openrouter_model_ideas',
   MODEL_ROTEIRO_STORAGE_KEY: 'dark_studio_openrouter_model_roteiro',
+  MODEL_CENAS_STORAGE_KEY: 'dark_studio_openrouter_model_cenas',
   MODEL_LEGACY_KEY: 'dark_studio_openrouter_model',
   DEFAULT_MODEL_IDEAS: 'openai/gpt-4o-mini',
   DEFAULT_MODEL_ROTEIRO: 'anthropic/claude-sonnet-4.5',
+  DEFAULT_MODEL_CENAS: 'openai/gpt-4o-mini',
 
   migrarChavesLocalStorage() {
     try {
@@ -3309,7 +3319,14 @@ const OpenRouterAPI = {
       }
       localStorage.setItem(this.MODEL_ROTEIRO_STORAGE_KEY, roteiroModel);
 
-      // 4. Migração de Sessão de AutoSave
+      // 4. Migração de Modelo de Cenas
+      let cenasModel = localStorage.getItem(this.MODEL_CENAS_STORAGE_KEY);
+      if (!cenasModel || !cenasModel.trim()) {
+        cenasModel = this.DEFAULT_MODEL_CENAS;
+      }
+      localStorage.setItem(this.MODEL_CENAS_STORAGE_KEY, cenasModel.trim());
+
+      // 5. Migração de Sessão de AutoSave
       const sessaoV1 = localStorage.getItem('dark_studio_session_v1');
       const sessaoLegada = localStorage.getItem('dark_studio_session');
       if (!sessaoV1 && sessaoLegada) {
@@ -3335,15 +3352,26 @@ const OpenRouterAPI = {
     return localStorage.getItem(this.MODEL_ROTEIRO_STORAGE_KEY) || this.DEFAULT_MODEL_ROTEIRO;
   },
 
-  saveConfig(apiKey, modelIdeas, modelRoteiro) {
+  getModelCenas() {
+    this.migrarChavesLocalStorage();
+    return localStorage.getItem(this.MODEL_CENAS_STORAGE_KEY) || this.DEFAULT_MODEL_CENAS;
+  },
+
+  getModelMediaPrompts() {
+    return this.getModelCenas();
+  },
+
+  saveConfig(apiKey, modelIdeas, modelRoteiro, modelCenas) {
     const cleanKey = (apiKey || '').trim();
     const cleanModelIdeas = (modelIdeas && modelIdeas.trim()) ? modelIdeas.trim() : this.DEFAULT_MODEL_IDEAS;
     const cleanModelRoteiro = (modelRoteiro && modelRoteiro.trim()) ? modelRoteiro.trim() : this.DEFAULT_MODEL_ROTEIRO;
+    const cleanModelCenas = (modelCenas && modelCenas.trim()) ? modelCenas.trim() : this.DEFAULT_MODEL_CENAS;
 
     localStorage.setItem(this.KEY_STORAGE_KEY, cleanKey);
     localStorage.setItem(this.MODEL_IDEAS_STORAGE_KEY, cleanModelIdeas);
     localStorage.setItem(this.MODEL_ROTEIRO_STORAGE_KEY, cleanModelRoteiro);
-    return { apiKey: cleanKey, modelIdeas: cleanModelIdeas, modelRoteiro: cleanModelRoteiro };
+    localStorage.setItem(this.MODEL_CENAS_STORAGE_KEY, cleanModelCenas);
+    return { apiKey: cleanKey, modelIdeas: cleanModelIdeas, modelRoteiro: cleanModelRoteiro, modelCenas: cleanModelCenas };
   },
 
   async generateContent(promptText, specificModel = null, customSystemPrompt = null, opcoes = {}) {
@@ -4160,7 +4188,7 @@ function validarFormatoIdeiaSubstituta(texto, outrasIdeiasTitulos = []) {
  */
 async function regenerarIdeiaUnicaComErro(num) {
   const tema = UI.getValue('select-tema', 'input-tema-custom');
-  const modelo = OpenRouterAPI.getModelRoteiro();
+  const modelo = OpenRouterAPI.getModelIdeas();
   const outEl = document.getElementById('output-prompt-ideias');
   if (!outEl) return;
 
@@ -4302,7 +4330,7 @@ async function avaliarIdeiasComIA(ideiasTexto, tema, modelo) {
   conteudo.innerHTML = '<div style="display: flex; align-items: center; gap: 8px;"><span class="spinner-sm" style="display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(199, 210, 254, 0.3); border-top-color: #c7d2fe; border-radius: 50%; animation: spin 0.8s linear infinite;"></span><span>Avaliando as 10 ideias com IA (Critérios Ponderados & Fidelidade Bíblica)...</span></div>';
   card.classList.add('hidden');
 
-  const modeloAvaliacao = modelo || OpenRouterAPI.getModelRoteiro();
+  const modeloAvaliacao = modelo || OpenRouterAPI.getModelIdeas();
   window._ideiasComErroBiblico = new Set();
   window._ideiasTop3 = new Set();
 
@@ -4607,7 +4635,7 @@ OK: [Idea Number]`;
   try {
     respostaRaw = await OpenRouterAPI.generateContent(
       promptRevisor,
-      modelo || OpenRouterAPI.getModelRoteiro(),
+      modelo || OpenRouterAPI.getModelIdeas(),
       null,
       { temperature: 0.2 }
     );
@@ -4749,7 +4777,7 @@ MANDATORY OUTPUT FORMAT (EXACTLY 4 LINES in Portuguese Brasil, maximum 80 charac
 Output EXCLUSIVELY the 4 lines above, without numbering preamble, without quotes, without introductory text.`;
 
       try {
-        const respSub = await OpenRouterAPI.generateContent(promptSubstituta, modelo || OpenRouterAPI.getModelRoteiro());
+        const respSub = await OpenRouterAPI.generateContent(promptSubstituta, modelo || OpenRouterAPI.getModelIdeas());
         if (respSub && respSub.trim()) {
           const val = validarFormatoIdeiaSubstituta(respSub, titulosExistentes);
           if (val.valido) {
@@ -5030,7 +5058,7 @@ Output EXCLUSIVELY the protocol lines above.`;
   try {
     const resp = await OpenRouterAPI.generateContent(
       promptRevisorTitulos,
-      modelo || OpenRouterAPI.getModelRoteiro(),
+      modelo || OpenRouterAPI.getModelIdeas(),
       null,
       { temperature: 0.2 }
     );
@@ -8267,7 +8295,7 @@ const AutoSave = window.AutoSave = {
   // Todos os campos monitorados
   FIELD_IDS: [
     'input-api-key',
-    'input-api-model-ideias', 'input-api-model-roteiro',
+    'input-api-model-ideias', 'input-api-model-roteiro', 'input-api-model-cenas',
     'select-tema', 'input-tema-custom',
     'select-idioma', 'input-idioma-custom',
     'select-estilo-roteiro',
@@ -8397,6 +8425,9 @@ const AutoSave = window.AutoSave = {
           } else {
             el.value = OpenRouterAPI.getModelRoteiro();
           }
+        } else if (id === 'input-api-model-cenas') {
+          const val = session[id];
+          el.value = (val && val.trim()) ? val.trim() : OpenRouterAPI.getModelCenas();
         } else if (id === 'select-estilo-roteiro') {
           const val = session[id];
           if (validEstilos.includes(val)) {
@@ -8515,6 +8546,11 @@ const AutoSave = window.AutoSave = {
     const inputModelRoteiro = document.getElementById('input-api-model-roteiro');
     if (inputModelRoteiro && (!inputModelRoteiro.value.trim() || inputModelRoteiro.value.trim() === 'openai/gpt-4o-mini')) {
       inputModelRoteiro.value = OpenRouterAPI.getModelRoteiro();
+    }
+
+    const inputModelCenas = document.getElementById('input-api-model-cenas');
+    if (inputModelCenas && !inputModelCenas.value.trim()) {
+      inputModelCenas.value = OpenRouterAPI.getModelCenas();
     }
 
     UI.updateApiStatusBadge();
@@ -9206,10 +9242,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const inputApiKey = document.getElementById('input-api-key');
   const inputApiModelIdeias = document.getElementById('input-api-model-ideias');
   const inputApiModelRoteiro = document.getElementById('input-api-model-roteiro');
+  const inputApiModelCenas = document.getElementById('input-api-model-cenas');
 
   if (inputApiKey) inputApiKey.value = OpenRouterAPI.getApiKey();
   if (inputApiModelIdeias) inputApiModelIdeias.value = OpenRouterAPI.getModelIdeas();
   if (inputApiModelRoteiro) inputApiModelRoteiro.value = OpenRouterAPI.getModelRoteiro();
+  if (inputApiModelCenas) inputApiModelCenas.value = OpenRouterAPI.getModelCenas();
   UI.updateApiStatusBadge();
 
   // Garante que o select-estilo-roteiro tenha valor válido imediatamente ao abrir
@@ -9222,6 +9260,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const key = (inputApiKey.value || '').trim();
     const modelIdeias = (inputApiModelIdeias.value || '').trim() || 'openai/gpt-4o-mini';
     const modelRoteiro = (inputApiModelRoteiro.value || '').trim() || 'anthropic/claude-sonnet-4.5';
+    const modelCenas = (inputApiModelCenas ? inputApiModelCenas.value || '' : '').trim() || 'openai/gpt-4o-mini';
 
     // 1. Grava direto no localStorage (sem passar pela migração) para garantia máxima
     if (key) {
@@ -9229,9 +9268,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     localStorage.setItem('dark_studio_openrouter_model_ideas', modelIdeias);
     localStorage.setItem('dark_studio_openrouter_model_roteiro', modelRoteiro);
+    localStorage.setItem('dark_studio_openrouter_model_cenas', modelCenas);
 
     // 2. Também chama saveConfig para manter a API em sincronia
-    OpenRouterAPI.saveConfig(key, modelIdeias, modelRoteiro);
+    OpenRouterAPI.saveConfig(key, modelIdeias, modelRoteiro, modelCenas);
 
     // 3. Atualiza o badge imediatamente (lê do DOM — chave já está no campo)
     UI.updateApiStatusBadge();
@@ -9240,7 +9280,7 @@ document.addEventListener('DOMContentLoaded', () => {
     AutoSave.save();
 
     if (key) {
-      UI.showToast(`Configurações salvas! Ideias/SEO: ${modelIdeias} | Roteiro: ${modelRoteiro}`);
+      UI.showToast(`Configurações salvas! Ideias/SEO: ${modelIdeias} | Roteiro: ${modelRoteiro} | Cenas: ${modelCenas}`);
     } else {
       UI.showToast('Configurações salvas sem API Key. A ferramenta funcionará em modo gerador de prompts.', 'warning');
     }
@@ -9550,8 +9590,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const tema = UI.getValue('select-tema', 'input-tema-custom');
       const idioma = UI.getValue('select-idioma', 'input-idioma-custom');
       const promptText = PromptEngine.generateIdeasPrompt({ tema, idioma });
-      // Item 2: Usa o modelo do campo "Modelo para Roteiro" também para gerar as ideias
-      const modeloIdeias = OpenRouterAPI.getModelRoteiro();
+      // Usa o modelo do campo "Modelo para Ideias/SEO" para gerar as ideias
+      const modeloIdeias = OpenRouterAPI.getModelIdeas();
 
       const rawIdeias = await executeApiCall(
         'btn-gerar-prompt-ideias',
@@ -10747,6 +10787,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
     const tipoGancho = UI.getValue('select-gancho', 'input-gancho-custom');
     const idioma = UI.getValue('select-idioma', 'input-idioma-custom');
     const modeloRoteiro = OpenRouterAPI.getModelRoteiro();
+    const modeloRevisao = OpenRouterAPI.getModelIdeas();
 
     const isCatalogo = estiloRoteiro.includes('Catálogo') || estiloRoteiro.includes('Catalogo');
     const isLongo = estiloRoteiro.includes('18-20') || estiloRoteiro.includes('Longo');
@@ -10865,7 +10906,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
 
       // 1.1 Validador de Tom Afirmativo (Item 3)
       if (typeof validarERegenerarTomAfirmativo === 'function') {
-        const tomRes = await validarERegenerarTomAfirmativo(resultText, idioma, modeloRoteiro);
+        const tomRes = await validarERegenerarTomAfirmativo(resultText, idioma, modeloRevisao);
         resultText = tomRes.texto;
         if (typeof atualizarRelatorioTomNaTela === 'function') {
           atualizarRelatorioTomNaTela(tomRes);
@@ -10884,7 +10925,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
 
       // 4. PONTO 5: Limitar Expressões Repetitivas (máx 2 vezes cada via regeneração por LLM)
       if (typeof limitarRepeticaoExpressoes === 'function') {
-        resultText = await limitarRepeticaoExpressoes(resultText, idioma, modeloRoteiro, estiloRoteiro);
+        resultText = await limitarRepeticaoExpressoes(resultText, idioma, modeloRevisao, estiloRoteiro);
       }
 
       // 5. Limitar Frases de Reforço de Historicidade e Descarte de Ceticismo (máx 2 longo, 1 shorts/médio)
@@ -10904,7 +10945,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
 
       // 6. Checagem de Repetição de Versículos Bíblicos por Extenso (máx 1 vez)
       if (typeof verificarERegenerarVersiculosRepetidos === 'function') {
-        const repRes = await verificarERegenerarVersiculosRepetidos(resultText, idioma, modeloRoteiro);
+        const repRes = await verificarERegenerarVersiculosRepetidos(resultText, idioma, modeloRevisao);
         resultText = repRes.texto;
         if (repRes.modificado) {
           console.log('[Checagem Repetição] Versículos duplicados reescritos sem repetição de citação literal.');
@@ -10912,7 +10953,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       }
 
       // 7. Filtro Pós-Geração Automático com Contexto Vizinho e Relatório na Tela
-      const filtroRes = await aplicarFiltroTermosProibidos(resultText, idioma, modeloRoteiro);
+      const filtroRes = await aplicarFiltroTermosProibidos(resultText, idioma, modeloRevisao);
       resultText = filtroRes.texto;
 
       // Exibe ou oculta alerta visual de termos persistentes (se houver)
@@ -10936,11 +10977,11 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       }
 
       // 7.1 Palavras em inglês/espanhol no texto em português: a frase é regenerada (nunca trocada palavra por palavra)
-      const estrangRes = await corrigirPalavrasEstrangeiras(resultText, idioma, modeloRoteiro);
+      const estrangRes = await corrigirPalavrasEstrangeiras(resultText, idioma, modeloRevisao);
       resultText = estrangRes.texto;
 
       // 7.1b Atribuição indevida, costume sem marcador e absolutos: a frase é reescrita (nunca troca de palavra)
-      const conteudoRes = await corrigirRegrasDeConteudo(resultText, idioma, modeloRoteiro);
+      const conteudoRes = await corrigirRegrasDeConteudo(resultText, idioma, modeloRevisao);
       resultText = conteudoRes.texto;
 
       // 7.1c Mesma explicação contada duas vezes: a 2ª ocorrência (frase igual ou 85%+ parecida, sem aspas) é removida e listada
@@ -10951,11 +10992,11 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       }
 
       // 7.2 Marcadores de contexto ("na época", "historiadores observam"...) não podem se repetir em sequência
-      const marcRes = await variarMarcadoresDeContexto(resultText, idioma, modeloRoteiro);
+      const marcRes = await variarMarcadoresDeContexto(resultText, idioma, modeloRevisao);
       resultText = marcRes.texto;
 
       // 7.3 Cronologia: "anos depois" entre eventos do mesmo período (ex.: Números 20 e Deuteronômio) é reescrito
-      const cronoRes = await corrigirConflitosDeCronologia(resultText, idioma, modeloRoteiro);
+      const cronoRes = await corrigirConflitosDeCronologia(resultText, idioma, modeloRevisao);
       resultText = cronoRes.texto;
 
       // 8. Garante convite de inscrição no último parágrafo antes de auditar
@@ -10975,7 +11016,7 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
         }
 
         try {
-          const revisaoRes = await executarRevisaoAutomaticaRoteiro(resultText, idioma, modeloRoteiro);
+          const revisaoRes = await executarRevisaoAutomaticaRoteiro(resultText, idioma, modeloRevisao);
           resultText = revisaoRes.texto;
 
           if (typeof atualizarRelatorioRevisaoNaTela === 'function') {
@@ -10993,12 +11034,12 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       // 10. PONTO 1: CHECAGEM FINAL DE INTEGRIDADE PÓS-REVISÃO
       // Detecta fragmentos duplicados, palavras faltando, 'The the', frase cortada e espaço antes de aspas
       if (typeof executarChecagemFinalIntegridade === 'function') {
-        resultText = await executarChecagemFinalIntegridade(resultText, idioma, modeloRoteiro);
+        resultText = await executarChecagemFinalIntegridade(resultText, idioma, modeloRevisao);
       }
 
       // 10.1 A revisão pode ter reintroduzido palavra proibida: frase é regenerada (nunca trocada por sinônimo)
       if (typeof aplicarFiltroTermosProibidos === 'function') {
-        const filtroPosRevisao = await aplicarFiltroTermosProibidos(resultText, idioma, modeloRoteiro);
+        const filtroPosRevisao = await aplicarFiltroTermosProibidos(resultText, idioma, modeloRevisao);
         resultText = filtroPosRevisao.texto;
       }
 
@@ -11088,7 +11129,7 @@ ${resultText}`;
       // ITEM 7: revisão gramatical final da Narração Limpa (só corrige frases quebradas; sem troca de sinônimos)
       if (hasApiKey && typeof revisarGramaticaNarracaoLimpa === 'function') {
         try {
-          const gramRes = await revisarGramaticaNarracaoLimpa(textoLimpo, idioma, modeloRoteiro);
+          const gramRes = await revisarGramaticaNarracaoLimpa(textoLimpo, idioma, modeloRevisao);
           textoLimpo = gramRes.texto;
           if (gramRes.aplicadas.length > 0) {
             // As mesmas correções valem para o Roteiro Completo (as duas versões não podem divergir)
@@ -11369,9 +11410,7 @@ ${resultText}`;
 
       const hasKey = typeof OpenRouterAPI !== 'undefined' && Boolean(OpenRouterAPI.getApiKey());
       if (hasKey) {
-        const modeloPrompts = typeof OpenRouterAPI.getModelMediaPrompts === 'function'
-          ? OpenRouterAPI.getModelMediaPrompts()
-          : (typeof OpenRouterAPI.getModelIdeas === 'function' ? OpenRouterAPI.getModelIdeas() : 'google/gemini-2.0-flash-001');
+        const modeloPrompts = OpenRouterAPI.getModelCenas();
 
         const totalLotes = Math.ceil(plano.cenas.length / 10);
         let loteIndex = 0;
@@ -11505,9 +11544,7 @@ ${resultText}`;
       const personagem = (!ehCategoriaGenerica(rawPersonagem) ? rawPersonagem : '');
 
       const chamarIaFn = async (promptLote) => {
-        const modelo = typeof OpenRouterAPI.getModelMediaPrompts === 'function'
-          ? OpenRouterAPI.getModelMediaPrompts()
-          : (typeof OpenRouterAPI.getModelIdeas === 'function' ? OpenRouterAPI.getModelIdeas() : 'google/gemini-2.0-flash-001');
+        const modelo = OpenRouterAPI.getModelCenas();
         return await OpenRouterAPI.generateContent(promptLote, modelo);
       };
 
@@ -11880,7 +11917,7 @@ Output exclusively the corrected thumbnail concepts with identical markers [[OPC
       // 5) Revisor de Fatos nos títulos de SEO usando a referência da ideia escolhida e o roteiro
       const roteiroContexto = resumo || document.getElementById('textarea-roteiro-gerado')?.value || document.getElementById('output-prompt-roteiro')?.value || '';
       if (typeof window.revisarFatosTitulosSeoComIA === 'function') {
-        seoLimpo = await window.revisarFatosTitulosSeoComIA(seoLimpo, tema, roteiroContexto, OpenRouterAPI.getModelRoteiro());
+        seoLimpo = await window.revisarFatosTitulosSeoComIA(seoLimpo, tema, roteiroContexto, OpenRouterAPI.getModelIdeas());
       }
 
       const outEl = document.getElementById('output-prompt-seo');

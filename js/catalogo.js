@@ -2235,12 +2235,13 @@ Subscribe to the channel for more Bible accounts explained from the text.`;
       });
     }
 
-    const callAi = async (prompt, systemPrompt = null, opts = {}) => {
+    const callAi = async (prompt, systemPrompt = null, opts = {}, specificModel = null) => {
+      const activeModel = specificModel || modelo;
       if (apiClient && typeof apiClient.generateContent === 'function') {
-        return await apiClient.generateContent(prompt, modelo, systemPrompt, opts);
+        return await apiClient.generateContent(prompt, activeModel, systemPrompt, opts);
       }
       if (typeof OpenRouterAPI !== 'undefined' && OpenRouterAPI.generateContent) {
-        return await OpenRouterAPI.generateContent(prompt, modelo, systemPrompt, opts);
+        return await OpenRouterAPI.generateContent(prompt, activeModel, systemPrompt, opts);
       }
       throw new Error('Cliente de API de IA não disponível.');
     };
@@ -2331,6 +2332,9 @@ Subscribe to the channel for more Bible accounts explained from the text.`;
       if (!truncado) {
         let rawConferencia = '';
         try {
+          const modeloAuditoria = (typeof OpenRouterAPI !== 'undefined' && typeof OpenRouterAPI.getModelIdeas === 'function')
+            ? OpenRouterAPI.getModelIdeas()
+            : 'openai/gpt-4o-mini';
           rawConferencia = await callAi(
             gerarPromptConferenciaItem({
               versiculosTexto: it.versiculosTexto,
@@ -2340,7 +2344,8 @@ Subscribe to the channel for more Bible accounts explained from the text.`;
               referenciaFormatada: it.referenciaFormatada
             }),
             'Você é um auditor bíblico checador de fatos. Responda apenas com JSON.',
-            { temperature: 0, max_tokens: 2048 }
+            { temperature: 0, max_tokens: 2048 },
+            modeloAuditoria
           );
         } catch (e) {
           rawConferencia = '';
