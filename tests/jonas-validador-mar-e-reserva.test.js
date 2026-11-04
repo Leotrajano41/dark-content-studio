@@ -145,6 +145,39 @@ async function rodarTestesJonas() {
   checar(!fichas['Personagens Bíblicos'], 'Não criou ficha para categoria "Personagens Bíblicos"');
   checar(!fichas['Bíblia'], 'Não criou ficha para "Bíblia"');
 
+  // --- TESTE 5: Substituição de termos genéricos pelo nome do personagem e regra de cena final ---
+  console.log('\n--- TESTE 5: Termos genéricos substituídos pelo personagem e cena final sem pessoas ---');
+
+  // Caso 1: Cena 04 - personagem citado na frase ("Jonas, filho de Amitai") mas descrição com "A rugged prophet"
+  const frase04 = 'Antes disso, Jonas, filho de Amitai, recebeu do Senhor uma ordem direta:';
+  const descGen04 = 'A rugged prophet stands on the shore looking out at the turbulent waves';
+  const prompt04 = PlanoCenasModule.montarPromptFinalCena(descGen04, frase04, contextoProjeto, '04');
+  const descRes04 = PlanoCenasModule.resolverNomePersonagemEmDescricaoGenerica(descGen04, frase04, '04', contextoProjeto);
+
+  checar(descRes04.includes('Jonah stands on the shore'), `Cena 04: "A rugged prophet" substituído por "Jonah": "${descRes04}"`);
+  checar(prompt04.includes(fichas['Jonah']), 'Cena 04: prompt inclui a ficha canônica de Jonah');
+  checar(prompt04.includes('Jonah stands on the shore'), 'Cena 04: prompt utiliza o nome próprio Jonah');
+
+  // Caso 2: Cena 01 / gancho em 1ª pessoa ("Na minha angústia clamei...") com descrição "A man kneels..."
+  const frase01 = 'Na minha angústia clamei ao Senhor, e ele me respondeu; do ventre do abismo gritei, e tu ouviste a minha voz.';
+  const descGen01 = 'A man kneels on the rocky ground with hands clasped in prayer';
+  const prompt01 = PlanoCenasModule.montarPromptFinalCena(descGen01, frase01, contextoProjeto, '01');
+  const descRes01 = PlanoCenasModule.resolverNomePersonagemEmDescricaoGenerica(descGen01, frase01, '01', contextoProjeto);
+
+  checar(descRes01.includes('Jonah kneels on the rocky ground'), `Cena 01: "A man" substituído pelo personagem principal "Jonah": "${descRes01}"`);
+  checar(prompt01.includes(fichas['Jonah']), 'Cena 01: prompt inclui a ficha canônica de Jonah');
+  checar(prompt01.includes('Jonah kneels'), 'Cena 01: prompt utiliza o nome próprio Jonah');
+
+  // Caso 3: Cena 14 final sem pessoas (pergaminho / CTA)
+  const frase14 = 'Inscreva-se no canal e ative as notificações para mais estudos bíblicos profundos.';
+  const descGen14 = 'an ancient illuminated parchment scroll unrolled on a rustic cedar table beside a glowing brass oil lamp in solemn evening twilight';
+  const prompt14 = PlanoCenasModule.montarPromptFinalCena(descGen14, frase14, contextoProjeto, '14');
+
+  checar(PlanoCenasModule.ehCenaSemPessoas(descGen14, frase14) === true, 'Cena 14 identificada corretamente como cena sem pessoas');
+  checar(!prompt14.includes(fichas['Jonah']), 'Cena 14 (pergaminho/CTA): NÃO injeta a ficha de Jonah');
+  checar(!prompt14.includes('Jonah:'), 'Cena 14: livre de qualquer ficha de personagem');
+  checar(prompt14.includes('parchment scroll'), 'Cena 14: preserva o objeto inanimado histórico');
+
   console.log('\n🎉 Todos os testes de Jonas, Validador Mar/Água e Auto-Recuperação passaram com sucesso!');
 }
 

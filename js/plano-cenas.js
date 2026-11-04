@@ -1779,12 +1779,117 @@ ${exemploJson}`;
   }
 
   /**
+   * Verifica se a cena é final sem pessoas (pergaminho, escrivaninha, lâmpada de óleo, CTA).
+   * Cenas finais sem figuras humanas NUNCA devem receber fichas de personagens.
+   */
+  function ehCenaSemPessoas(descVisual, trechoPt) {
+    const t = (trechoPt || '').toLowerCase();
+    const d = (descVisual || '').toLowerCase();
+
+    // 1. Frases de chamada para ação / conclusão de canal
+    if (/\b(?:inscreva-se|canal|notifica[cç][oõ]es|estudo\s+b[íi]blico|compartilhe|deixe\s+seu\s+like|comente|pr[oó]ximo\s+v[íi]deo)\b/i.test(t)) {
+      return true;
+    }
+
+    // 2. Descrição visual de objetos inanimados / pergaminho / escrivaninha
+    if (/\b(?:parchment|scroll|illuminated manuscript|brass oil lamp|oil lamp|cedar table)\b/i.test(d)) {
+      if (!/\b(?:seated|sitting|kneel|kneeling|stand|standing|walk|walking|running|praying|gazing|looking|weeping|faces?|hands?|prophet|king|queen|man|woman|figure|person|people|crowd|darius|daniel|elias|elijah|jonah|jonas|david|davi|moses|mois[eé]s)\b/i.test(d)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Obtém o personagem principal do contexto do projeto (ou por dedução do tema/ideia).
+   */
+  function obterPersonagemPrincipalContexto(contexto = {}) {
+    if (contexto && contexto.personagemPrincipal && ehNomeProprioValidoPersonagem(contexto.personagemPrincipal)) {
+      return normalizarNomePersonagemCanonico(contexto.personagemPrincipal);
+    }
+    const textoTema = [
+      (contexto && contexto.tema) || '',
+      (contexto && contexto.ideia) || '',
+      (contexto && contexto.titulo) || ''
+    ].join(' ');
+    const persTema = detectarPersonagensNaDescricao(textoTema, contexto);
+    for (const p of persTema) {
+      if (ehNomeProprioValidoPersonagem(p)) {
+        return normalizarNomePersonagemCanonico(p);
+      }
+    }
+    const fichas = {
+      ...((contexto && contexto.fichasPersonagens) || {}),
+      ...(typeof window !== 'undefined' && window._fichasPersonagensAtual ? window._fichasPersonagensAtual : {})
+    };
+    for (const k of Object.keys(fichas)) {
+      if (ehNomeProprioValidoPersonagem(k)) {
+        return normalizarNomePersonagemCanonico(k);
+      }
+    }
+    return '';
+  }
+
+  /**
+   * Identifica o personagem bíblico pretendido para a cena:
+   * 1. Personagem citado na frase da cena.
+   * 2. Na cena 01/gancho com citação em 1ª pessoa ("clamei", "minha angústia", etc.), usa o personagem principal.
+   */
+  function identificarPersonagemAlvoCena(trechoPt, numeroCena, contexto = {}) {
+    const tLimpo = limparExpressoesGenealogicas(trechoPt || '').toLowerCase();
+    const numInt = parseInt(numeroCena, 10);
+
+    // 1. Personagens citados explicitamente no trecho da cena (após limpeza genealógica)
+    const persNaFrase = detectarPersonagensNaDescricao(tLimpo, contexto);
+    for (const p of persNaFrase) {
+      if (ehNomeProprioValidoPersonagem(p)) {
+        return normalizarNomePersonagemCanonico(p);
+      }
+    }
+
+    // 2. Cena 01 ou gancho com citação em 1ª pessoa
+    const ehPrimeiraPessoa = /\b(?:clamei|gritei|fui|estive|ouvi|disse|olhei|desci|vi|chorei|pedi|supliquei|minha|meu|meus|minhas|me|mim|eu|comigo)\b/i.test(tLimpo);
+    if ((numInt === 1 || !numeroCena || ehPrimeiraPessoa) && ehPrimeiraPessoa) {
+      const pp = obterPersonagemPrincipalContexto(contexto);
+      if (pp) return pp;
+    }
+
+    return '';
+  }
+
+  /**
+   * Substitui termos genéricos ("a man", "a prophet", "a rugged prophet", "a king", "a woman", "a figure")
+   * pelo nome próprio do personagem bíblico da cena quando citado na frase ou no gancho em 1ª pessoa.
+   */
+  function resolverNomePersonagemEmDescricaoGenerica(descVisual, trechoPt, numeroCena, contexto = {}) {
+    if (!descVisual || typeof descVisual !== 'string') return descVisual;
+    if (ehCenaSemPessoas(descVisual, trechoPt)) return descVisual;
+
+    const personagemAlvo = identificarPersonagemAlvoCena(trechoPt, numeroCena, contexto);
+    if (!personagemAlvo) return descVisual;
+
+    // Se a descrição já contém o nome próprio do personagem, não precisa substituir
+    if (new RegExp(`\\b${personagemAlvo}\\b`, 'i').test(descVisual)) {
+      return descVisual;
+    }
+
+    const REGEX_GENERICO = /\b(?:(?:an?|the)\s+)?(?:rugged\s+|elderly\s+|young\s+|old\s+|solitary\s+|ancient\s+|hebrew\s+|persian\s+|bearded\s+)?(?:prophet|man|woman|figure|king|queen|person|individual)\b/i;
+
+    if (REGEX_GENERICO.test(descVisual)) {
+      return descVisual.replace(REGEX_GENERICO, personagemAlvo);
+    }
+
+    return descVisual;
+  }
+
+  /**
    * Injeta os elementos fixos de consistência após a descrição visual:
    * 1. Prefixo do estilo do canal no início.
    * 2. Ficha canônica do personagem quando ele aparece (ITEM 2 e PONTO 1).
    * 3. Sufixo "Full bleed image, no border, no frame, no decorative corners. No text." no final.
    */
-  function montarPromptFinalCena(descricaoVisual, trechoPt, contexto = {}) {
+  function montarPromptFinalCena(descricaoVisual, trechoPt, contexto = {}, numeroCena = null) {
     let desc = (descricaoVisual || '').trim();
 
     // Remove eventuais prefixos ou sufixos duplicados
@@ -1792,10 +1897,15 @@ ${exemploJson}`;
     desc = desc.replace(/Full bleed image[^.]*\.?\s*$/i, '');
     desc = desc.replace(/^Depicting\s+/i, '');
 
+    const cenaSemPessoas = ehCenaSemPessoas(desc, trechoPt);
+    if (!cenaSemPessoas) {
+      desc = resolverNomePersonagemEmDescricaoGenerica(desc, trechoPt, numeroCena, contexto);
+    }
+
     // Se desc estiver vazia ou for curta demais (< 5 palavras) ou apenas o nome do personagem,
     // gera a ação concreta da cena a partir de trechoPt para garantir que a ação NUNCA suma
     if (contarPalavras(desc) < 5 || /^(?:elijah|david|moses|aaron|goliath|saul|samuel|jonathan|solomon|prophet|king|giant)[\s.:,]*$/i.test(desc)) {
-      desc = gerarDescricaoVisualSemantica(trechoPt, '01', 'medio', contexto);
+      desc = gerarDescricaoVisualSemantica(trechoPt, numeroCena || '01', 'medio', contexto);
       desc = desc.replace(/[.,;:\s]+$/, '');
     }
 
@@ -1825,46 +1935,48 @@ ${exemploJson}`;
     // NUNCA de quem é apenas mencionado no trecho falado (oração, fala ou genealogia).
     const descLowerLimpa = limparExpressoesGenealogicas(desc.toLowerCase());
 
-    // PONTO: Para cada personagem que aparece na descricaoVisual e não tem ficha (ex.: Darius),
-    // gera a ficha (lista fixa ou determinística) antes de montar os prompts
-    const persDetectadosNaDesc = detectarPersonagensNaDescricao(descLowerLimpa);
-    for (const pers of persDetectadosNaDesc) {
-      if (!ehNomeProprioValidoPersonagem(pers)) continue;
-      const canon = normalizarNomePersonagemCanonico(pers);
-      if (!ehNomeProprioValidoPersonagem(canon)) continue;
+    if (!cenaSemPessoas) {
+      // PONTO: Para cada personagem que aparece na descricaoVisual e não tem ficha (ex.: Darius),
+      // gera a ficha (lista fixa ou determinística) antes de montar os prompts
+      const persDetectadosNaDesc = detectarPersonagensNaDescricao(descLowerLimpa);
+      for (const pers of persDetectadosNaDesc) {
+        if (!ehNomeProprioValidoPersonagem(pers)) continue;
+        const canon = normalizarNomePersonagemCanonico(pers);
+        if (!ehNomeProprioValidoPersonagem(canon)) continue;
 
-      if (!fichasDisponiveis[canon]) {
-        const fichaNova = FICHAS_PERSONAGENS[pers.toLowerCase()] || FICHAS_PERSONAGENS[canon.toLowerCase()] || gerarFichaDeterministica(canon, pers, trechoPt);
-        if (fichaNova) {
-          fichasDisponiveis[canon] = fichaNova;
-          if (contexto.fichasPersonagens) {
-            contexto.fichasPersonagens[canon] = fichaNova;
-          }
-          if (typeof window !== 'undefined' && window._fichasPersonagensAtual) {
-            window._fichasPersonagensAtual[canon] = fichaNova;
+        if (!fichasDisponiveis[canon]) {
+          const fichaNova = FICHAS_PERSONAGENS[pers.toLowerCase()] || FICHAS_PERSONAGENS[canon.toLowerCase()] || gerarFichaDeterministica(canon, pers, trechoPt);
+          if (fichaNova) {
+            fichasDisponiveis[canon] = fichaNova;
+            if (contexto.fichasPersonagens) {
+              contexto.fichasPersonagens[canon] = fichaNova;
+            }
+            if (typeof window !== 'undefined' && window._fichasPersonagensAtual) {
+              window._fichasPersonagensAtual[canon] = fichaNova;
+            }
           }
         }
       }
-    }
 
-    for (const [chave, fichaCanon] of Object.entries(fichasDisponiveis)) {
-      if (!ehNomeProprioValidoPersonagem(chave)) continue;
-      const canon = normalizarNomePersonagemCanonico(chave);
-      if (!personagensEncontrados.some(p => p.nome.toLowerCase() === canon.toLowerCase())) {
-        const itemLex = DICIONARIO_LEXICO_PERSONAGENS.find(it => it.en.toLowerCase() === canon.toLowerCase() || it.pt.toLowerCase() === canon.toLowerCase());
-        let reg = new RegExp(`\\b${chave}\\b`, 'i');
-        if (itemLex) {
-          reg = new RegExp(`\\b(?:${itemLex.en}|${itemLex.pt}${itemLex.altPt ? '|' + itemLex.altPt : ''})\\b`, 'i');
-        }
-        // Busca EXCLUSIVAMENTE na descrição visual da cena (descLowerLimpa)
-        if (reg.test(descLowerLimpa)) {
-          personagensEncontrados.push({ nome: canon, ficha: fichaCanon });
+      for (const [chave, fichaCanon] of Object.entries(fichasDisponiveis)) {
+        if (!ehNomeProprioValidoPersonagem(chave)) continue;
+        const canon = normalizarNomePersonagemCanonico(chave);
+        if (!personagensEncontrados.some(p => p.nome.toLowerCase() === canon.toLowerCase())) {
+          const itemLex = DICIONARIO_LEXICO_PERSONAGENS.find(it => it.en.toLowerCase() === canon.toLowerCase() || it.pt.toLowerCase() === canon.toLowerCase());
+          let reg = new RegExp(`\\b${chave}\\b`, 'i');
+          if (itemLex) {
+            reg = new RegExp(`\\b(?:${itemLex.en}|${itemLex.pt}${itemLex.altPt ? '|' + itemLex.altPt : ''})\\b`, 'i');
+          }
+          // Busca EXCLUSIVAMENTE na descrição visual da cena (descLowerLimpa)
+          if (reg.test(descLowerLimpa)) {
+            personagensEncontrados.push({ nome: canon, ficha: fichaCanon });
+          }
         }
       }
     }
 
     let blocoFichas = '';
-    if (personagensEncontrados.length > 0) {
+    if (!cenaSemPessoas && personagensEncontrados.length > 0) {
       blocoFichas = personagensEncontrados.map(p => p.ficha).join(', ') + '. ';
     }
 
@@ -2095,10 +2207,11 @@ Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
         }
 
         // PONTO 2: Status final SEMPRE CONCLUIDA, nunca descrição vazia
+        descVisual = resolverNomePersonagemEmDescricaoGenerica(descVisual, trechoPt, c.numero, contexto);
         c.status = 'CONCLUIDA';
         c.motivoPendente = '';
         c.descricaoVisual = descVisual;
-        c.promptIngles = montarPromptFinalCena(descVisual, trechoPt, contexto);
+        c.promptIngles = montarPromptFinalCena(descVisual, trechoPt, contexto, c.numero);
         descricoesAcumuladas.push(descVisual);
       }
     }
@@ -2130,11 +2243,12 @@ Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
           ...contexto,
           descricoesAnteriores: descricoesConcluidas
         });
+        const descResolvida = resolverNomePersonagemEmDescricaoGenerica(descVisual, trechoPt, c.numero, contexto);
         c.status = 'CONCLUIDA';
         c.motivoPendente = '';
-        c.descricaoVisual = descVisual;
-        c.promptIngles = montarPromptFinalCena(descVisual, trechoPt, contexto);
-        descricoesConcluidas.push(descVisual);
+        c.descricaoVisual = descResolvida;
+        c.promptIngles = montarPromptFinalCena(descResolvida, trechoPt, contexto, c.numero);
+        descricoesConcluidas.push(descResolvida);
       }
       return {
         cenas,
@@ -2268,11 +2382,12 @@ Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
         }
 
         // PONTO 2: Status final SEMPRE CONCLUIDA, nunca descrição vazia
+        const descResolvida = resolverNomePersonagemEmDescricaoGenerica(descVisual, trechoPt, c.numero, contexto);
         c.status = 'CONCLUIDA';
         c.motivoPendente = '';
-        c.descricaoVisual = descVisual;
-        c.promptIngles = montarPromptFinalCena(descVisual, trechoPt, contexto);
-        descricoesConcluidas.push(descVisual);
+        c.descricaoVisual = descResolvida;
+        c.promptIngles = montarPromptFinalCena(descResolvida, trechoPt, contexto, c.numero);
+        descricoesConcluidas.push(descResolvida);
       }
     }
 
@@ -2292,14 +2407,15 @@ Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
     const descricoesAcumuladas = [];
     for (const c of cenas) {
       const trechoPt = c.frases.join(' ');
-      const descVisual = gerarDescricaoVisualFallback(trechoPt, c.numero, {
+      let descVisual = gerarDescricaoVisualFallback(trechoPt, c.numero, {
         ...contexto,
         descricoesAnteriores: descricoesAcumuladas
       });
+      descVisual = resolverNomePersonagemEmDescricaoGenerica(descVisual, trechoPt, c.numero, contexto);
       c.descricaoVisual = descVisual;
       c.status = 'CONCLUIDA';
       c.motivoPendente = '';
-      c.promptIngles = montarPromptFinalCena(descVisual, trechoPt, contexto);
+      c.promptIngles = montarPromptFinalCena(descVisual, trechoPt, contexto, c.numero);
       descricoesAcumuladas.push(descVisual);
     }
     return cenas;
@@ -2812,6 +2928,9 @@ Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
     DICIONARIO_LEXICO_PERSONAGENS,
     detectarTipoEnquadramento,
     detectarPersonagensNaDescricao,
+    ehCenaSemPessoas,
+    identificarPersonagemAlvoCena,
+    resolverNomePersonagemEmDescricaoGenerica,
     montarPromptFinalCena,
     gerarDescricaoVisualSemantica,
     gerarDescricaoVisualFallback,
