@@ -1518,12 +1518,16 @@ CRITICAL RULES:
 5. DOMINANT EVENT RULE:
    - If an excerpt contains more than one action or subject, depict the primary event that occupies the majority of the text.
 6. FORBIDDEN to include elements from other biblical events or stories (e.g., NEVER include sea, ocean waves, or shore if the text is about a valley, desert, rock, camp, or mountain).
-7. Use strictly biblical English names and respect CANONICAL CHARACTER IDENTITY: David, Goliath, Saul, Samuel, Jonathan, Solomon, Moses, Aaron, Miriam, Joshua, Eleazar, Pharaoh.
-8. FORBIDDEN to depict God as a human figure, face, or humanoid shadow. Depict divine presence through glorious radiant celestial light, glowing illumination, pillar of cloud or fire.
-9. Do NOT include Portuguese words.
-10. Do NOT use generic placeholders like "biblical tableau", "artistic depiction" or "scene representing". Describe the physical concrete action.
-11. CRITICAL SCENE NUMBERING RULE: You MUST PRESERVE the exact scene numbers from INPUT SCENES: [${numerosEsperados}]. DO NOT restart numbering from "01" if scenes are ${numerosEsperados}!
-12. Output EXCLUSIVELY a valid JSON array of objects with "numero" and "descricaoVisual".
+7. MANDATORY CHARACTER NAMING RULE (NEVER USE GENERIC PRONOUNS OR DESCRIPTIONS):
+   - Whenever a biblical character appears in the scene (e.g. Jonah, David, Esther, Darius), you MUST ALWAYS write their explicit canonical biblical NAME directly in the description (e.g. "Jonah boarding the ship", "Jonah kneeling in prayer", "Jonah gesturing toward the city gates").
+   - It is STRICTLY FORBIDDEN to refer to an active character generically or with pronouns: NEVER write "the same man", "the man", "this man", "he", "a man", "a prophet", "the prophet", "a figure", "the same figure", "a person". Always use their specific proper name!
+   - If the scene focuses exclusively on a different group or secondary people (e.g. "a dramatic close-up on the faces of the Ninevites in repentance", "anxious sailors tossing cargo into the stormy sea"), describe ONLY that specific group and DO NOT include the main character's name unless they physically appear in that shot.
+8. Use strictly biblical English names and respect CANONICAL CHARACTER IDENTITY: David, Goliath, Saul, Samuel, Jonathan, Solomon, Moses, Aaron, Miriam, Joshua, Eleazar, Pharaoh.
+9. FORBIDDEN to depict God as a human figure, face, or humanoid shadow. Depict divine presence through glorious radiant celestial light, glowing illumination, pillar of cloud or fire.
+10. Do NOT include Portuguese words.
+11. Do NOT use generic placeholders like "biblical tableau", "artistic depiction" or "scene representing". Describe the physical concrete action.
+12. CRITICAL SCENE NUMBERING RULE: You MUST PRESERVE the exact scene numbers from INPUT SCENES: [${numerosEsperados}]. DO NOT restart numbering from "01" if scenes are ${numerosEsperados}!
+13. Output EXCLUSIVELY a valid JSON array of objects with "numero" and "descricaoVisual".
 ${blocoFichasIa}${blocoAnteriores}
 INPUT SCENES:
 ${cenasFormatadas}
@@ -1859,12 +1863,33 @@ ${exemploJson}`;
   }
 
   /**
-   * Substitui termos genéricos ("a man", "a prophet", "a rugged prophet", "a king", "a woman", "a figure")
+   * Detecta se a descrição visual é focada exclusivamente em outro grupo secundário ou multidão
+   * (ex: Ninivitas, marinheiros, multidão, soldados) sem a presença física do personagem bíblico individual.
+   */
+  function ehFocoEmOutroGrupo(descVisual) {
+    if (!descVisual || typeof descVisual !== 'string') return false;
+    const d = descVisual.toLowerCase();
+
+    // Se o personagem bíblico principal/canônico já está explicitamente na descrição, não é grupo exclusivo
+    const persDetectados = detectarPersonagensNaDescricao(d);
+    if (persDetectados.length > 0) {
+      return false;
+    }
+
+    const REGEX_OUTRO_GRUPO = /\b(?:faces?\s+of\s+(?:the\s+)?(?:ninevites|sailors|mariners|soldiers|elders|crowd|multitude|onlookers|priests|people)|(?:ninevites|citizens\s+of\s+nineveh|people\s+of\s+nineveh|sailors|mariners|ship\s+crew|pagan\s+prophets|prophets\s+of\s+baal|philistine\s+army|gathered\s+assembly|assembled\s+crowd|hebrew\s+multitude|onlookers\s+watching))\b/i;
+
+    return REGEX_OUTRO_GRUPO.test(d);
+  }
+
+  /**
+   * Substitui termos genéricos ("the same man", "the man", "this man", "the prophet", "he ", "a man", "a prophet", etc.)
    * pelo nome próprio do personagem bíblico da cena quando citado na frase ou no gancho em 1ª pessoa.
    */
   function resolverNomePersonagemEmDescricaoGenerica(descVisual, trechoPt, numeroCena, contexto = {}) {
     if (!descVisual || typeof descVisual !== 'string') return descVisual;
     if (ehCenaSemPessoas(descVisual, trechoPt)) return descVisual;
+    // Se a descrição é focada em outro grupo (ex.: "faces of the Ninevites", "sailors"), NÃO substitui
+    if (ehFocoEmOutroGrupo(descVisual)) return descVisual;
 
     const personagemAlvo = identificarPersonagemAlvoCena(trechoPt, numeroCena, contexto);
     if (!personagemAlvo) return descVisual;
@@ -1874,13 +1899,27 @@ ${exemploJson}`;
       return descVisual;
     }
 
-    const REGEX_GENERICO = /\b(?:(?:an?|the)\s+)?(?:rugged\s+|elderly\s+|young\s+|old\s+|solitary\s+|ancient\s+|hebrew\s+|persian\s+|bearded\s+)?(?:prophet|man|woman|figure|king|queen|person|individual)\b/i;
+    let d = descVisual;
 
-    if (REGEX_GENERICO.test(descVisual)) {
-      return descVisual.replace(REGEX_GENERICO, personagemAlvo);
+    // 1. Substitui "He " no início da descrição (ex.: "He gestures toward..." -> "Jonah gestures toward...")
+    if (/^(?:he\b|He\b)\s+/i.test(d)) {
+      return d.replace(/^(?:he\b|He\b)\s+/i, `${personagemAlvo} `);
     }
 
-    return descVisual;
+    // 2. Termos genéricos prioritários e compostos:
+    // "the same man", "the man", "this man", "the prophet", "a rugged prophet", etc.
+    const REGEX_GENERICO_EXATO = /\b(?:the\s+same\s+man|the\s+same\s+figure|this\s+man|the\s+man|the\s+prophet|a\s+rugged\s+prophet|a\s+prophet|a\s+man|a\s+figure|a\s+king|a\s+woman)\b/i;
+    if (REGEX_GENERICO_EXATO.test(d)) {
+      return d.replace(REGEX_GENERICO_EXATO, personagemAlvo);
+    }
+
+    // 3. Fallback genérico amplo
+    const REGEX_GENERICO_AMPLO = /\b(?:(?:an?|the)\s+)?(?:same\s+|this\s+|rugged\s+|elderly\s+|young\s+|old\s+|solitary\s+|ancient\s+|hebrew\s+|persian\s+|bearded\s+)?(?:prophet|man|woman|figure|king|queen|person|individual)\b/i;
+    if (REGEX_GENERICO_AMPLO.test(d)) {
+      return d.replace(REGEX_GENERICO_AMPLO, personagemAlvo);
+    }
+
+    return d;
   }
 
   /**
@@ -1898,7 +1937,9 @@ ${exemploJson}`;
     desc = desc.replace(/^Depicting\s+/i, '');
 
     const cenaSemPessoas = ehCenaSemPessoas(desc, trechoPt);
-    if (!cenaSemPessoas) {
+    const focoOutroGrupo = ehFocoEmOutroGrupo(desc);
+
+    if (!cenaSemPessoas && !focoOutroGrupo) {
       desc = resolverNomePersonagemEmDescricaoGenerica(desc, trechoPt, numeroCena, contexto);
     }
 
@@ -1932,10 +1973,11 @@ ${exemploJson}`;
     };
 
     // PONTO 1: Injetar a ficha SÓ dos personagens que estão na descricaoVisual da cena (quem aparece na imagem),
-    // NUNCA de quem é apenas mencionado no trecho falado (oração, fala ou genealogia).
+    // NUNCA de quem é apenas mencionado no trecho falado (oração, fala ou genealogia)
+    // e NUNCA quando a cena é focada exclusivamente em outro grupo secundário (ex.: Ninevites, sailors).
     const descLowerLimpa = limparExpressoesGenealogicas(desc.toLowerCase());
 
-    if (!cenaSemPessoas) {
+    if (!cenaSemPessoas && !focoOutroGrupo) {
       // PONTO: Para cada personagem que aparece na descricaoVisual e não tem ficha (ex.: Darius),
       // gera a ficha (lista fixa ou determinística) antes de montar os prompts
       const persDetectadosNaDesc = detectarPersonagensNaDescricao(descLowerLimpa);
@@ -1976,7 +2018,7 @@ ${exemploJson}`;
     }
 
     let blocoFichas = '';
-    if (!cenaSemPessoas && personagensEncontrados.length > 0) {
+    if (!cenaSemPessoas && !focoOutroGrupo && personagensEncontrados.length > 0) {
       blocoFichas = personagensEncontrados.map(p => p.ficha).join(', ') + '. ';
     }
 
@@ -2167,6 +2209,8 @@ The previous attempt was rejected because: "${motivoRej}".
 CRITICAL INSTRUCTIONS:
 - You MUST fix the rejected issue completely.
 - If rejected for forbidden words, NEVER use words like 'viewers', 'audience', 'subscribe', 'channel', or 'video'.
+- ALWAYS write the exact proper NAME of the character appearing in the scene (e.g. Jonah, David). NEVER refer to them as "the same man", "the man", "this man", "he", "a man", "a prophet" or "a figure".
+- If the shot focuses on secondary people or a group (e.g. "faces of the Ninevites", "sailors"), describe only that group without adding the main character unless physically visible.
 - Narration excerpt: "${trechoPt}".
 - Characters present: ${persCena.join(', ') || 'biblical figures'}.
 - Camera framing: ${enqSugerido}.
@@ -2340,6 +2384,8 @@ The previous attempt was rejected because: "${motivoRej}".
 CRITICAL INSTRUCTIONS:
 - You MUST fix the rejected issue completely.
 - If rejected for forbidden words, NEVER use words like 'viewers', 'audience', 'subscribe', 'channel', or 'video'.
+- ALWAYS write the exact proper NAME of the character appearing in the scene (e.g. Jonah, David). NEVER refer to them as "the same man", "the man", "this man", "he", "a man", "a prophet" or "a figure".
+- If the shot focuses on secondary people or a group (e.g. "faces of the Ninevites", "sailors"), describe only that group without adding the main character unless physically visible.
 - Narration excerpt: "${trechoPt}".
 - Characters present: ${persCena.join(', ') || 'biblical figures'}.
 - Camera framing: ${enqSugerido}.
@@ -2929,6 +2975,7 @@ Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
     detectarTipoEnquadramento,
     detectarPersonagensNaDescricao,
     ehCenaSemPessoas,
+    ehFocoEmOutroGrupo,
     identificarPersonagemAlvoCena,
     resolverNomePersonagemEmDescricaoGenerica,
     montarPromptFinalCena,

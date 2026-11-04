@@ -168,7 +168,27 @@ async function rodarTestesJonas() {
   checar(prompt01.includes(fichas['Jonah']), 'Cena 01: prompt inclui a ficha canônica de Jonah');
   checar(prompt01.includes('Jonah kneels'), 'Cena 01: prompt utiliza o nome próprio Jonah');
 
-  // Caso 3: Cena 14 final sem pessoas (pergaminho / CTA)
+  // Caso 3: Cena 05 - "the same man" gesturing ("Levanta-te, vai à grande cidade de Nínive...")
+  const frase05 = 'A palavra do Senhor veio a Jonas pela segunda vez: Levanta-te, vai à grande cidade de Nínive.';
+  const descGen05 = 'A dynamic medium shot of the same man gesturing toward the distant ancient city gates';
+  const prompt05 = PlanoCenasModule.montarPromptFinalCena(descGen05, frase05, contextoProjeto, '05');
+  const descRes05 = PlanoCenasModule.resolverNomePersonagemEmDescricaoGenerica(descGen05, frase05, '05', contextoProjeto);
+
+  checar(descRes05.includes('Jonah gesturing'), `Cena 05: "the same man" substituído por "Jonah": "${descRes05}"`);
+  checar(prompt05.includes(fichas['Jonah']), 'Cena 05: prompt inclui a ficha canônica de Jonah');
+  checar(prompt05.includes('Jonah gesturing'), 'Cena 05: prompt utiliza o nome próprio Jonah');
+
+  // Caso 4: Cena 13 focada em outro grupo ("faces of the Ninevites") - NÃO injeta ficha de Jonah
+  const frase13 = 'Os homens de Nínive creram em Deus, proclamaram um jejum e vestiram-se de pano de saco.';
+  const descGen13 = 'A dramatic close-up on the faces of the Ninevites covered in ashes and sackcloth in deep repentance';
+  const prompt13 = PlanoCenasModule.montarPromptFinalCena(descGen13, frase13, contextoProjeto, '13');
+
+  checar(PlanoCenasModule.ehFocoEmOutroGrupo(descGen13) === true, 'Cena 13 identificada como foco em outro grupo (Ninevites)');
+  checar(!prompt13.includes(fichas['Jonah']), 'Cena 13 (faces of the Ninevites): NÃO injeta a ficha de Jonah');
+  checar(!prompt13.includes('Jonah:'), 'Cena 13: prompt livre de ficha de Jonah');
+  checar(prompt13.includes('faces of the Ninevites'), 'Cena 13: preserva foco nos Ninevitas');
+
+  // Caso 5: Cena 14 final sem pessoas (pergaminho / CTA)
   const frase14 = 'Inscreva-se no canal e ative as notificações para mais estudos bíblicos profundos.';
   const descGen14 = 'an ancient illuminated parchment scroll unrolled on a rustic cedar table beside a glowing brass oil lamp in solemn evening twilight';
   const prompt14 = PlanoCenasModule.montarPromptFinalCena(descGen14, frase14, contextoProjeto, '14');
