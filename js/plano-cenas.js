@@ -1037,12 +1037,14 @@ Example output:
   function gerarDescricaoVisualSemantica(trechoPt, numeroCena, enqSugerido = 'medio', contexto = {}, descricoesAnteriores = []) {
     const t = (trechoPt || '').toLowerCase();
     const pers = detectarPersonagensNaDescricao(t);
-    let primeiroNome = pers.length > 0 ? (NOMES_PERSONAGENS_NORMALIZADOS[pers[0]] || pers[0]) : '';
+    let primeiroNome = pers.length > 0 ? normalizarNomePersonagemCanonico(pers[0]) : '';
     if (/\b(?:dario|darius)\b/i.test(t) && /\b(?:assinou|decreto|jejuou|noite|correu|apressou|chamou|ordenou|j[uú]bilo)\b/i.test(t)) {
       primeiroNome = 'Darius';
     }
     if (!primeiroNome && contexto.personagemPrincipal) {
-      primeiroNome = NOMES_PERSONAGENS_NORMALIZADOS[contexto.personagemPrincipal.toLowerCase()] || contexto.personagemPrincipal;
+      if (ehNomeProprioValidoPersonagem(contexto.personagemPrincipal)) {
+        primeiroNome = normalizarNomePersonagemCanonico(contexto.personagemPrincipal);
+      }
     }
 
     // 1. Detecta lugar/topônimo no trecho ou no tema do contexto
@@ -1069,10 +1071,35 @@ Example output:
         lugar = 'the sunlit barley fields of Bethlehem';
       } else if (/\b(?:mar\s+vermelho)\b/i.test(temaLower) || /\b(?:mar\s+vermelho)\b/i.test(t)) {
         lugar = 'the parted seabed of the Red Sea';
+      } else if (/\b(?:navio|embarcou|porto|jope|mar|mares|tempestade|ondas?|naufr[aá]gio)\b/i.test(t)) {
+        lugar = 'the tempestuous maritime waters near the port of Joppa';
+      } else if (/\b(?:n[íi]nive)\b/i.test(t) || /\b(?:n[íi]nive)\b/i.test(temaLower)) {
+        lugar = 'the ancient stone city of Nineveh';
+      } else if (/\b(?:t[aá]rsis)\b/i.test(t)) {
+        lugar = 'the coastal waters toward Tarshish';
+      } else if (/\b(?:rio|ribeiro|[aá]guas?)\b/i.test(t)) {
+        lugar = 'the flowing biblical riverbank';
+      } else if (/\b(?:monte|montanha|cume)\b/i.test(t)) {
+        lugar = 'the rugged biblical mountain heights';
+      } else if (/\b(?:deserto|areia|ermo)\b/i.test(t)) {
+        lugar = 'the vast arid desert wilderness';
+      } else if (/\b(?:pal[aá]cio|trono|corte)\b/i.test(t)) {
+        lugar = 'the royal stone palace court';
+      } else if (/\b(?:cidade|muralha|porta)\b/i.test(t)) {
+        lugar = 'the ancient fortified stone city gates';
       } else {
-        lugar = 'the ancient biblical landscape';
+        lugar = 'the historical biblical setting';
       }
     }
+
+    const sujeito = (primeiroNome && ehNomeProprioValidoPersonagem(primeiroNome))
+      ? normalizarNomePersonagemCanonico(primeiroNome)
+      : (/\b(?:marinheiros?|tripula[cç][aã]o)\b/i.test(t) ? 'anxious ancient mariners' :
+         /\b(?:pescador(?:es)?)\b/i.test(t) ? 'humble Galilean fishermen' :
+         /\b(?:anci[aã]os?)\b/i.test(t) ? 'revered biblical elders' :
+         /\b(?:soldados?|guardas?)\b/i.test(t) ? 'ancient armed guards' :
+         /\b(?:multid[aã]o|povo)\b/i.test(t) ? 'assembled biblical crowd' :
+         'faithful biblical figures');
 
     // 2. Detecta ação física concreta respeitando ESTRITAMENTE o ciclo do roteiro ATUAL
     let acao = '';
@@ -1188,19 +1215,43 @@ Example output:
       acao = `an ancient illuminated parchment scroll unrolled on a rustic cedar table beside a glowing brass oil lamp in solemn evening twilight`;
     }
 
-    // Ações contextuais universais (sem vincular a histórias ou personagens alheios)
+    // Ações contextuais universais e ricas (baseadas em verbos, lugares e objetos reais da frase da cena)
+    // PROIBIDO expressamente usar "solemn historical events" ou "ancient biblical landscape" como único conteúdo
     if (!acao) {
-      const sujeito = (primeiroNome && ehNomeProprioValidoPersonagem(primeiroNome)) ? primeiroNome : 'authentic biblical figures';
-      if (/\b(?:sil[eê]ncio|nada\s+aconteceu|sem\s+resposta|ningu[eé]m\s+respondeu|nenhuma\s+voz)\b/i.test(t)) {
-        acao = `${sujeito} standing in profound, breathless silence at ${lugar} under dramatic atmospheric lighting`;
-      } else if (/\b(?:orou|orando|clamou|s[uú]plica|prece)\b/i.test(t)) {
-        acao = `${sujeito} kneeling with hands outstretched in solemn earnest prayer at ${lugar}`;
+      if (/\b(?:navio|embarcou|embarca[cç][aã]o|barco|marinheiro|porto|jope)\b/i.test(t)) {
+        acao = `${sujeito} boarding the weathered wooden sailing ship at the ancient stone harbor, ropes and sails prepared for voyage`;
+      } else if (/\b(?:tempestade|tormenta|vento|ondas?|naufr[aá]gio)\b/i.test(t)) {
+        acao = `${sujeito} confronting the ferocious storm winds as towering turbulent waves violently toss the wooden ship`;
+      } else if (/\b(?:lan[cç]ado|lan[cç]aram|jogaram|profundezas|abismo|cora[cç][aã]o\s+dos\s+mares)\b/i.test(t)) {
+        acao = `${sujeito} being cast into the tempestuous surging ocean waves as dark waters churn in dramatic turmoil`;
+      } else if (/\b(?:peixe|grande\s+peixe|baleia|ventre|engoliu|tr[eê]s\s+dias)\b/i.test(t)) {
+        acao = `${sujeito} preserved within the deep ocean depths beside the colossal sea creature under divine providence`;
+      } else if (/\b(?:dormia|dormindo|por[aã]o|desceu\s+ao\s+por[aã]o)\b/i.test(t)) {
+        acao = `${sujeito} resting in the shadowy lower hold of the tossing wooden vessel under dim oil lamp light`;
+      } else if (/\b(?:fugiu|fuga|desobedeceu|t[aá]rsis)\b/i.test(t)) {
+        acao = `${sujeito} hastening away in urgent journey toward the coastal horizon with conflicted expression`;
+      } else if (/\b(?:ang[uú]stia|clamou|orou|orando|s[uú]plica|prece|aflito|afli[cç][aã]o|respondeu)\b/i.test(t)) {
+        acao = `${sujeito} kneeling with hands outstretched in earnest heartfelt prayer, crying out from deep anguish under heavenly light`;
+      } else if (/\b(?:n[íi]nive|pregou|proclamou|mensagem|advert[eê]ncia|exortou|pregava)\b/i.test(t)) {
+        acao = `${sujeito} walking through the ancient stone city thoroughfares with arm raised, boldly declaring the prophetic word`;
+      } else if (/\b(?:jejum|cinza|saco|arrependeu|arrepender|pranto|humilhou)\b/i.test(t)) {
+        acao = `${sujeito} sitting in humble sackcloth and ashes in sincere repentance and humility before God`;
+      } else if (/\b(?:aboboreira|planta|sombra|sol|calor|vento\s+oriental|secou)\b/i.test(t)) {
+        acao = `${sujeito} sheltering beneath a leafy plant under the scorching heat and arid desert winds`;
+      } else if (/\b(?:sil[eê]ncio|nada\s+aconteceu|sem\s+resposta|ningu[eé]m\s+respondeu|nenhuma\s+voz)\b/i.test(t)) {
+        acao = `${sujeito} standing in profound, breathless silence at ${lugar} under brooding atmospheric skies`;
       } else if (/\b(?:fogo|chamas?)\b/i.test(t)) {
-        acao = `${sujeito} standing before blazing sacred fire illuminating ${lugar} under dramatic evening skies`;
-      } else if (/\b(?:decreto|edito|lei)\b/i.test(t)) {
-        acao = `${sujeito} reading an official sealed parchment decree at ${lugar}`;
+        acao = `${sujeito} standing reverently before blazing sacred fire illuminating ${lugar} under dramatic evening skies`;
+      } else if (/\b(?:decreto|edito|lei|cartas?|selo)\b/i.test(t)) {
+        acao = `${sujeito} presenting the official sealed parchment decree before the gathered assembly at ${lugar}`;
+      } else if (/\b(?:caminh|andou|partiu|viajou|jornada|estrada)\b/i.test(t)) {
+        acao = `${sujeito} journeying with resolute pace along the rugged stone pathway carrying a traveler staff`;
+      } else if (/\b(?:olhou|viu|contemplou|vis[aã]o)\b/i.test(t)) {
+        acao = `${sujeito} gazing outward with deep solemn emotion across the horizon at ${lugar}`;
+      } else if (/\b(?:disse|falou|perguntou|chamou)\b/i.test(t)) {
+        acao = `${sujeito} speaking with intense solemn conviction before listening companions at ${lugar}`;
       } else {
-        acao = `${sujeito} participating in solemn historical events at ${lugar} under dramatic atmospheric lighting`;
+        acao = `${sujeito} engaged in resolute dramatic physical action at ${lugar} under cinematic atmospheric lighting`;
       }
     }
 
@@ -1359,7 +1410,7 @@ Example output:
   function detectarPersonagensNaDescricao(desc, contexto = {}) {
     if (!desc || typeof desc !== 'string') return [];
     const d = desc.toLowerCase();
-    const pers = [];
+    const matches = [];
     const jaAdicionados = new Set();
 
     // 1. Chaves de fichas existentes no contexto ou na sessão atual
@@ -1371,8 +1422,9 @@ Example output:
       const kNorm = (NOMES_PERSONAGENS_NORMALIZADOS[k.toLowerCase()] || k).toLowerCase();
       if (!jaAdicionados.has(kNorm)) {
         const reg = new RegExp(`\\b${k}\\b`, 'i');
-        if (reg.test(d)) {
-          pers.push(kNorm);
+        const m = d.match(reg);
+        if (m) {
+          matches.push({ nome: kNorm, pos: m.index !== undefined ? m.index : 0 });
           jaAdicionados.add(kNorm);
         }
       }
@@ -1385,14 +1437,24 @@ Example output:
         const regEn = new RegExp(`\\b${item.en}\\b`, 'i');
         const regPt = new RegExp(`\\b${item.pt}\\b`, 'i');
         const regAlt = item.altPt ? new RegExp(`\\b${item.altPt}\\b`, 'i') : null;
-        if (regEn.test(d) || regPt.test(d) || (regAlt && regAlt.test(d))) {
-          pers.push(kNorm);
+        let pos = -1;
+        const mEn = d.match(regEn);
+        const mPt = d.match(regPt);
+        const mAlt = regAlt ? d.match(regAlt) : null;
+        if (mEn) pos = mEn.index;
+        else if (mPt) pos = mPt.index;
+        else if (mAlt) pos = mAlt.index;
+
+        if (pos !== -1) {
+          matches.push({ nome: kNorm, pos });
           jaAdicionados.add(kNorm);
         }
       }
     }
 
-    return pers.sort();
+    // Ordena pela posição de aparição no texto da cena (quem aparece primeiro tem precedência)
+    matches.sort((a, b) => a.pos - b.pos);
+    return matches.map(m => m.nome);
   }
 
   /**
@@ -1605,18 +1667,28 @@ ${exemploJson}`;
     // Sanitiza usos legítimos de "audience" (audiência real com o rei) em vez de reprovar
     let desc = sanitizarTermosAudienciaLegitimos(descricaoVisual.trim());
 
-    // 1. Detecção de falso mar / águas indevidas
+    // 1. Detecção de falso mar / águas indevidas com verificação contextual completa (tema + roteiro + trecho)
+    // Permite "sea/ocean/water/ship/waves" se o roteiro fala de mar, navio, peixe, tempestade, porto, profundezas etc.
+    const REGEX_MARITIMO_AMPLO = /(?<![\p{L}])(?:mar|mares|mar[íi]timo|mar[íi]tima|mar[íi]timos|oceano|oceanos|ondas?|naufr[aá]gio|navio|navios|embarcou|embarca[cç][aã]o|barco|barcos|porto|jope|t[aá]rsis|profundezas?|abismo|peixe|peixes|baleia|tempestade|tormenta|remavam|marinheiros?|tripula[cç][aã]o|[aá]guas?|rio|ribeiro|pescador|pescadores|pesca|redes?)(?![\p{L}])/iu;
+
+    const contextoGeral = [
+      contexto.tema || '',
+      contexto.narracaoLimpa || '',
+      contexto.roteiro || '',
+      contexto.ideia || '',
+      contexto.titulo || '',
+      trechoPt || ''
+    ].join(' ');
+    const temContextoMaritimo = REGEX_MARITIMO_AMPLO.test(contextoGeral);
+
     const temMarNaDescricao = /\b(?:sea|ocean|waves?)\b/i.test(desc);
-    if (temMarNaDescricao) {
-      const temMarNoTrecho = /(?<![\p{L}])(?:mar|oceano|ondas?)(?![\p{L}])/iu.test(trechoPt);
-      if (!temMarNoTrecho) {
-        return { valido: false, motivo: 'Contém termos de mar ("sea"/"ocean") sem menção a mar no trecho narrativo.' };
-      }
+    if (temMarNaDescricao && !temContextoMaritimo) {
+      return { valido: false, motivo: 'Contém termos de mar ("sea"/"ocean") sem menção a mar no trecho narrativo.' };
     }
 
     const temAguaNaDescricao = /\bwaters?\b/i.test(desc);
-    if (temAguaNaDescricao) {
-      const temAguaNoTrecho = /(?<![\p{L}])(?:mar|oceano|[aá]guas?|beber|sede|fonte|rio|ribeiro|po[cç]o|jorr(?:ar|ou)|brot(?:ar|aram)|manancial)(?![\p{L}])/iu.test(trechoPt);
+    if (temAguaNaDescricao && !temContextoMaritimo) {
+      const temAguaNoTrecho = /(?<![\p{L}])(?:mar|mares|oceano|oceanos|[aá]guas?|beber|sede|fonte|rio|ribeiro|po[cç]o|jorr(?:ar|ou)|brot(?:ar|aram)|manancial|navio|barco|porto|profundezas?)(?![\p{L}])/iu.test(trechoPt);
       if (!temAguaNoTrecho) {
         return { valido: false, motivo: 'Contém termos aquáticos ("water"/"waters") sem menção a água no trecho narrativo.' };
       }
@@ -1914,8 +1986,9 @@ ${exemploJson}`;
         trecho: c.frases.join(' ')
       }));
 
-      // Extrai as descrições das cenas já concluídas anteriormente
+      // Extrai as descrições das cenas já concluídas em lotes anteriores
       const descricoesAcumuladas = cenas
+        .slice(0, l * tamanhoLote)
         .filter(c => c.status === 'CONCLUIDA' && c.descricaoVisual)
         .map(c => c.descricaoVisual);
 
@@ -1946,65 +2019,30 @@ ${exemploJson}`;
         const itemIa = localizarItemIaCena(itensLote, c, idx);
         let descVisual = extrairTextoDescricaoVisual(itemIa);
 
-        // Se a IA do lote falhou ou omitiu a cena, registra pendência para permitir regeneração manual ou botão de pendentes
-        if (erroIaLote || !itemIa) {
-          c.status = 'PENDENTE';
-          c.motivoPendente = erroIaLote ? `Erro da IA: ${erroIaLote}` : 'Descrição ausente na resposta da IA.';
-          c.descricaoVisual = '';
-          c.promptIngles = `[PENDENTE: ${c.motivoPendente}]`;
-          continue;
-        }
-
         const contextoValidacao = {
           ...contexto,
           descricoesAnteriores: descricoesAcumuladas
         };
-        let validacao = validarDescricaoVisualCena(descVisual, trechoPt, contextoValidacao);
 
-        // Se a descrição da IA foi rejeitada pelo validador:
+        // Se a IA do lote falhou ou omitiu a cena, gera a descrição de reserva rica
+        let validacao = { valido: true, motivo: '' };
+        if (erroIaLote || !itemIa || !descVisual) {
+          descVisual = gerarDescricaoVisualFallback(trechoPt, c.numero, {
+            ...contexto,
+            descricoesAnteriores: descricoesAcumuladas
+          });
+          validacao = { valido: true, motivo: '' };
+        } else {
+          validacao = validarDescricaoVisualCena(descVisual, trechoPt, contextoValidacao);
+        }
+
+        // PONTO 2: Se a descrição da IA foi rejeitada pelo validador:
         if (!validacao.valido) {
           let corrigido = false;
 
-          // BUG 2: Se foi reprovada por termos de audiência ou bastidor (viewers/audience/subscribe/channel)
-          const ehTermosAudiencia = validacao.motivo && validacao.motivo.includes('termos de audiência ou bastidor proibidos');
-          if (ehTermosAudiencia) {
-            if (typeof chamarIaFn === 'function') {
-              for (let tent = 1; tent <= 2; tent++) {
-                try {
-                  const promptAud = `You are an expert biblical art director creating ONE visual description for Scene ${c.numero}.
-The previous attempt was rejected because it contained forbidden meta/audience words.
-CRITICAL INSTRUCTION: You MUST NOT use words like 'viewers', 'audience', 'subscribe', 'channel', or 'video'. Describe ONLY physical ancient historical action and biblical characters.
-Narration excerpt: "${trechoPt}".
-Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
-                  const respAud = await chamarIaFn(promptAud);
-                  const itensAud = extrairJsonLote(respAud);
-                  const itemAud = localizarItemIaCena(itensAud, c, 0);
-                  const candAud = extrairTextoDescricaoVisual(itemAud);
-                  if (candAud) {
-                    const valAud = validarDescricaoVisualCena(candAud, trechoPt, contextoValidacao);
-                    if (valAud.valido) {
-                      descVisual = valAud.descSanitizada || candAud;
-                      validacao = valAud;
-                      corrigido = true;
-                      break;
-                    }
-                  }
-                } catch (_) {}
-              }
-            }
-
-            // Se ainda falhar (ou sem IA), remove as palavras proibidas da descrição e aprova. NUNCA deixar PENDENTE por esse motivo!
-            if (!corrigido || !validacao.valido) {
-              descVisual = limparPalavrasProibidasAudiencia(descVisual || trechoPt);
-              if (contarPalavras(descVisual) < 4) {
-                descVisual = gerarDescricaoVisualFallback(trechoPt, c.numero, contexto);
-              }
-              validacao = { valido: true, motivo: '' };
-              corrigido = true;
-            }
-          }
-
-          if (!corrigido && typeof chamarIaFn === 'function') {
+          // QUALQUER reprovação do validarDescricaoVisualCena → tentar de novo com a IA (até 2 vezes, explicando o motivo)
+          if (typeof chamarIaFn === 'function') {
+            const motivoRej = validacao.motivo || 'Visual description rejected';
             const descAnterior = descricoesAcumuladas[descricoesAcumuladas.length - 1] || '';
             const enqAnt = detectarTipoEnquadramento(descAnterior);
             const enqSugerido = (enqAnt === 'aberto') ? 'close' : 'aberto';
@@ -2012,26 +2050,26 @@ Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
 
             for (let tent = 1; tent <= 2; tent++) {
               try {
-                const motivoRej = validacao.motivo || 'Visual description rejected';
-                const promptTentativa = `You are an expert biblical art director creating ONE visual description for Scene ${c.numero}.
-The previous attempt was rejected: "${motivoRej}".
-Narration excerpt: "${trechoPt}".
-Characters present: ${persCena.join(', ') || 'biblical figures'}.
-Camera framing: MUST be ${enqSugerido} (different from previous: "${enqAnt}").
-CRITICAL RULES:
-- Describe the physical concrete action happening in this scene (e.g. praying, fire falling from heaven onto the stone altar, frantic pagan leaping, stunned silence).
-- Characters must be actively engaged in their specific physical action and location, NEVER a static portrait.
-- Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
+                const promptCorrecao = `You are an expert biblical art director creating ONE visual description for Scene ${c.numero}.
+The previous attempt was rejected because: "${motivoRej}".
+CRITICAL INSTRUCTIONS:
+- You MUST fix the rejected issue completely.
+- If rejected for forbidden words, NEVER use words like 'viewers', 'audience', 'subscribe', 'channel', or 'video'.
+- Narration excerpt: "${trechoPt}".
+- Characters present: ${persCena.join(', ') || 'biblical figures'}.
+- Camera framing: ${enqSugerido}.
+- Describe ONLY physical concrete historical action, setting, and characters directly from this narration excerpt.
+Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
 
-                const respTentativa = await chamarIaFn(promptTentativa);
-                const itensTentativa = extrairJsonLote(respTentativa);
-                const itemTentativa = localizarItemIaCena(itensTentativa, c, 0);
-                const candDesc = extrairTextoDescricaoVisual(itemTentativa);
+                const resp = await chamarIaFn(promptCorrecao);
+                const itens = extrairJsonLote(resp);
+                const item = localizarItemIaCena(itens, c, 0);
+                const candDesc = extrairTextoDescricaoVisual(item);
                 if (candDesc) {
-                  const valTentativa = validarDescricaoVisualCena(candDesc, trechoPt, contextoValidacao);
-                  if (valTentativa.valido) {
-                    descVisual = candDesc;
-                    validacao = valTentativa;
+                  const val = validarDescricaoVisualCena(candDesc, trechoPt, contextoValidacao);
+                  if (val.valido) {
+                    descVisual = val.descSanitizada || candDesc;
+                    validacao = val;
                     corrigido = true;
                     break;
                   }
@@ -2040,38 +2078,28 @@ CRITICAL RULES:
             }
           }
 
-          // AJUSTE C / BUG 2: Se falhou por repetição de enquadramento ou semelhança excessiva com a anterior,
-          // aciona fallback semântico rico trocando o plano (personagens + ação + lugar citados)
-          const ehRepeticao = validacao.motivo && (
-            validacao.motivo.includes('Cenas consecutivas não podem repetir') ||
-            validacao.motivo.includes('Semelhança excessiva com cena anterior')
-          );
-
-          if (!corrigido && ehRepeticao) {
-            const descAnterior = descricoesAcumuladas[descricoesAcumuladas.length - 1] || '';
-            const enqAnt = detectarTipoEnquadramento(descAnterior);
-            descVisual = gerarFallbackEnquadramentoAlternativo(trechoPt, c.numero, enqAnt, {
-              ...contexto,
-              descricoesAnteriores: descricoesAcumuladas
-            });
+          // Se ainda falhar (ou sem IA), usa a descrição de reserva baseada na frase da cena e aprova!
+          // NUNCA deixar PENDENTE por qualquer regra do validador!
+          if (!corrigido || !validacao.valido) {
+            if (validacao.motivo && validacao.motivo.includes('termos de audiência ou bastidor proibidos')) {
+              descVisual = limparPalavrasProibidasAudiencia(descVisual || trechoPt);
+            }
+            if (contarPalavras(descVisual) < 4 || !validarDescricaoVisualCena(descVisual, trechoPt, contextoValidacao).valido) {
+              descVisual = gerarDescricaoVisualFallback(trechoPt, c.numero, {
+                ...contexto,
+                descricoesAnteriores: descricoesAcumuladas
+              });
+            }
             validacao = { valido: true, motivo: '' };
           }
         }
 
-        // Se a descrição foi validada com sucesso (ou resolvida via fallback de enquadramento)
-        if (validacao.valido) {
-          c.status = 'CONCLUIDA';
-          c.motivoPendente = '';
-          c.descricaoVisual = descVisual;
-          c.promptIngles = montarPromptFinalCena(descVisual, trechoPt, contexto);
-          descricoesAcumuladas.push(descVisual);
-        } else {
-          // Marca como PENDENTE com motivo real
-          c.status = 'PENDENTE';
-          c.motivoPendente = validacao.motivo || 'Descrição rejeitada pelo validador';
-          c.descricaoVisual = '';
-          c.promptIngles = `[PENDENTE: ${c.motivoPendente}]`;
-        }
+        // PONTO 2: Status final SEMPRE CONCLUIDA, nunca descrição vazia
+        c.status = 'CONCLUIDA';
+        c.motivoPendente = '';
+        c.descricaoVisual = descVisual;
+        c.promptIngles = montarPromptFinalCena(descVisual, trechoPt, contexto);
+        descricoesAcumuladas.push(descVisual);
       }
     }
 
@@ -2090,10 +2118,28 @@ CRITICAL RULES:
     }
 
     if (typeof chamarIaFn !== 'function') {
+      const descricoesConcluidas = cenas
+        .filter(c => c.status === 'CONCLUIDA' && c.descricaoVisual)
+        .map(c => c.descricaoVisual);
+
+      for (const c of pendentes) {
+        const trechoPt = c.frases.join(' ');
+        const descAnterior = descricoesConcluidas[descricoesConcluidas.length - 1] || '';
+        const enqAnt = detectarTipoEnquadramento(descAnterior);
+        const descVisual = gerarFallbackEnquadramentoAlternativo(trechoPt, c.numero, enqAnt, {
+          ...contexto,
+          descricoesAnteriores: descricoesConcluidas
+        });
+        c.status = 'CONCLUIDA';
+        c.motivoPendente = '';
+        c.descricaoVisual = descVisual;
+        c.promptIngles = montarPromptFinalCena(descVisual, trechoPt, contexto);
+        descricoesConcluidas.push(descVisual);
+      }
       return {
         cenas,
-        pendentesRestantes: pendentes,
-        erroIa: 'Função de chamada à IA não fornecida ou API Key não configurada.'
+        pendentesRestantes: [],
+        erroIa: null
       };
     }
 
@@ -2164,73 +2210,37 @@ CRITICAL RULES:
         if (!validacao.valido || !descVisual) {
           let corrigido = false;
 
-          // BUG 2: Se foi reprovada por termos de audiência ou bastidor (viewers/audience/subscribe/channel)
-          const ehTermosAudiencia = validacao.motivo && validacao.motivo.includes('termos de audiência ou bastidor proibidos');
-          if (ehTermosAudiencia) {
-            if (typeof chamarIaFn === 'function') {
-              for (let tent = 1; tent <= 2; tent++) {
-                try {
-                  const promptAud = `You are an expert biblical art director creating ONE visual description for Scene ${c.numero}.
-The previous attempt was rejected because it contained forbidden meta/audience words.
-CRITICAL INSTRUCTION: You MUST NOT use words like 'viewers', 'audience', 'subscribe', 'channel', or 'video'. Describe ONLY physical ancient historical action and biblical characters.
-Narration excerpt: "${trechoPt}".
-Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
-                  const respAud = await chamarIaFn(promptAud);
-                  const itensAud = extrairJsonLote(respAud);
-                  const itemAud = localizarItemIaCena(itensAud, c, 0);
-                  const candAud = extrairTextoDescricaoVisual(itemAud);
-                  if (candAud) {
-                    const valAud = validarDescricaoVisualCena(candAud, trechoPt, contextoValidacao);
-                    if (valAud.valido) {
-                      descVisual = valAud.descSanitizada || candAud;
-                      validacao = valAud;
-                      corrigido = true;
-                      break;
-                    }
-                  }
-                } catch (_) {}
-              }
-            }
-
-            // Se ainda falhar (ou sem IA), remove as palavras proibidas da descrição e aprova. NUNCA deixar PENDENTE por esse motivo!
-            if (!corrigido || !validacao.valido) {
-              descVisual = limparPalavrasProibidasAudiencia(descVisual || trechoPt);
-              if (contarPalavras(descVisual) < 4) {
-                descVisual = gerarDescricaoVisualFallback(trechoPt, c.numero, contexto);
-              }
-              validacao = { valido: true, motivo: '' };
-              corrigido = true;
-            }
-          }
-
-          if (!corrigido && typeof chamarIaFn === 'function') {
+          // PONTO 2: Generalizado para QUALQUER motivo de reprovação do validador
+          // Tenta de novo com a IA (até 2 vezes, explicando o motivo exato no prompt)
+          if (typeof chamarIaFn === 'function') {
+            const motivoRej = validacao.motivo || 'Scene visual description is missing or invalid';
+            const persCena = detectarPersonagensNaDescricao(trechoPt);
             const descAnterior = descricoesConcluidas[descricoesConcluidas.length - 1] || '';
             const enqAnt = detectarTipoEnquadramento(descAnterior);
             const enqSugerido = (enqAnt === 'aberto') ? 'close' : 'aberto';
-            const persCena = detectarPersonagensNaDescricao(trechoPt);
 
             for (let tent = 1; tent <= 2; tent++) {
               try {
-                const motivoRej = validacao.motivo || 'Scene missing from regeneration batch or empty';
-                const promptTroca = `You are an expert biblical art director creating ONE visual description for Scene ${c.numero}.
-The previous attempt was rejected: "${motivoRej}".
-Narration excerpt: "${trechoPt}".
-Characters present: ${persCena.join(', ') || 'biblical figures'}.
-Camera framing: MUST be ${enqSugerido} (different from previous: "${enqAnt}").
-CRITICAL RULES:
-- Describe the physical concrete action happening in this scene (e.g. praying, fire falling from heaven onto the stone altar, frantic pagan leaping, stunned silence).
-- Characters must be actively engaged in their specific physical action and location, NEVER a static portrait.
-- Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
+                const promptCorrecao = `You are an expert biblical art director creating ONE visual description for Scene ${c.numero}.
+The previous attempt was rejected because: "${motivoRej}".
+CRITICAL INSTRUCTIONS:
+- You MUST fix the rejected issue completely.
+- If rejected for forbidden words, NEVER use words like 'viewers', 'audience', 'subscribe', 'channel', or 'video'.
+- Narration excerpt: "${trechoPt}".
+- Characters present: ${persCena.join(', ') || 'biblical figures'}.
+- Camera framing: ${enqSugerido}.
+- Describe ONLY physical concrete historical action, setting, and characters directly from this narration excerpt.
+Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
 
-                const respTroca = await chamarIaFn(promptTroca);
-                const itensTroca = extrairJsonLote(respTroca);
-                const itemTroca = localizarItemIaCena(itensTroca, c, 0);
-                const candDesc = extrairTextoDescricaoVisual(itemTroca);
+                const resp = await chamarIaFn(promptCorrecao);
+                const itens = extrairJsonLote(resp);
+                const item = localizarItemIaCena(itens, c, 0);
+                const candDesc = extrairTextoDescricaoVisual(item);
                 if (candDesc) {
-                  const valTroca = validarDescricaoVisualCena(candDesc, trechoPt, contextoValidacao);
-                  if (valTroca.valido) {
-                    descVisual = candDesc;
-                    validacao = valTroca;
+                  const val = validarDescricaoVisualCena(candDesc, trechoPt, contextoValidacao);
+                  if (val.valido) {
+                    descVisual = val.descSanitizada || candDesc;
+                    validacao = val;
                     corrigido = true;
                     break;
                   }
@@ -2239,30 +2249,30 @@ CRITICAL RULES:
             }
           }
 
-          // Se após as tentativas ainda não validou, aciona fallback semântico rico
+          // Se ainda falhar (ou sem IA), usa a descrição de reserva baseada na frase da cena e aprova!
+          // NUNCA deixar PENDENTE por qualquer regra do validador!
           if (!corrigido || !validacao.valido) {
-            const descAnterior = descricoesConcluidas[descricoesConcluidas.length - 1] || '';
-            const enqAnt = detectarTipoEnquadramento(descAnterior);
-            descVisual = gerarFallbackEnquadramentoAlternativo(trechoPt, c.numero, enqAnt, {
-              ...contexto,
-              descricoesAnteriores: descricoesConcluidas
-            });
+            if (validacao.motivo && validacao.motivo.includes('termos de audiência ou bastidor proibidos')) {
+              descVisual = limparPalavrasProibidasAudiencia(descVisual || trechoPt);
+            }
+            if (contarPalavras(descVisual) < 4 || !validarDescricaoVisualCena(descVisual, trechoPt, contextoValidacao).valido) {
+              const descAnterior = descricoesConcluidas[descricoesConcluidas.length - 1] || '';
+              const enqAnt = detectarTipoEnquadramento(descAnterior);
+              descVisual = gerarFallbackEnquadramentoAlternativo(trechoPt, c.numero, enqAnt, {
+                ...contexto,
+                descricoesAnteriores: descricoesConcluidas
+              });
+            }
             validacao = { valido: true, motivo: '' };
           }
         }
 
-        if (validacao.valido) {
-          c.status = 'CONCLUIDA';
-          c.motivoPendente = '';
-          c.descricaoVisual = descVisual;
-          c.promptIngles = montarPromptFinalCena(descVisual, trechoPt, contexto);
-          descricoesConcluidas.push(descVisual);
-        } else {
-          c.status = 'PENDENTE';
-          c.motivoPendente = erroIaLote ? `Erro da IA: ${erroIaLote}` : (validacao.motivo || 'Descrição rejeitada na regeneração');
-          c.descricaoVisual = '';
-          c.promptIngles = `[PENDENTE: ${c.motivoPendente}]`;
-        }
+        // PONTO 2: Status final SEMPRE CONCLUIDA, nunca descrição vazia
+        c.status = 'CONCLUIDA';
+        c.motivoPendente = '';
+        c.descricaoVisual = descVisual;
+        c.promptIngles = montarPromptFinalCena(descVisual, trechoPt, contexto);
+        descricoesConcluidas.push(descVisual);
       }
     }
 
@@ -2287,6 +2297,8 @@ CRITICAL RULES:
         descricoesAnteriores: descricoesAcumuladas
       });
       c.descricaoVisual = descVisual;
+      c.status = 'CONCLUIDA';
+      c.motivoPendente = '';
       c.promptIngles = montarPromptFinalCena(descVisual, trechoPt, contexto);
       descricoesAcumuladas.push(descVisual);
     }

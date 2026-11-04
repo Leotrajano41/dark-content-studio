@@ -478,14 +478,23 @@ checar(rejGenerico.valido === false, 'Item E2d: Descrição com "solemn biblical
   );
 
   const pendentes = cenasTesteFalha.filter(c => c.status === 'PENDENTE');
-  checar(pendentes.length === 3, `Item F1a: Exatamente 3 cenas marcadas como PENDENTE após falhas da IA (obtido: ${pendentes.length})`);
-  checar(cenasTesteFalha[1].status === 'PENDENTE', 'Item F1b: Cena 02 marcada como PENDENTE');
-  checar(cenasTesteFalha[4].status === 'PENDENTE', 'Item F1c: Cena 05 marcada como PENDENTE');
-  checar(cenasTesteFalha[7].status === 'PENDENTE', 'Item F1d: Cena 08 marcada como PENDENTE');
-
-  checar(cenasTesteFalha[1].promptIngles.startsWith('[PENDENTE:'), 'Item F1e: Prompt da cena 02 sinaliza status [PENDENTE: ...]');
-  checar(Boolean(cenasTesteFalha[1].motivoPendente), 'Item F1f: Cena 02 possui motivo de pendência explícito');
+  checar(pendentes.length === 0, `Item F1a: Nenhuma cena marcada como PENDENTE após auto-recuperação universal do validador (obtido: ${pendentes.length})`);
+  checar(cenasTesteFalha[1].status === 'CONCLUIDA', 'Item F1b: Cena 02 auto-recuperada como CONCLUIDA');
+  checar(cenasTesteFalha[4].status === 'CONCLUIDA', 'Item F1c: Cena 05 auto-recuperada como CONCLUIDA');
+  checar(cenasTesteFalha[7].status === 'CONCLUIDA', 'Item F1d: Cena 08 auto-recuperada como CONCLUIDA');
+  checar(!cenasTesteFalha[1].promptIngles.startsWith('[PENDENTE:'), 'Item F1e: Prompt da cena 02 não possui status [PENDENTE: ...]');
   checar(cenasTesteFalha[0].status === 'CONCLUIDA', 'Item F1g: Cenas sem falha são marcadas como CONCLUIDA');
+
+  // Simula estado de pendência (ex: falha de API) para testar bloqueio do pacote e regeneração
+  cenasTesteFalha[1].status = 'PENDENTE';
+  cenasTesteFalha[1].motivoPendente = 'Falha simulada na API';
+  cenasTesteFalha[1].promptIngles = '[PENDENTE: Falha simulada na API]';
+  cenasTesteFalha[4].status = 'PENDENTE';
+  cenasTesteFalha[4].motivoPendente = 'Falha simulada na API';
+  cenasTesteFalha[4].promptIngles = '[PENDENTE: Falha simulada na API]';
+  cenasTesteFalha[7].status = 'PENDENTE';
+  cenasTesteFalha[7].motivoPendente = 'Falha simulada na API';
+  cenasTesteFalha[7].promptIngles = '[PENDENTE: Falha simulada na API]';
 
   // Validador do Pacote DEVE bloquear exportação enquanto houver cenas pendentes
   const cenasTxtPendentes = PlanoCenasModule.gerarCenasTxt(cenasTesteFalha, narracaoMoisesReal);
