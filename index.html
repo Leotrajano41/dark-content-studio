@@ -1864,6 +1864,7 @@ textarea.h-180 {
               <li><strong>Gerar Keywords de Mídia:</strong> Clique em <em>"Gerar Keywords de Mídia com IA"</em> (tempo de espera: ~5-10s). A IA extrairá termos exclusivamente em inglês de elementos físicos, objetos antigos e cenários filmáveis (sem conceitos abstratos). Copie com o botão <em>"Copiar Keywords"</em> e busque no Pixabay, Pexels ou Envato.</li>
               <li><strong>Gerar Prompts Visuais:</strong> Clique em <em>"Gerar Prompts para Imagens/Vídeos com IA"</em> (tempo de espera: ~15-25s). A IA gerará de 30 a 40 prompts cinematográficos cobrindo o roteiro do início ao fim em ordem cronológica, no formato 16:9 widescreen, com estilo visual fixo e sem texto na imagem.</li>
               <li><strong>Uso dos Prompts:</strong> Clique em <em>"Copiar Prompts Visuais"</em> e cole em ferramentas de geração em lote (ex: Meta Explosion, Midjourney, Runway, Leonardo).</li>
+              <li><strong>Consistência de Personagem no Gemini:</strong> Para o personagem manter o mesmo rosto, anexe no Gemini a imagem já aprovada do personagem junto com o prompt da nova cena.</li>
             </ol>
             <div class="step-guide-alert">
               <span>⚠️ <strong>Lembrete:</strong> Gere de novo antes de copiar, para não usar o resultado de outro vídeo.</span>
@@ -1947,6 +1948,25 @@ textarea.h-180 {
           <div id="lista-cenas-pendentes" style="max-height: 160px; overflow-y: auto; font-size: 0.82rem; font-family: var(--font-mono); color: #fef3c7; background: rgba(0, 0, 0, 0.4); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(245, 158, 11, 0.3);"></div>
         </div>
 
+        <!-- Bloco Novo: Gancho Visual da Abertura (3 Opções: Conservadora, Mediana, Ousada) -->
+        <div id="card-gancho-visual-abertura" class="output-card mt-4 hidden" style="border: 1px solid rgba(229, 184, 105, 0.4); background: linear-gradient(180deg, rgba(30, 27, 46, 0.95) 0%, rgba(18, 16, 29, 0.98) 100%);">
+          <div class="output-header" style="flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="output-title" style="color: #fde68a;">🎬 Gancho Visual da Abertura (Primeiros 3 a 5 Segundos)</span>
+              <span id="badge-abertura-status" style="background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fde68a; font-size: 0.76rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;">3 Opções</span>
+            </div>
+            <div id="badge-cenas-animar-topo" style="background: rgba(99, 102, 241, 0.2); border: 1px solid #6366f1; color: #c7d2fe; font-size: 0.76rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
+              🎥 Cenas para Animar: <span id="texto-cenas-animar-indicador">3 a 5 cenas marcadas</span>
+            </div>
+          </div>
+          <p class="field-hint" style="color: #cbd5e1; margin-bottom: 12px;">
+            Conceitos cinematográficos para os primeiros 3 a 5 segundos do vídeo. Clique em <strong>"Usar esta abertura"</strong> para aplicar diretamente na <strong>Cena 1</strong> com o estilo visual fixo e ficha de personagens.
+          </p>
+          <div id="container-opcoes-abertura" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
+            <!-- Renderizado dinamicamente -->
+          </div>
+        </div>
+
         <!-- Painel de Exportação e Arquivos para o Scriptorium (Itens 9 a 14) -->
         <div id="card-plano-cenas" class="output-card mt-4 hidden">
           <div class="output-header" style="flex-wrap: wrap; gap: 10px;">
@@ -1964,12 +1984,15 @@ textarea.h-180 {
               <button id="btn-download-prompts-txt" class="btn btn-secondary btn-sm" title="Baixar prompts.txt">
                 📄 prompts.txt
               </button>
+              <button id="btn-download-animar-txt" class="btn btn-secondary btn-sm" title="Baixar animar.txt (Cenas para animar com duração 5s)">
+                🎬 animar.txt
+              </button>
               <button id="btn-download-pacote-scriptorium" class="btn btn-accent btn-sm" style="font-weight: 700;" title="Baixar Pacote Scriptorium Completo (.zip)">
                 📦 Pacote Scriptorium (.zip)
               </button>
             </div>
           </div>
-          <p class="field-hint" style="margin-bottom: 10px;">Arquivos prontos para o Scriptorium: <code>cenas.txt</code> (marcações de início de cena na narração), <code>descricoes.txt</code> (prompts por cena) e <code>prompts.txt</code> (prompts numerados para copiar).</p>
+          <p class="field-hint" style="margin-bottom: 10px;">Arquivos prontos para o Scriptorium: <code>cenas.txt</code> (marcações de início de cena na narração), <code>descricoes.txt</code> (prompts por cena), <code>prompts.txt</code> (prompts numerados) e <code>animar.txt</code> (cenas para animar 5s).</p>
           
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
             <div>
@@ -1980,6 +2003,14 @@ textarea.h-180 {
               <label style="font-size: 0.8rem; font-weight: 600; color: #a5b4fc; margin-bottom: 4px; display: block;">prompts.txt (Prompts de Imagem Prontos para Gerador):</label>
               <textarea id="output-prompts-txt" class="form-control prompt-output" readonly style="min-height: 200px; font-family: var(--font-mono); font-size: 0.8rem;" placeholder="01. Prompt detalhado..."></textarea>
             </div>
+          </div>
+
+          <div style="margin-top: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label style="font-size: 0.8rem; font-weight: 600; color: #c7d2fe; display: block;">🎬 animar.txt (Cenas Selecionadas para Animação de 5s no Pacote):</label>
+              <span id="badge-total-animar" style="font-size: 0.72rem; color: #a5b4fc; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.4); padding: 1px 6px; border-radius: 4px;"></span>
+            </div>
+            <textarea id="output-animar-txt" class="form-control prompt-output" readonly style="min-height: 100px; font-family: var(--font-mono); font-size: 0.8rem;" placeholder="01 | Cinematic slow push-in camera, 5s duration..."></textarea>
           </div>
         </div>
 
@@ -2875,7 +2906,7 @@ textarea.h-180 {
               </div>
               <div class="guia-detalhe-item">
                 <span class="guia-tag-acao tag-oque">O que Escolher:</span>
-                <span>Copie as keywords para buscar fotos e vídeos grátis no Pexels e Pixabay; copie os prompts detalhados para criar imagens épicas em IAs visuais (Midjourney, DALL-E, etc.).</span>
+                <span>Copie as keywords para buscar fotos e vídeos grátis no Pexels e Pixabay; copie os prompts detalhados para criar imagens épicas em IAs visuais (Midjourney, Gemini, etc.).<br><strong>Dica de Consistência:</strong> Para o personagem manter o mesmo rosto, anexe no Gemini a imagem já aprovada do personagem junto com o prompt da nova cena.</span>
               </div>
               <div class="guia-detalhe-item">
                 <span class="guia-tag-acao tag-aparece">O que vai Aparecer:</span>
@@ -3549,6 +3580,15 @@ REGRAS ESTRITAS DO ROTEIRO:
 - CITAÇÕES: a mesma passagem não pode aparecer com duas redações; não citar o mesmo versículo duas vezes.
 - SEÇÕES FINAIS: seções finais em ordem cronológica, e cada seção recebe o resumo das anteriores para não repetir eventos.
 - REFORÇO: limitar frases de reforço a uma por seção (no máximo uma por seção).
+- MINI-GANCHOS NAS TRANSIÇÕES (RETENÇÃO E EXPECTATIVA):
+  Ao longo do desenvolvimento, a cada transição de seção ou grande virada do relato (tanto em roteiros Longos quanto Shorts/Médio), inclua uma frase curta de "mini-gancho" que crie expectativa para o que vem a seguir (ex.: "mas o que aconteceu depois ninguém esperava", "mas a resposta que ecoou daquela montanha mudaria tudo", "o que estava prestes a acontecer diante daquele rebanho, porém, ninguém podia prever").
+  Regras estritas do mini-gancho:
+  1. Faz parte natural da narração corrida (sem rótulos, sem colchetes [ ], sem avisos de bastidor).
+  2. NUNCA repita a mesma frase de mini-gancho no mesmo roteiro.
+  3. NUNCA prometa algo sensacionalista que o texto bíblico não sustenta.
+- CHAMADA PARA AÇÃO (CTA) CONTEXTUALIZADA COM O TEMA:
+  A chamada para ação no fechamento do vídeo DEVE ser natural, de exatamente UMA frase, e intimamente contextualizada com a história bíblica narrada (ex.: "se até Moisés errou, compartilhe com alguém que precisa ouvir isso hoje", "se a fidelidade de Daniel sustentou sua vida na cova, compartilhe esta verdade com quem precisa de ânimo").
+  É ESTRITAMENTE PROIBIDO usar CTA genérico do tipo "deixe seu like e se inscreva" como única chamada.
 - OBRIGATORIEDADE DO DESFECHO COMPLETO DO EPISÓDIO BÍBLICO (NUNCA DEIXE O EPISÓDIO INCOMPLETO):
   Todo roteiro bíblico DEVE narrar o clímax e o desfecho concreto e completo do acontecimento histórico (ex: em Elias no Carmelo, narre obrigatoriamente a oração de Elias, o fogo de Deus caindo do céu e consumindo o holocausto, a lenha, as pedras e a água, e a reação imediata de todo o povo caindo com o rosto em terra e proclamando que o Senhor é Deus; em Davi e Golias, o arremesso da pedra, o impacto decisivo cravando na testa e a queda do gigante). É ESTRITAMENTE PROIBIDO cortar ou encerrar a narrativa antes de relatar a intervenção divina e a conclusão do episódio histórico, antes de passar para a conclusão e para o CTA de inscrição.
 
@@ -5878,16 +5918,16 @@ function garantirCtaNoUltimoParagrafo(texto, idioma = 'pt', estiloRoteiro = '') 
   const id = (idioma || '').toLowerCase();
 
   const ctaCurto = id.includes('ingl') || id.includes('en')
-    ? 'Subscribe to the channel for more biblical studies and sacred accounts.'
+    ? 'Share this truth with someone who needs to hear it today, and subscribe to follow upcoming biblical accounts.'
     : (id.includes('espanh') || id.includes('es'))
-      ? 'Suscríbete al canal para más relatos bíblicos y estudios sagrados.'
-      : 'Inscreva-se no canal para mais estudos e relatos bíblicos sagrados.';
+      ? 'Comparte esta verdad con alguien que necesita escucharla hoy, y suscríbete para acompañar los próximos relatos.'
+      : 'Compartilhe esta verdade com quem precisa ouvir isso hoje e inscreva-se para acompanhar os próximos relatos.';
 
   const ctaLongo = id.includes('ingl') || id.includes('en')
-    ? 'To continue discovering the historical depth and truth of the Holy Scriptures, subscribe to the channel and follow our upcoming studies.'
+    ? 'If this biblical account strengthened your faith, share it with someone who needs this message today and subscribe to the channel to follow upcoming studies.'
     : (id.includes('espanh') || id.includes('es'))
-      ? 'Para continuar descubriendo la profundidad histórica e a verdade de las Sagradas Escrituras, suscríbete al canal y acompaña nuestros próximos estudios.'
-      : 'Para continuar estudando a história e a verdade das Escrituras Sagradas, inscreva-se no canal e acompanhe nossos próximos estudos.';
+      ? 'Si este relato bíblico fortaleció tu fe, compártelo con alguien que necesita este mensaje hoy y suscríbete al canal para acompañar los próximos estudios.'
+      : 'Se este relato bíblico fortaleceu sua fé, compartilhe com alguém que precisa dessa mensagem hoje e inscreva-se no canal para acompanhar os próximos estudos.';
 
   const ctaPadrao = isShorts ? ctaCurto : ctaLongo;
 
@@ -5897,7 +5937,7 @@ function garantirCtaNoUltimoParagrafo(texto, idioma = 'pt', estiloRoteiro = '') 
   // Regex para identificar sentença de CTA ou convite intermediário
   const ctaSentenceRegex = /(?:^|[.!?]\s*)(?:[^.!?\n]*\b(?:subscrib(?:e|ing)|inscreva-se|se\s+inscreva|inscrev(?:a|er)\s+(?:no|neste)\s+canal|join\s+(?:this\s+)?channel|follow\s+(?:this\s+)?channel|acompanhe\s+(?:este|o)\s+canal|suscr[ií]bete|suscribir|ative\s+o\s+sino|vamos\s+em\s+frente|let\x27?s\s+move\s+on)\b[^.!?\n]*[.!?]?)/gi;
 
-  const REGEX_CTA_DETECTOR = /(?<![\p{L}])(?:inscreva-se|se\s+inscreva|inscrev(?:a|er)\s+(?:no|neste)\s+canal|subscribe|acompanhe\s+(?:este|o)\s+canal|suscr[ií]bete|ative\s+o\s+sino)(?![\p{L}])/iu;
+  const REGEX_CTA_DETECTOR = /(?<![\p{L}])(?:inscreva-se|se\s+inscreva|inscrev(?:a|er)\s+(?:no|neste)\s+canal|subscribe|acompanhe\s+(?:este|o)\s+canal|suscr[ií]bete|ative\s+o\s+sino|compartilhe\s+(?:com\s+algu[eé]m|esta\s+mensagem|este\s+v[ií]deo|este\s+estudo|esta\s+verdade)|share\s+(?:this|with)|comparte\s+(?:con|este))(?![\p{L}])/iu;
   const ehCta = (p) => REGEX_CTA_DETECTOR.test(p || '');
 
   if (isCatalogo) {
@@ -6503,9 +6543,13 @@ function limparResultadosEtapasPosteriores() {
   // Zerar fichas de personagens e plano de cenas para evitar vazamento entre temas/roteiros
   window._fichasPersonagensAtual = null;
   window._planoDeCenasAtual = null;
+  window._ganchosAberturaAtual = null;
+  window._animarTxtAtual = null;
   if (typeof window !== 'undefined' && window.AutoSave && window.AutoSave.session) {
     delete window.AutoSave.session._fichasPersonagensAtual;
     delete window.AutoSave.session._planoDeCenasAtual;
+    delete window.AutoSave.session._ganchosAberturaAtual;
+    delete window.AutoSave.session._animarTxtAtual;
   }
 
   if (typeof AutoSave !== 'undefined' && AutoSave && AutoSave.save) {
@@ -7769,10 +7813,12 @@ CRITICAL RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
 2. ZERO PREMATURE CONCLUSION (SECTIONS 1 TO 6):
    ${!isLast ? `- STRICTLY PROHIBITED to conclude, wrap up, summarize the entire history, or provide a closing sign-off in this section.
    - Concluding is EXCLUSIVELY RESERVED for Section 7.
-   - Section ${secaoNumero} must end with natural forward narrative momentum carrying the listener into the next historical stage.` : `- SECTION 7 RULES (CONCISE CONCLUSION & SUBSCRIPTION CALL):
-   * MAXIMUM OF 120 WORDS IN TOTAL for the concluding reflection (excluding the 20-word subscription call).
+   - Section ${secaoNumero} must end with natural forward narrative momentum carrying the listener into the next historical stage.
+   - MINI-GANCHO DE TRANSIÇÃO: Na última frase desta seção, inclua um mini-gancho curto e fluido na narração corrida que crie forte expectativa para o que vem a seguir (ex.: "mas o que aconteceu depois ninguém esperava", "mas o que estava prestes a acontecer diante daquele monte mudaria tudo", "a resposta que ecoou em seguida, porém, surpreendeu a todos"), sem rótulos, sem colchetes e sem prometer algo que a Bíblia não sustenta. NUNCA repita a mesma frase de mini-gancho usada nas seções anteriores.` : `- SECTION 7 RULES (CONCISE CONCLUSION & THEMATIC SUBSCRIPTION CALL):
+   * MAXIMUM OF 120 WORDS IN TOTAL for the concluding reflection.
    * STRICTLY PROHIBITED from repeating the summary of earlier chapters, re-listing scenes, or preaching homilies.
-   * Focus strictly on divine sovereignty and the eternal biblical truth, followed immediately by the 20-word subscription call.`}
+   * Focus strictly on divine sovereignty and the eternal biblical truth.
+   * FINAL CTA CONTEXTUALIZADO COM O TEMA: Termine OBRIGATORIAMENTE com exatamente UMA frase de chamada para ação (CTA) natural e intimamente contextualizada com a história bíblica contada neste vídeo (ex: "se até Moisés errou, compartilhe com alguém que precisa ouvir isso hoje" ou "se a voz do Senhor chamou um homem simples no deserto, compartilhe esta verdade com quem precisa de renovo"). É ESTRITAMENTE PROIBIDO CTA genérico tipo "deixe seu like e se inscreva no canal" como chamada única.`}
 3. ZERO BACKSTAGE / META-LANGUAGE & ZERO INTERNAL LABELS:
    - STRICTLY FORBIDDEN to use presentation or backstage phrases like "in the next section", "as we transition", "we will explore", "as we continue our exploration", "moving ahead", "as the narrative unfolds". Speak directly as an ancient chronicle without stepping out of the story.
    - STRICTLY FORBIDDEN to utter internal architectural labels like "Canonical Boundary", "Opening Hook", "Section", "Point", "Outline", "Role" in the spoken text.
@@ -8313,7 +8359,7 @@ const AutoSave = window.AutoSave = {
     'output-prompt-seo',
     'textarea-narracao-limpa-audio',
     'select-voz-audio', 'output-legenda-srt',
-    'output-cenas-txt', 'output-prompts-txt'
+    'output-cenas-txt', 'output-prompts-txt', 'output-animar-txt'
   ],
 
   save() {
@@ -8335,6 +8381,12 @@ const AutoSave = window.AutoSave = {
     }
     if (window._fichasPersonagensAtual) {
       session._fichasPersonagensAtual = window._fichasPersonagensAtual;
+    }
+    if (window._ganchosAberturaAtual) {
+      session._ganchosAberturaAtual = window._ganchosAberturaAtual;
+    }
+    if (window._animarTxtAtual) {
+      session._animarTxtAtual = window._animarTxtAtual;
     }
 
     // A chave NÃO vai dentro da sessão (fica só na chave canônica do OpenRouterAPI): uma cópia a menos em texto puro
@@ -8485,6 +8537,15 @@ const AutoSave = window.AutoSave = {
         window._hashNarracaoPlanoCenas = session._hashNarracaoPlanoCenas || '';
         if (session._fichasPersonagensAtual) {
           window._fichasPersonagensAtual = session._fichasPersonagensAtual;
+        }
+        if (session._ganchosAberturaAtual) {
+          window._ganchosAberturaAtual = session._ganchosAberturaAtual;
+          if (typeof renderizarCardGanchosAbertura === 'function') {
+            try { renderizarCardGanchosAbertura(window._ganchosAberturaAtual); } catch (_) {}
+          }
+        }
+        if (session._animarTxtAtual) {
+          window._animarTxtAtual = session._animarTxtAtual;
         }
 
         const cardPlano = document.getElementById('card-plano-cenas');
@@ -9017,9 +9078,13 @@ function limparEstadoTemaAnterior() {
   window._planoDeCenasAtual = null;
   window._hashNarracaoPlanoCenas = null;
   window._fichasPersonagensAtual = null;
+  window._ganchosAberturaAtual = null;
+  window._animarTxtAtual = null;
   if (typeof window !== 'undefined' && window.AutoSave && window.AutoSave.session) {
     delete window.AutoSave.session._fichasPersonagensAtual;
     delete window.AutoSave.session._planoDeCenasAtual;
+    delete window.AutoSave.session._ganchosAberturaAtual;
+    delete window.AutoSave.session._animarTxtAtual;
   }
   if (typeof currentAudioBlob !== 'undefined') currentAudioBlob = null;
   if (typeof currentAudioParts !== 'undefined') currentAudioParts = [];
@@ -9030,6 +9095,10 @@ function limparEstadoTemaAnterior() {
     if (cardPlanoCenas) cardPlanoCenas.classList.add('hidden');
     const alertDesatualizado = document.getElementById('alerta-plano-cenas-desatualizado');
     if (alertDesatualizado) alertDesatualizado.classList.add('hidden');
+    const cardGanchoAbertura = document.getElementById('card-gancho-visual-abertura');
+    if (cardGanchoAbertura) cardGanchoAbertura.classList.add('hidden');
+    const outAnimarTxt = document.getElementById('output-animar-txt');
+    if (outAnimarTxt) outAnimarTxt.value = '';
 
     const cardAudioPlayer = document.getElementById('card-audio-player');
     if (cardAudioPlayer) cardAudioPlayer.classList.add('hidden');
@@ -11310,6 +11379,127 @@ ${resultText}`;
   }
 
   // ITEM 1-14: Integração do Plano de Cenas e Exportação para o Scriptorium
+  function renderizarCardGanchosAbertura(opcoesAbertura, narracaoLimpa, contexto) {
+    const cardEl = document.getElementById('card-gancho-visual-abertura');
+    const containerEl = document.getElementById('container-opcoes-abertura');
+    const indicadorAnimar = document.getElementById('texto-cenas-animar-indicador');
+    const badgeTotalAnimar = document.getElementById('badge-total-animar');
+    if (!cardEl || !containerEl) return;
+
+    if (!opcoesAbertura || !Array.isArray(opcoesAbertura) || opcoesAbertura.length === 0) {
+      cardEl.classList.add('hidden');
+      return;
+    }
+
+    cardEl.classList.remove('hidden');
+
+    const cenas = window._planoDeCenasAtual?.cenas || [];
+    const animadas = cenas.filter(c => c.animar);
+    const numsAnimadas = animadas.map(c => `Cena ${c.numero}`).join(', ');
+    if (indicadorAnimar) {
+      indicadorAnimar.textContent = numsAnimadas ? `${numsAnimadas} (5s cada)` : 'Cena 1 + impactantes';
+    }
+    if (badgeTotalAnimar) {
+      badgeTotalAnimar.textContent = `${animadas.length} cenas marcadas`;
+    }
+
+    const estilosTipo = {
+      CONSERVADORA: {
+        bg: 'rgba(16, 185, 129, 0.15)',
+        borda: '#10b981',
+        texto: '#6ee7b7',
+        rotulo: '🟢 CONSERVADORA (Direta e Esperada)'
+      },
+      MEDIANA: {
+        bg: 'rgba(245, 158, 11, 0.15)',
+        borda: '#f59e0b',
+        texto: '#fde68a',
+        rotulo: '🟡 MEDIANA (Metáfora / Detalhe Revelador)'
+      },
+      OUSADA: {
+        bg: 'rgba(139, 92, 246, 0.15)',
+        borda: '#8b5cf6',
+        texto: '#c4b5fd',
+        rotulo: '🟣 OUSADA (Conexão Inesperada e Fiel)'
+      }
+    };
+
+    const aberturaEmUso = cenas[0]?.aberturaEscolhida || 'CONSERVADORA';
+
+    function escapeHtml(str) {
+      return (str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+    }
+
+    containerEl.innerHTML = opcoesAbertura.map((op, idx) => {
+      const cfg = estilosTipo[op.tipo] || estilosTipo.CONSERVADORA;
+      const isAtiva = (op.tipo === aberturaEmUso) || (idx === 0 && !cenas[0]?.aberturaEscolhida);
+
+      return `
+        <div class="card-opcao-abertura" data-tipo="${escapeHtml(op.tipo)}" style="background: rgba(15, 23, 42, 0.7); border: 2px solid ${isAtiva ? '#f59e0b' : 'rgba(255,255,255,0.1)'}; border-radius: 8px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 6px;">
+              <span style="font-size: 0.72rem; font-weight: 700; background: ${cfg.bg}; color: ${cfg.texto}; border: 1px solid ${cfg.borda}; padding: 2px 8px; border-radius: 4px; text-transform: uppercase;">
+                ${cfg.rotulo}
+              </span>
+              ${isAtiva ? '<span style="font-size: 0.72rem; font-weight: bold; color: #f59e0b; background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; padding: 2px 6px; border-radius: 4px;">✓ Em uso na Cena 1</span>' : ''}
+            </div>
+            <h4 style="color: #f8fafc; font-size: 0.95rem; margin-bottom: 8px; font-weight: 600;">${escapeHtml(op.nome)}</h4>
+            <div style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.5; margin-bottom: 10px; background: rgba(0,0,0,0.25); padding: 8px; border-radius: 6px;">
+              <strong style="color: #93c5fd; display: block; font-size: 0.76rem; margin-bottom: 2px;">CENA PARA O GERADOR:</strong>
+              ${escapeHtml(op.descricaoDiretor)}
+            </div>
+            <div style="font-size: 0.8rem; color: #fde68a; font-style: italic; margin-bottom: 12px; line-height: 1.4;">
+              <strong style="font-style: normal; color: #fbbf24;">Por que prende a atenção:</strong> ${escapeHtml(op.porQuePrende)}
+            </div>
+          </div>
+          <div>
+            <button type="button" class="btn btn-sm btn-usar-abertura" data-idx="${idx}" style="width: 100%; font-weight: 700; background: ${isAtiva ? '#10b981' : '#3b82f6'}; color: #fff; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer;">
+              ${isAtiva ? '✓ Abertura em uso' : '🎬 Usar esta abertura'}
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    containerEl.querySelectorAll('.btn-usar-abertura').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.getAttribute('data-idx'), 10);
+        const opEscolhida = opcoesAbertura[idx];
+        if (!opEscolhida || !window._planoDeCenasAtual) return;
+
+        PlanoCenasModule.aplicarGanchoAberturaNaCena1(
+          window._planoDeCenasAtual.cenas,
+          opEscolhida,
+          narracaoLimpa,
+          contexto
+        );
+
+        const cenasTxt = PlanoCenasModule.gerarCenasTxt(window._planoDeCenasAtual.cenas, narracaoLimpa);
+        const descricoesTxt = PlanoCenasModule.gerarDescricoesTxt(window._planoDeCenasAtual.cenas);
+        const promptsTxt = PlanoCenasModule.gerarPromptsTxt(window._planoDeCenasAtual.cenas);
+        const animarTxt = PlanoCenasModule.gerarAnimarTxt(window._planoDeCenasAtual.cenas);
+
+        window._cenasTxtAtual = cenasTxt;
+        window._descricoesTxtAtual = descricoesTxt;
+        window._promptsTxtAtual = promptsTxt;
+        window._animarTxtAtual = animarTxt;
+
+        const outCenas = document.getElementById('output-cenas-txt');
+        const outPrompts = document.getElementById('output-prompts-txt');
+        const outAnimar = document.getElementById('output-animar-txt');
+        if (outCenas) outCenas.value = cenasTxt;
+        if (outPrompts) outPrompts.value = promptsTxt;
+        if (outAnimar) outAnimar.value = animarTxt;
+
+        renderizarCardGanchosAbertura(opcoesAbertura, narracaoLimpa, contexto);
+        atualizarPreviewCadenciaCenas();
+
+        UI.showToast(`Abertura "${opEscolhida.nome}" aplicada na Cena 1!`, 'success');
+        try { AutoSave.save(); } catch (_) {}
+      });
+    });
+  }
+
   function atualizarPreviewCadenciaCenas() {
     const texto = (document.getElementById('textarea-roteiro-gerado')?.value || '').trim();
     const painelPreview = document.getElementById('preview-cadencia-cenas');
@@ -11430,18 +11620,38 @@ ${resultText}`;
       window._planoDeCenasAtual = plano;
       window._hashNarracaoPlanoCenas = PlanoCenasModule.gerarHashTexto(narracaoLimpa);
 
+      // Geração dos ganchos visuais da abertura (Conservadora, Mediana, Ousada)
+      try {
+        const chamarIaAbertura = hasKey ? async (promptAbertura) => {
+          return await OpenRouterAPI.generateContent(promptAbertura, modeloPrompts);
+        } : null;
+        const ganchos = await PlanoCenasModule.gerarGanchosVisuaisAbertura(
+          narracaoLimpa,
+          { tema: inputTema, personagemPrincipal: personagem },
+          chamarIaAbertura
+        );
+        window._ganchosAberturaAtual = ganchos;
+        renderizarCardGanchosAbertura(ganchos, narracaoLimpa, { tema: inputTema, personagemPrincipal: personagem, fichasPersonagens: window._fichasPersonagensAtual });
+      } catch (errGanchos) {
+        console.warn('[Ganchos Abertura] Falha ao gerar opções de abertura:', errGanchos);
+      }
+
       const cenasTxt = PlanoCenasModule.gerarCenasTxt(plano.cenas, narracaoLimpa);
       const descricoesTxt = PlanoCenasModule.gerarDescricoesTxt(plano.cenas);
       const promptsTxt = PlanoCenasModule.gerarPromptsTxt(plano.cenas);
+      const animarTxt = PlanoCenasModule.gerarAnimarTxt(plano.cenas);
 
       window._cenasTxtAtual = cenasTxt;
       window._descricoesTxtAtual = descricoesTxt;
       window._promptsTxtAtual = promptsTxt;
+      window._animarTxtAtual = animarTxt;
 
       const outCenas = document.getElementById('output-cenas-txt');
       const outPrompts = document.getElementById('output-prompts-txt');
+      const outAnimar = document.getElementById('output-animar-txt');
       if (outCenas) outCenas.value = cenasTxt;
       if (outPrompts) outPrompts.value = promptsTxt;
+      if (outAnimar) outAnimar.value = animarTxt;
 
       const cardPlano = document.getElementById('card-plano-cenas');
       if (cardPlano) cardPlano.classList.remove('hidden');
@@ -11453,6 +11663,7 @@ ${resultText}`;
       if (alerta) alerta.classList.add('hidden');
 
       atualizarPainelCenasPendentes();
+      atualizarPreviewCadenciaCenas();
       atualizarSeloAba(2, true);
 
       const pendentesIniciais = plano.cenas.filter(c => c.status === 'PENDENTE');
@@ -11558,17 +11769,25 @@ ${resultText}`;
       const cenasTxt = PlanoCenasModule.gerarCenasTxt(window._planoDeCenasAtual.cenas, narracaoLimpa);
       const descricoesTxt = PlanoCenasModule.gerarDescricoesTxt(window._planoDeCenasAtual.cenas);
       const promptsTxt = PlanoCenasModule.gerarPromptsTxt(window._planoDeCenasAtual.cenas);
+      const animarTxt = PlanoCenasModule.gerarAnimarTxt(window._planoDeCenasAtual.cenas);
 
       window._cenasTxtAtual = cenasTxt;
       window._descricoesTxtAtual = descricoesTxt;
       window._promptsTxtAtual = promptsTxt;
+      window._animarTxtAtual = animarTxt;
 
       const outCenas = document.getElementById('output-cenas-txt');
       const outPrompts = document.getElementById('output-prompts-txt');
+      const outAnimar = document.getElementById('output-animar-txt');
       if (outCenas) outCenas.value = cenasTxt;
       if (outPrompts) outPrompts.value = promptsTxt;
+      if (outAnimar) outAnimar.value = animarTxt;
 
       atualizarPainelCenasPendentes();
+      atualizarPreviewCadenciaCenas();
+      if (window._ganchosAberturaAtual) {
+        renderizarCardGanchosAbertura(window._ganchosAberturaAtual, narracaoLimpa, { tema: inputTema, personagemPrincipal: personagem, fichasPersonagens: window._fichasPersonagensAtual });
+      }
 
       if (res.erroIa) {
         UI.showToast(`Aviso da IA ao regenerar: ${res.erroIa}`, 'error');
@@ -11623,6 +11842,10 @@ ${resultText}`;
     dispararDownloadTexto('prompts.txt', window._promptsTxtAtual || document.getElementById('output-prompts-txt')?.value);
   });
 
+  document.getElementById('btn-download-animar-txt')?.addEventListener('click', () => {
+    dispararDownloadTexto('animar.txt', window._animarTxtAtual || (window._planoDeCenasAtual ? PlanoCenasModule.gerarAnimarTxt(window._planoDeCenasAtual.cenas) : ''));
+  });
+
   // Download do Pacote Scriptorium (.zip)
   document.getElementById('btn-download-pacote-scriptorium')?.addEventListener('click', async () => {
     if (!window._planoDeCenasAtual || !window._cenasTxtAtual) {
@@ -11636,6 +11859,7 @@ ${resultText}`;
     const cenasTxt = window._cenasTxtAtual;
     const descricoesTxt = window._descricoesTxtAtual || PlanoCenasModule.gerarDescricoesTxt(window._planoDeCenasAtual.cenas);
     const promptsTxt = window._promptsTxtAtual || PlanoCenasModule.gerarPromptsTxt(window._planoDeCenasAtual.cenas);
+    const animarTxt = window._animarTxtAtual || (window._planoDeCenasAtual ? PlanoCenasModule.gerarAnimarTxt(window._planoDeCenasAtual.cenas) : '');
 
     // Validador estrito antes de exportar (Item 14)
     const validacao = PlanoCenasModule.validarPacoteScriptorium({
@@ -11658,6 +11882,9 @@ ${resultText}`;
       { nome: 'descricoes.txt', conteudo: descricoesTxt },
       { nome: 'prompts.txt', conteudo: promptsTxt }
     ];
+    if (animarTxt) {
+      arquivosZip.push({ nome: 'animar.txt', conteudo: animarTxt });
+    }
 
     // ITEM 1: Grava os bytes binários reais do áudio MP3 (lê como ArrayBuffer)
     if (typeof currentAudioBlob !== 'undefined' && currentAudioBlob) {
@@ -12926,9 +13153,13 @@ Desenvolvimento: A soberania divina cumpre cada detalhe profético anunciado pel
       // Ao mudar a ideia escolhida, zera fichas de personagens e plano de cenas do projeto anterior
       window._fichasPersonagensAtual = null;
       window._planoDeCenasAtual = null;
+      window._ganchosAberturaAtual = null;
+      window._animarTxtAtual = null;
       if (typeof window !== 'undefined' && window.AutoSave && window.AutoSave.session) {
         delete window.AutoSave.session._fichasPersonagensAtual;
         delete window.AutoSave.session._planoDeCenasAtual;
+        delete window.AutoSave.session._ganchosAberturaAtual;
+        delete window.AutoSave.session._animarTxtAtual;
       }
       if (!inputIdeiaEl.value.trim()) {
         window._numeroIdeiaEscolhida = null;

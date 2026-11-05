@@ -1958,7 +1958,7 @@ ${exemploJson}`;
         fichasDisponiveis[canon] = v;
       }
     }
-    const fichasProjeto = contexto.fichasPersonagens || (typeof window !== 'undefined' ? window._fichasPersonagensAtual : null) || {};
+    const fichasProjeto = contexto.fichasPersonagens || contexto.fichas || (typeof window !== 'undefined' ? window._fichasPersonagensAtual : null) || {};
     for (const [k, v] of Object.entries(fichasProjeto)) {
       if (ehNomeProprioValidoPersonagem(k)) {
         const canon = normalizarNomePersonagemCanonico(k);
@@ -2260,6 +2260,7 @@ Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
       }
     }
 
+    marcarCenasParaAnimar(cenas, contexto);
     return cenas;
   }
 
@@ -2437,6 +2438,8 @@ Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
       }
     }
 
+    marcarCenasParaAnimar(cenas, contexto);
+
     return {
       cenas,
       pendentesRestantes: cenas.filter(c => c.status === 'PENDENTE'),
@@ -2490,6 +2493,7 @@ Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
     const { cenas, avisos } = agruparFrasesEmCenas(frases, narracaoLimpa);
 
     gerarDescricoesVisuaisOffline(cenas, narracaoLimpa, contexto);
+    marcarCenasParaAnimar(cenas, contexto);
 
     return {
       cenas,
@@ -2578,6 +2582,356 @@ Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
   function gerarPromptsTxt(cenas) {
     if (!cenas || !Array.isArray(cenas)) return '';
     return cenas.map(c => `${c.numero}. ${(c.promptIngles || '').trim()}`).join('\n\n');
+  }
+
+  // ---------------------------------------------------------------------------
+  // GANCHOS VISUAIS DA ABERTURA E CENAS PARA ANIMAR (animar.txt)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Gera prompt curto de animação cinematográfica em inglês para geradores de vídeo.
+   * Contém movimento da cena, movimento de câmera e duração fixa de 5s.
+   */
+  function gerarPromptAnimacaoCurto(cena, contexto = {}) {
+    const desc = (cena?.descricaoVisual || '').toLowerCase();
+    const frase = (cena?.frases ? cena.frases.join(' ') : (cena?.fraseInicio || '')).toLowerCase();
+    const tema = (contexto?.tema || '').toLowerCase();
+
+    if (/\b(?:fogo|chama|labareda|sar[çc]a|queima|ardente|fogueira|inc[eê]ndio|fire|flame|burning|burns|blaze)\b/i.test(desc + ' ' + frase)) {
+      return 'Cinematic slow push-in camera, gentle flickering supernatural flames and warm golden light, subtle rising embers and drifting smoke, 5s duration';
+    }
+    if (/\b(?:mar|onda|ondas|rio|profundeza|[aá]gua|mar[ií]timo|sea|ocean|waves|water|parted)\b/i.test(desc + ' ' + frase)) {
+      return 'Slow dynamic low-angle tracking camera, majestic surging water currents and rising misty spray, dramatic volumetric light beams, 5s duration';
+    }
+    if (/\b(?:olhar|olhou|orou|orando|ajoelh|rosto|express|face|kneel|prayer|praying|eyes|looking)\b/i.test(desc + ' ' + frase)) {
+      return 'Slow dramatic dolly-in toward subject\'s awe-struck face, robes fluttering softly in desert wind, warm light shifting across features, 5s duration';
+    }
+    if (/\b(?:multid[aã]o|povo|ex[eé]rcito|soldados|profetas|acampamento|crowd|army|assembly|soldiers|people)\b/i.test(desc + ' ' + frase)) {
+      return 'Cinematic wide panning camera, atmospheric desert dust blowing across rocky ground, torchlights flickering softly in distance, 5s duration';
+    }
+    if (/\b(?:monte|montanha|deserto|rocha|altar|pedra|mountain|mount|desert|rock|altar)\b/i.test(desc + ' ' + frase)) {
+      return 'Slow atmospheric crane drift upwards over ancient rugged terrain, moving storm clouds, glowing divine rays piercing the sky, 5s duration';
+    }
+    if (/\b(?:voz|céu|anjo|glória|trovão|raio|voice|heaven|angel|glory|thunder|lightning)\b/i.test(desc + ' ' + frase)) {
+      return 'Dramatic slow camera tilt upward into supernatural golden luminescence, floating radiant particles, ethereal atmospheric depth, 5s duration';
+    }
+
+    return 'Cinematic slow camera push-in, subtle atmospheric dust motes floating in warm directional light, gentle natural movement, 5s duration';
+  }
+
+  /**
+   * Marca automaticamente de 3 a 5 cenas como "ANIMAR":
+   * A cena de abertura (Cena 1) SEMPRE é incluída, somada às cenas de maior impacto dramático do roteiro.
+   */
+  function marcarCenasParaAnimar(cenas, contexto = {}) {
+    if (!cenas || !Array.isArray(cenas) || cenas.length === 0) return cenas;
+
+    // 1. Cena 1 (Abertura) é SEMPRE marcada como ANIMAR
+    cenas[0].animar = true;
+    if (!cenas[0].promptAnimacao) {
+      cenas[0].promptAnimacao = gerarPromptAnimacaoCurto(cenas[0], contexto);
+    }
+
+    // Se tiver menos de 3 cenas no total, marca todas
+    if (cenas.length <= 3) {
+      for (let i = 0; i < cenas.length; i++) {
+        cenas[i].animar = true;
+        if (!cenas[i].promptAnimacao) {
+          cenas[i].promptAnimacao = gerarPromptAnimacaoCurto(cenas[i], contexto);
+        }
+      }
+      return cenas;
+    }
+
+    // 2. Pontua as demais cenas (da cena 2 em diante) por impacto dramático
+    const regexImpacto = /\b(?:fogo|chama|ardente|sar[çc]a|voz|trov[aã]o|rel[aâ]mpago|anjo|queda|mort|espada|milagre|gl[oó]ria|abismo|tempestade|rugi|le[aã]o|desafio|clama|orou|altar|consumiu|rosto\s+em\s+terra|fara[oó]|mar\s+vermelho|carruagens|fuga|alian[çc]a|vis[aã]o|santidade|santo)\b/i;
+    const regexImpactoEn = /\b(?:fire|flame|burning|voice|thunder|lightning|angel|fall|sword|miracle|glory|storm|roaring|lion|altar|consumed|chariot|parted|vision|holy|sacred|presence)\b/i;
+
+    const candidatos = [];
+    for (let i = 1; i < cenas.length; i++) {
+      const c = cenas[i];
+      const textoCena = (c.frases ? c.frases.join(' ') : (c.fraseInicio || '')) + ' ' + (c.descricaoVisual || '');
+      let score = 0;
+
+      const matchesPt = (textoCena.match(regexImpacto) || []).length;
+      const matchesEn = (textoCena.match(regexImpactoEn) || []).length;
+      score += (matchesPt + matchesEn) * 3;
+
+      // Cenas mais longas ou no meio/clímax têm peso extra
+      if (c.duracaoEstimadaSegundos >= 14) score += 2;
+      const posicaoRelativa = i / cenas.length;
+      if (posicaoRelativa >= 0.35 && posicaoRelativa <= 0.85) score += 2;
+
+      candidatos.push({ index: i, cena: c, score });
+    }
+
+    // Ordena por pontuação de impacto
+    candidatos.sort((a, b) => b.score - a.score);
+
+    // Alvo total de cenas animadas: entre 3 e 5 cenas (1 abertura + 2 a 4 do miolo)
+    const totalDesejado = cenas.length >= 10 ? 4 : 3;
+    const selecionadosIndices = new Set([0]);
+
+    for (const cand of candidatos) {
+      if (selecionadosIndices.size >= totalDesejado) break;
+
+      // Evita selecionar cenas imediatamente consecutivas se houver opções
+      const consecutivo = Array.from(selecionadosIndices).some(idx => Math.abs(idx - cand.index) <= 1);
+      if (consecutivo && candidatos.length > totalDesejado * 2) {
+        continue;
+      }
+      selecionadosIndices.add(cand.index);
+    }
+
+    // Se ainda não alcançou o mínimo de 3 cenas, completa com os primeiros candidatos
+    if (selecionadosIndices.size < 3) {
+      for (const cand of candidatos) {
+        if (selecionadosIndices.size >= 3) break;
+        selecionadosIndices.add(cand.index);
+      }
+    }
+
+    // Aplica a marcação final em todas as cenas
+    for (let i = 0; i < cenas.length; i++) {
+      if (selecionadosIndices.has(i)) {
+        cenas[i].animar = true;
+        if (!cenas[i].promptAnimacao) {
+          cenas[i].promptAnimacao = gerarPromptAnimacaoCurto(cenas[i], contexto);
+        }
+      } else {
+        cenas[i].animar = false;
+      }
+    }
+
+    return cenas;
+  }
+
+  /**
+   * Gera o conteúdo do arquivo animar.txt:
+   * Formato estrito: NN | prompt curto em inglês com câmera, movimento e 5s duration.
+   */
+  function gerarAnimarTxt(cenas) {
+    if (!cenas || !Array.isArray(cenas)) return '';
+    const animadas = cenas.filter(c => c.animar === true);
+    if (animadas.length === 0 && cenas.length > 0) {
+      // Fallback: se nenhuma estiver explicitamente marcada, anima pelo menos a cena 1
+      cenas[0].animar = true;
+      if (!cenas[0].promptAnimacao) cenas[0].promptAnimacao = gerarPromptAnimacaoCurto(cenas[0]);
+      animadas.push(cenas[0]);
+    }
+
+    return animadas.map(c => {
+      const numStr = String(c.numero).padStart(2, '0');
+      const promptAnim = (c.promptAnimacao || gerarPromptAnimacaoCurto(c)).replace(/[\r\n]+/g, ' ').trim();
+      return `${numStr} | ${promptAnim}`;
+    }).join('\n');
+  }
+
+  /**
+   * Gera 3 opções de Gancho Visual da Abertura (primeiros 3 a 5 segundos do vídeo):
+   * 1. CONSERVADORA (direta e esperada)
+   * 2. MEDIANA (metáfora visual menos óbvia)
+   * 3. OUSADA (conexão inesperada, fiel ao texto bíblico e sem invenções)
+   */
+  async function gerarGanchosVisuaisAbertura(narracaoLimpa, contexto = {}, chamarIaFn = null) {
+    const textoBase = typeof narracaoLimpa === 'string'
+      ? narracaoLimpa
+      : (narracaoLimpa && (narracaoLimpa.fraseOriginal || narracaoLimpa.narracaoLimpa || '')) || '';
+    const tema = typeof contexto === 'string' ? contexto.trim() : ((contexto && contexto.tema) || '').trim();
+    const primeiraFrase = (textoBase || '').split(/[.!?]\s+/)[0] || '';
+    const personagem = (typeof contexto === 'object' && contexto && contexto.personagemPrincipal) ? contexto.personagemPrincipal.trim() : '';
+
+    const formatarItensAbertura = (arr) => (arr || []).map(item => ({
+      ...item,
+      descricaoVisual: item.descricaoVisual || item.descricaoVisualIngles || '',
+      descricaoVisualIngles: item.descricaoVisualIngles || item.descricaoVisual || ''
+    }));
+
+    // Tenta geração via IA quando fornecido chamarIaFn
+    if (typeof chamarIaFn === 'function') {
+      try {
+        const promptAbertura = `Act as an expert biblical documentary cinematographer and director.
+Generate EXACTLY 3 distinct visual opening hook scene concepts for the first 3 to 5 seconds of our biblical documentary video about: "${tema}".
+First narrative sentence spoken in the opening: "${primeiraFrase}".
+Key character: "${personagem || 'Central biblical figure'}".
+
+GENERATE ONE OF EACH MANDATORY TYPE:
+1. CONSERVADORA: Direct, expected, highly recognizable biblical scene representing the opening moment.
+2. MEDIANA: Less obvious visual metaphor, telling physical detail, or symbolic close-up that builds anticipation.
+3. OUSADA: Unexpected cinematic angle or striking contrast, yet 100% faithful to canonical Scripture and the theme (zero extra-biblical lore, zero sensationalism that contradicts the Bible).
+
+RULES:
+- No written text or words in the image.
+- Each concept MUST contain:
+  * tipo: "CONSERVADORA" | "MEDIANA" | "OUSADA"
+  * nome: short Portuguese title (max 5 words)
+  * descricaoDiretor: visual description as a director describing to a video generator (what appears, camera angle, what moves, environment) in Portuguese
+  * porQuePrende: 1 single Portuguese sentence explaining why it hooks attention in 3-5 seconds
+  * descricaoVisualIngles: concise cinematic visual description in English for image generation
+
+OUTPUT FORMAT:
+Output EXCLUSIVELY a valid JSON array of 3 objects with keys: "tipo", "nome", "descricaoDiretor", "porQuePrende", "descricaoVisualIngles". No preamble, no markdown.`;
+
+        const respIa = await chamarIaFn(promptAbertura);
+        const limpoJson = (respIa || '').replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+        const jsonMatch = limpoJson.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (Array.isArray(parsed) && parsed.length >= 3) {
+            return formatarItensAbertura(parsed.slice(0, 3).map((item, idx) => ({
+              tipo: ['CONSERVADORA', 'MEDIANA', 'OUSADA'][idx] || item.tipo,
+              nome: item.nome || `Opção ${idx + 1}`,
+              descricaoDiretor: item.descricaoDiretor || '',
+              porQuePrende: item.porQuePrende || '',
+              descricaoVisualIngles: item.descricaoVisualIngles || item.descricaoVisual || ''
+            })));
+          }
+        }
+      } catch (errIa) {
+        console.warn('[PlanoCenas] Falha na IA dos ganchos de abertura, aplicando gerador semântico offline:', errIa);
+      }
+    }
+
+    // Fallback semântico offline calibrado por tema bíblico
+    const tNorm = (tema + ' ' + primeiraFrase).toLowerCase();
+
+    // Caso 1: Moisés e a Sarça Ardente (Êxodo 3)
+    if (/\b(?:moys?es|sar[çc]a|ardente|horebe|sinai|exodo\s+3)\b/i.test(tNorm)) {
+      return formatarItensAbertura([
+        {
+          tipo: 'CONSERVADORA',
+          nome: 'A Sarça em Chamas no Horebe',
+          descricaoDiretor: 'Plano médio aberto. Moisés de perfil apoiado em seu cajado rústico na encosta rochosa do Monte Horebe, observando perplexo uma sarça espinhosa envolta em fogo dourado sobrenatural, com labaredas dançando sem consumir os ramos verdes.',
+          porQuePrende: 'Apresenta imediatamente o milagre mais icônico do chamado de Moisés de forma solene e visualmente arrebatadora.',
+          descricaoVisualIngles: 'Moses standing on the rocky slope of Mount Horeb looking in awe at a solitary desert bush completely enveloped in vibrant supernatural golden flames without being consumed, glowing divine radiance in twilight'
+        },
+        {
+          tipo: 'MEDIANA',
+          nome: 'Pés Descalços Sobre o Solo Sagrado',
+          descricaoDiretor: 'Plano detalhe rente ao solo árido. Os pés calejados de Moisés pisando na terra avermelhada e nas pedras do deserto, ao lado de suas sandálias de couro retiradas e jogadas ao pó, banhados pela luz dourada pulsante do fogo sagrado.',
+          porQuePrende: 'Gera mistério e reverência imediata através do detalhe físico da ordem de tirar as sandálias por ser terra santa.',
+          descricaoVisualIngles: 'Close-up dramatic low angle shot of bare weathered feet touching the sacred rocky desert soil beside removed ancient leather sandals, illuminated by intense glowing supernatural firelight'
+        },
+        {
+          tipo: 'OUSADA',
+          nome: 'Folhas Verdes Intactas no Fogo',
+          descricaoDiretor: 'Macro cinematográfico com câmera lenta. As folhas e espinhos verdes de uma sarça do deserto cercadas por labaredas incandescentes que não as queimam nem soltam fuligem, com faíscas divinas suspensas no ar do deserto sob vento imóvel.',
+          porQuePrende: 'Confronta as leis da física nos primeiros 3 segundos, forçando o olhar a decifrar como o fogo arde sem queimar.',
+          descricaoVisualIngles: 'Macro cinematographic shot of vibrant green desert leaves and sharp thorns completely surrounded by fierce supernatural fire yet perfectly intact without smoke or charring, floating golden sparks'
+        }
+      ]);
+    }
+
+    // Caso 2: Elias e os Profetas de Baal (1 Reis 18)
+    if (/\b(?:elias|carmelo|baal|profetas\s+de\s+baal)\b/i.test(tNorm)) {
+      return [
+        {
+          tipo: 'CONSERVADORA',
+          nome: 'O Fogo Caindo do Céu',
+          descricaoDiretor: 'Plano geral dramático no Monte Carmelo. Um raio vertical de fogo sobrenatural caindo do zênite e consumindo o altar de pedras de Elias e a água dos regos, sob o olhar estarrecido da multidão.',
+          porQuePrende: 'Entrega o clímax divino logo no primeiro segundo, gerando choque e imponência visual imediata.',
+          descricaoVisualIngles: 'Elijah standing with outstretched arms on Mount Carmel as a brilliant pillar of supernatural divine fire descends vertically from the heavens onto the stone altar'
+        },
+        {
+          tipo: 'MEDIANA',
+          nome: 'A Água Encharcando as Pedras',
+          descricaoDiretor: 'Plano próximo em ângulo holandês. Quatro grandes cântaros de barro derramando água cristalina sobre a lenha e as doze pedras do altar seco, com a água transbordando para os regos sob sol causticante.',
+          porQuePrende: 'Instiga curiosidade ao mostrar água sendo despejada sobre um sacrifício em plena seca antes de o fogo descer.',
+          descricaoVisualIngles: 'Dramatic dynamic medium shot of clay water jars pouring streams of clear water over rugged stone altar and wood, water filling the trench around under blazing desert sky'
+        },
+        {
+          tipo: 'OUSADA',
+          nome: 'O Povo com o Rosto no Pó',
+          descricaoDiretor: 'Plano plongée extremo do alto. Centenas de israelitas caindo simultaneamente com os rostos na terra avermelhada, com as mãos na cabeça e reflexos dourados nos mantos enquanto proclamam o Senhor.',
+          porQuePrende: 'Provoca impacto humano coletivo instantâneo através da comoção visceral de uma multidão prostrada ao mesmo tempo.',
+          descricaoVisualIngles: 'High-angle wide shot of a vast gathering of ancient Hebrew spectators falling prostrate with their faces to the desert ground, overwhelmed by the supernatural descent of divine fire'
+        }
+      ];
+    }
+
+    // Caso 3: Daniel na cova dos leões (Daniel 6)
+    if (/\b(?:daniel|le[aã]o|le[oõ]es|cova)\b/i.test(tNorm)) {
+      return [
+        {
+          tipo: 'CONSERVADORA',
+          nome: 'Daniel na Cova com as Feras',
+          descricaoDiretor: 'Plano médio em contra-plongée. Daniel sereno em pé na escuridão da cova de pedra, cercado por leões imensos sentados mansamente a seus pés como ovelhas, sob feixe de luz da abertura superior.',
+          porQuePrende: 'O contraste entre feras carnívoras e a tranquilidade absoluta do profeta prende a atenção instantaneamente.',
+          descricaoVisualIngles: 'Daniel standing in solemn serenity inside a dark subterranean stone pit, surrounded by massive resting lions with closed mouths, illuminated by a single shaft of light from above'
+        },
+        {
+          tipo: 'MEDIANA',
+          nome: 'O Selo Real na Grande Pedra',
+          descricaoDiretor: 'Plano detalhe com tocha trêmula. Uma imensa pedra redonda bloqueando a entrada da cova, com o anel de sinete do rei Dario selando a argila ainda fresca entre as correntes de ferro.',
+          porQuePrende: 'Cria tensão claustrofóbica e sensação de decreto irrevogável antes de revelar se Daniel sobreviveu.',
+          descricaoVisualIngles: 'Extreme close-up of a massive stone sealing the dark entrance of the den, royal signet seal stamped into soft clay over iron chains, torchlight flickering in the cavern shadows'
+        },
+        {
+          tipo: 'OUSADA',
+          nome: 'A Mandíbula Fechada na Sombra',
+          descricaoDiretor: 'Primeiríssimo plano na penumbra. O focinho e os dentes afiados de um leão faminto a centímetros do manto de linho de Daniel, com uma aura luminosa sutil invisível mantendo a fera imóvel e quieta.',
+          porQuePrende: 'Gera tensão visceral de perigo iminente nos primeiros 3 segundos através da proximidade máxima com o predador.',
+          descricaoVisualIngles: 'Tense cinematic macro shot of a massive lion\'s fierce face inches away from clean linen robes, mouth firmly shut by an unseen divine presence in subterranean darkness'
+        }
+      ];
+    }
+
+    // Caso Geral / Universal para qualquer outro tema bíblico
+    const nomeBase = (personagem || tema || 'Profeta').split(/\s+/).slice(0, 2).join(' ');
+    return formatarItensAbertura([
+      {
+        tipo: 'CONSERVADORA',
+        nome: `O Momento Decisivo de ${nomeBase}`,
+        descricaoDiretor: `Plano geral cinematográfico. ${nomeBase} no centro da cena bíblica histórica diante do cenário antigo, com atmosfera solene e luz dramática no clímax da narrativa.`,
+        porQuePrende: 'Apresenta o personagem e o cenário central da história bíblica com impacto e reconhecimento imediato.',
+        descricaoVisualIngles: `${nomeBase || 'Biblical figure'} standing in dramatic historical setting under imposing ancient sky, solemn biblical atmosphere with volumetric natural lighting`
+      },
+      {
+        tipo: 'MEDIANA',
+        nome: 'O Objeto Sagrado em Destaque',
+        descricaoDiretor: 'Plano detalhe dramático focado em um elemento físico do relato (cajado, pergaminho, cálice, pedras ou solo antigo) com iluminação dourada e poeira suspensa.',
+        porQuePrende: 'Instiga curiosidade ao destacar um detalhe tangível e autêntico antes de revelar toda a extensão do episódio.',
+        descricaoVisualIngles: 'Detailed cinematic close-up of an ancient biblical relic and worn hands holding it under dramatic raking light, dust particles floating in air'
+      },
+      {
+        tipo: 'OUSADA',
+        nome: 'A Perspectiva Imprevista do Conflito',
+        descricaoDiretor: 'Ângulo inusitado em contra-plongée baixo rente ao solo antigo, com silhuetas recortadas contra um céu crepuscular carregado e tensão sobrenatural palpável.',
+        porQuePrende: 'Quebra expectativas visuais comuns e estabelece tensão cinematográfica máxima nos primeiros 3 a 5 segundos.',
+        descricaoVisualIngles: 'Low-angle dramatic wide perspective shot revealing imposing ancient biblical landscape with silhouettes framed against a stormy sunset sky'
+      }
+    ]);
+  }
+
+  /**
+   * Aplica a opção de abertura escolhida na Cena 1 do Plano de Cenas:
+   * Atualiza a descrição visual, remonta o prompt final com estilo e fichas, e marca como ANIMAR.
+   */
+  function aplicarGanchoAberturaNaCena1(cenas, opcaoAbertura, narracaoOuContexto = {}, contextoExtra = {}) {
+    const listaCenas = Array.isArray(cenas) ? cenas : (cenas && Array.isArray(cenas.cenas) ? cenas.cenas : null);
+    if (!listaCenas || listaCenas.length === 0 || !opcaoAbertura) return cenas;
+
+    const contexto = (typeof narracaoOuContexto === 'object' && narracaoOuContexto !== null && !Array.isArray(narracaoOuContexto))
+      ? narracaoOuContexto
+      : (typeof contextoExtra === 'object' ? contextoExtra : {});
+
+    const desc = opcaoAbertura.descricaoVisualIngles || opcaoAbertura.descricaoVisual || opcaoAbertura.descricaoDiretor || '';
+    const trechoPt = (listaCenas[0].frases && listaCenas[0].frases.length > 0)
+      ? listaCenas[0].frases.join(' ')
+      : (listaCenas[0].fraseInicio || listaCenas[0].fraseOriginal || '');
+
+    listaCenas[0].descricaoVisual = desc;
+    listaCenas[0].status = 'CONCLUIDA';
+    listaCenas[0].motivoPendente = '';
+    listaCenas[0].aberturaEscolhida = opcaoAbertura.tipo;
+    listaCenas[0].aberturaNome = opcaoAbertura.nome;
+    listaCenas[0].animar = true;
+    listaCenas[0].promptAnimacao = gerarPromptAnimacaoCurto(listaCenas[0], contexto);
+    const promptMontado = montarPromptFinalCena(desc, trechoPt, contexto, 1);
+    listaCenas[0].promptIngles = promptMontado;
+    listaCenas[0].promptFinal = promptMontado;
+
+    return cenas;
   }
 
   /**
@@ -2993,6 +3347,11 @@ Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
     gerarCenasTxt,
     gerarDescricoesTxt,
     gerarPromptsTxt,
+    gerarPromptAnimacaoCurto,
+    marcarCenasParaAnimar,
+    gerarAnimarTxt,
+    gerarGanchosVisuaisAbertura,
+    aplicarGanchoAberturaNaCena1,
     gerarHashTexto,
     verificarDesatualizacao,
     gerarSlug,
