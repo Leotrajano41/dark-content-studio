@@ -129,5 +129,74 @@
     return { texto: paragrafos.join('\n\n'), removidas };
   }
 
-  return { removerFrasesRepetidas, MARCADORES, marcadorDeContexto, detectarCostumeSemMarcador, detectarAtribuicaoIndevida, detectarAbsolutos, detectarCenasInventadas, detectarCitacoesSemReferencia };
+  // ---------------------------------------------------------------------------
+  // FECHAMENTO E CTA: uma frase só, curta, ligada ao tema, sem "inscreva-se" e sem prometer próximos vídeos.
+  // Fidelidade bíblica: "gago" e similares não existem no texto (Êxodo 4:10 diz "pesado de boca e pesado de língua").
+  // ---------------------------------------------------------------------------
+  const LIMITE_PALAVRAS_CTA = 35;
+  const normSemAcento = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const STOP_TEMA = new Set(['sobre', 'diante', 'entre', 'depois', 'antes', 'ainda', 'como', 'para', 'pelo', 'pela', 'este', 'esta', 'essa', 'esse', 'isso', 'quando', 'onde', 'registra', 'realmente', 'biblia', 'biblico', 'biblica', 'capitulo', 'versiculo', 'video', 'historia']);
+
+  function paragrafosDe(texto) {
+    return String(texto || '').split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  }
+
+  function palavrasDoTema(ideia, texto) {
+    const set = new Set(normSemAcento(ideia).split(/[^a-z0-9]+/).filter(w => w.length >= 4 && !STOP_TEMA.has(w) && !/^\d+$/.test(w)));
+    // Nomes próprios que aparecem 3+ vezes no roteiro (personagem principal) também contam como "tema"
+    const cont = {};
+    (String(texto || '').match(/(?<=[a-zà-ú,;:]\s)[A-ZÀ-Ú][a-zà-ú]{3,}/g) || []).forEach(n => { const k = normSemAcento(n); cont[k] = (cont[k] || 0) + 1; });
+    Object.keys(cont).forEach(k => { if (cont[k] >= 3 && !STOP_TEMA.has(k)) set.add(k); });
+    return set;
+  }
+
+  /**
+   * Valida o CTA (último parágrafo). Retorna { ok, problemas:[{tipo,detalhe}], cta }.
+   * Tipos: mais_de_uma_frase, longo_demais, inscreva_se, promete_proximos, formatacao, sem_acao, sem_relacao_com_o_tema.
+   */
+  function validarCtaFinal(texto, ideia = '') {
+    const paras = paragrafosDe(texto);
+    const cta = paras[paras.length - 1] || '';
+    const problemas = [];
+    const frases = dividirFrases(cta).filter(f => /\p{L}/u.test(f));
+    const palavras = (cta.match(/\S+/g) || []).length;
+    const n = normSemAcento(cta);
+
+    if (!cta) problemas.push({ tipo: 'sem_cta', detalhe: 'Roteiro sem parágrafo final' });
+    if (frases.length > 1) problemas.push({ tipo: 'mais_de_uma_frase', detalhe: `${frases.length} frases` });
+    if (palavras > LIMITE_PALAVRAS_CTA) problemas.push({ tipo: 'longo_demais', detalhe: `${palavras} palavras (máx. ${LIMITE_PALAVRAS_CTA})` });
+    if (/inscrev|inscrit|subscri|suscri|ative o sino|sininho|\bsino\b/.test(n)) problemas.push({ tipo: 'inscreva_se', detalhe: 'convite de inscrição' });
+    if (/\bproxim[oa]s?\b|em breve|\bveremos\b|vamos ver|acompanh|volte|nos vemos|ate o proximo|\bseguinte (video|episodio)\b|novos? (videos?|episodios?|estudos?)/.test(n)) {
+      problemas.push({ tipo: 'promete_proximos', detalhe: 'promessa de próximos vídeos/episódios' });
+    }
+    if (/[\[\]*#]|^\s*(?:cta|fim)\b/i.test(cta)) problemas.push({ tipo: 'formatacao', detalhe: 'rótulo, colchete ou markdown' });
+    if (!/compartilh|comente|comentar|envie|mande|encaminh|conte\b|converse|leve\b|lembre|\bore\b|reze|diga|marque|guarde|medite|escreva|share|comparte/.test(n)) {
+      problemas.push({ tipo: 'sem_acao', detalhe: 'não pede uma ação ao espectador' });
+    }
+    const tema = palavrasDoTema(ideia, texto);
+    if (tema.size > 0) {
+      const tokens = n.split(/[^a-z0-9]+/);
+      if (!tokens.some(t => tema.has(t))) problemas.push({ tipo: 'sem_relacao_com_o_tema', detalhe: 'não cita o tema nem o personagem do vídeo' });
+    }
+    return { ok: problemas.length === 0, problemas, cta };
+  }
+
+  /**
+   * Fidelidade bíblica no fechamento (conclusão + CTA = últimos 2 parágrafos): proíbe termos que o texto não traz.
+   * Êxodo 4:10 diz "pesado de boca e pesado de língua" — não "gago".
+   */
+  function validarFidelidadeFechamento(texto) {
+    const paras = paragrafosDe(texto);
+    const problemas = [];
+    const fecho = paras.slice(-2);
+    const rxTermo = /(?<![\p{L}])(?:gag[oa]s?|gaguej\p{L}*|tartamud\p{L}*)(?![\p{L}])/iu;
+    fecho.forEach((p, i) => {
+      const m = p.match(rxTermo);
+      if (m) problemas.push({ tipo: 'termo_fora_do_texto_biblico', termo: m[0], indiceParagrafo: paras.length - fecho.length + i });
+    });
+    const foraDoFechamento = paras.slice(0, -2).filter(p => rxTermo.test(p)).length;
+    return { ok: problemas.length === 0, problemas, foraDoFechamento };
+  }
+
+  return { removerFrasesRepetidas, validarCtaFinal, validarFidelidadeFechamento, LIMITE_PALAVRAS_CTA, MARCADORES, marcadorDeContexto, detectarCostumeSemMarcador, detectarAtribuicaoIndevida, detectarAbsolutos, detectarCenasInventadas, detectarCitacoesSemReferencia };
 });

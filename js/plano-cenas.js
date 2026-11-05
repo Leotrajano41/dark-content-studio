@@ -2589,34 +2589,205 @@ Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
   // ---------------------------------------------------------------------------
 
   /**
-   * Gera prompt curto de animação cinematográfica em inglês para geradores de vídeo.
-   * Contém movimento da cena, movimento de câmera e duração fixa de 5s.
+   * Remove do texto de descrição visual tudo que NÃO é a cena em si (prefixo de estilo, "Depicting", sufixo sem moldura).
+   */
+  function limparDescricaoParaAnimacao(desc) {
+    return String(desc || '')
+      .replace(/^Illuminated manuscript[^.]*\.\s*/i, '')
+      .replace(/^Depicting\s+/i, '')
+      .replace(/Full bleed image[^.]*\.?\s*$/i, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  /**
+   * Extrai o sujeito/ação principal da descrição da cena (primeira oração, sem o "tipo de plano").
+   */
+  function extrairSujeitoCena(desc) {
+    let d = limparDescricaoParaAnimacao(desc);
+    d = d.replace(/^(?:an?|the)?\s*(?:[\w-]+\s+){0,3}(?:shot|close-up|closeup|view|perspective|angle)\s+(?:of|on|showing|revealing|focusing on)\s+/i, '');
+    const oracao = d.split(/[;.]/)[0].split(/,\s+(?=[a-z])/)[0];
+    return oracao.split(/\s+/).slice(0, 16).join(' ').replace(/[,\s]+$/, '');
+  }
+
+  /**
+   * Gera o prompt curto de animação DESTA cena, a partir da descrição visual dela (nunca de um texto-modelo único):
+   * o que se move na cena + movimento de câmera + 5s. Usado como reserva quando a IA não responde ou reprova.
    */
   function gerarPromptAnimacaoCurto(cena, contexto = {}) {
-    const desc = (cena?.descricaoVisual || '').toLowerCase();
-    const frase = (cena?.frases ? cena.frases.join(' ') : (cena?.fraseInicio || '')).toLowerCase();
-    const tema = (contexto?.tema || '').toLowerCase();
+    const descOriginal = cena?.descricaoVisual || '';
+    const desc = limparDescricaoParaAnimacao(descOriginal).toLowerCase();
+    const sujeito = extrairSujeitoCena(descOriginal) || 'the scene';
+    const numero = parseInt(cena?.numero, 10) || 1;
 
-    if (/\b(?:fogo|chama|labareda|sar[çc]a|queima|ardente|fogueira|inc[eê]ndio|fire|flame|burning|burns|blaze)\b/i.test(desc + ' ' + frase)) {
-      return 'Cinematic slow push-in camera, gentle flickering supernatural flames and warm golden light, subtle rising embers and drifting smoke, 5s duration';
+    // Câmera: segue o tipo de plano que a própria descrição já pede; senão alterna por número da cena
+    let camera;
+    if (/\b(?:close-up|closeup|macro|detail|face|faces|hands?|feet|eyes)\b/.test(desc)) camera = 'slow push-in';
+    else if (/\b(?:low[- ]angle|from below|looking up)\b/.test(desc)) camera = 'gentle upward tilt';
+    else if (/\b(?:high[- ]angle|overhead|aerial|from above|bird)\b/.test(desc)) camera = 'slow descending crane move';
+    else if (/\b(?:wide|panoramic|landscape|vast|horizon|expanse)\b/.test(desc)) camera = 'slow lateral pan';
+    else camera = ['slow push-in', 'slow lateral dolly', 'gentle orbit', 'slow pull-back'][numero % 4];
+
+    // O que se move: só o que a descrição desta cena menciona (até 2 elementos)
+    const regras = [
+      [/\b(?:flame|flames|fire|burning|blaze|ember|embers)\b/, 'flames flicker and sway while embers drift upward'],
+      [/\b(?:sandal|sandals|barefoot|bare feet|feet|foot)\b/, 'dust lifts softly around the feet as they settle on the ground'],
+      [/\b(?:kneel|kneels|kneeling|prayer|praying|prays|bows?|bowing|prostrat\w*|face down)\b/, 'the head bows slowly and the robes settle around the body'],
+      [/\b(?:staff|rod)\b/, 'the hand tightens around the staff while the robe stirs in the wind'],
+      [/\b(?:sheep|flock|lambs?|shepherd)\b/, 'sheep drift slowly across the slope as the shepherd moves among them'],
+      [/\b(?:water|sea|ocean|wave|waves|river|rain|ripples?)\b/, 'water ripples and mist rises from the surface'],
+      [/\b(?:crowd|people|army|multitude|soldiers|onlookers|assembly|elders)\b/, 'figures shift and murmur while dust rises from the ground'],
+      [/\b(?:cloud|clouds|sky|storm|rays?|glory|heaven|heavens|light beam)\b/, 'clouds drift and rays of light shift slowly across the scene'],
+      [/\b(?:scroll|parchment|manuscript|book)\b/, 'the parchment edges curl gently as candlelight flickers'],
+      [/\b(?:eyes|gaze|looking|awe|face|expression)\b/, 'the eyes widen slowly as warm light shifts across the face'],
+      [/\b(?:wind|desert|sand|rock|rocky|mountain|hill|slope|boulder)\b/, 'wind lifts fine sand and dust across the rocky ground']
+    ];
+    const movimentos = [];
+    for (const [re, mov] of regras) {
+      if (re.test(desc)) movimentos.push(mov);
+      if (movimentos.length >= 2) break;
     }
-    if (/\b(?:mar|onda|ondas|rio|profundeza|[aá]gua|mar[ií]timo|sea|ocean|waves|water|parted)\b/i.test(desc + ' ' + frase)) {
-      return 'Slow dynamic low-angle tracking camera, majestic surging water currents and rising misty spray, dramatic volumetric light beams, 5s duration';
+    if (movimentos.length === 0) movimentos.push('subtle natural movement of fabric, hair and light across the figures');
+
+    return `${camera.charAt(0).toUpperCase()}${camera.slice(1)} on ${sujeito}: ${movimentos.join(' and ')}, 5s duration`;
+  }
+
+  const STOPWORDS_ANIMAR = new Set(['with', 'from', 'that', 'this', 'into', 'over', 'across', 'while', 'their', 'there', 'around', 'slowly', 'slow', 'camera', 'duration', 'gentle', 'soft', 'softly', 'the', 'and', 'for', 'her', 'his', 'its', 'are', 'was', 'toward', 'towards', 'through', 'under', 'upon', 'move', 'moves', 'moving']);
+
+  function tokensConteudo(texto) {
+    return (String(texto || '').toLowerCase().match(/[a-z]{4,}/g) || []).filter(w => !STOPWORDS_ANIMAR.has(w));
+  }
+
+  function similaridadeJaccard(a, b) {
+    const A = new Set(tokensConteudo(a));
+    const B = new Set(tokensConteudo(b));
+    if (A.size === 0 || B.size === 0) return 0;
+    let inter = 0;
+    A.forEach(w => { if (B.has(w)) inter++; });
+    return inter / (A.size + B.size - inter);
+  }
+
+  /**
+   * Valida o conteúdo do animar.txt: formato "NN | prompt ... 5s", sem linhas iguais ou quase iguais.
+   * Se receber as cenas, confere também que cada linha tem relação com a descrição visual da PRÓPRIA cena.
+   */
+  function validarAnimarTxt(animarTxt, cenas = null, limiteSimilaridade = 0.7) {
+    const problemas = [];
+    const linhas = String(animarTxt || '').split('\n').map(l => l.trim()).filter(Boolean);
+    const itens = [];
+    for (const linha of linhas) {
+      const m = linha.match(/^(\d{2,3})\s*\|\s*(.+)$/);
+      if (!m) { problemas.push({ tipo: 'formato', linha }); continue; }
+      if (!/\b5\s?s\b|5 seconds/i.test(m[2])) problemas.push({ tipo: 'sem_duracao', cena: m[1] });
+      itens.push({ numero: m[1], prompt: m[2] });
     }
-    if (/\b(?:olhar|olhou|orou|orando|ajoelh|rosto|express|face|kneel|prayer|praying|eyes|looking)\b/i.test(desc + ' ' + frase)) {
-      return 'Slow dramatic dolly-in toward subject\'s awe-struck face, robes fluttering softly in desert wind, warm light shifting across features, 5s duration';
+    for (let i = 0; i < itens.length; i++) {
+      for (let j = i + 1; j < itens.length; j++) {
+        const igual = itens[i].prompt.toLowerCase() === itens[j].prompt.toLowerCase();
+        const sim = similaridadeJaccard(itens[i].prompt, itens[j].prompt);
+        if (igual || sim >= limiteSimilaridade) {
+          problemas.push({ tipo: igual ? 'igual' : 'quase_igual', cenas: [itens[i].numero, itens[j].numero], similaridade: Number(sim.toFixed(2)) });
+        }
+      }
     }
-    if (/\b(?:multid[aã]o|povo|ex[eé]rcito|soldados|profetas|acampamento|crowd|army|assembly|soldiers|people)\b/i.test(desc + ' ' + frase)) {
-      return 'Cinematic wide panning camera, atmospheric desert dust blowing across rocky ground, torchlights flickering softly in distance, 5s duration';
+    if (Array.isArray(cenas)) {
+      for (const it of itens) {
+        const cena = cenas.find(c => String(c.numero).padStart(2, '0') === it.numero);
+        if (!cena) continue;
+        const tokensDesc = new Set(tokensConteudo(limparDescricaoParaAnimacao(cena.descricaoVisual)).map(w => w.slice(0, 5)));
+        const compartilha = tokensConteudo(it.prompt).some(w => tokensDesc.has(w.slice(0, 5)));
+        if (!compartilha) problemas.push({ tipo: 'sem_relacao_com_a_cena', cena: it.numero });
+      }
     }
-    if (/\b(?:monte|montanha|deserto|rocha|altar|pedra|mountain|mount|desert|rock|altar)\b/i.test(desc + ' ' + frase)) {
-      return 'Slow atmospheric crane drift upwards over ancient rugged terrain, moving storm clouds, glowing divine rays piercing the sky, 5s duration';
-    }
-    if (/\b(?:voz|céu|anjo|glória|trovão|raio|voice|heaven|angel|glory|thunder|lightning)\b/i.test(desc + ' ' + frase)) {
-      return 'Dramatic slow camera tilt upward into supernatural golden luminescence, floating radiant particles, ethereal atmospheric depth, 5s duration';
+    return { ok: problemas.length === 0, problemas };
+  }
+
+  /**
+   * Gera com IA (uma única chamada em lote) o prompt de animação de CADA cena marcada, a partir da descrição visual
+   * e do trecho narrado daquela cena. O que a IA devolver reprovado (formato, repetido, sem relação com a cena) é
+   * substituído pela reserva gerada da própria descrição da cena.
+   */
+  async function gerarPromptsAnimacaoComIa(cenas, contexto = {}, chamarIaFn = null) {
+    if (!Array.isArray(cenas)) return cenas;
+    const animadas = cenas.filter(c => c.animar === true);
+    if (animadas.length === 0) return cenas;
+
+    if (typeof chamarIaFn === 'function') {
+      try {
+        const entrada = animadas.map(c => {
+          const trecho = (c.frases ? c.frases.join(' ') : (c.fraseInicio || c.fraseOriginal || '')).slice(0, 220);
+          return `SCENE ${String(c.numero).padStart(2, '0')}\nVISUAL DESCRIPTION: ${limparDescricaoParaAnimacao(c.descricaoVisual)}\nNARRATION: ${trecho}`;
+        }).join('\n\n');
+        const prompt = `You write short ANIMATION prompts for an image-to-video generator (5-second clips) for a biblical documentary.
+For EACH scene below, write ONE animation prompt in English based ONLY on that scene's own visual description: what moves IN THAT SCENE (the elements named in its description) + one camera movement + the duration.
+
+RULES:
+- Every prompt MUST be different from the others and use the specific subject/objects of its own scene. NEVER reuse a template sentence between scenes.
+- Do NOT add elements that are not in the scene's visual description (no flames, storms, water or crowds unless the description has them).
+- Never depict God as a human figure; divine presence only as light.
+- 20 to 40 words. End with exactly: "5s duration".
+- One line of plain text per prompt (no markdown, no quotes).
+
+SCENES:
+${entrada}
+
+OUTPUT: only a valid JSON array like [{"numero":"01","promptAnimacao":"..."}], one object per scene, same numbers as above.`;
+        const resp = await chamarIaFn(prompt);
+        const limpo = String(resp || '').replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+        const m = limpo.match(/\[[\s\S]*\]/);
+        if (m) {
+          const lista = JSON.parse(m[0]);
+          for (const item of lista) {
+            const alvo = animadas.find(c => String(c.numero).padStart(2, '0') === String(item.numero).padStart(2, '0'));
+            if (!alvo || typeof item.promptAnimacao !== 'string') continue;
+            let p = item.promptAnimacao.replace(/[\r\n]+/g, ' ').replace(/^["']|["']$/g, '').trim();
+            if (!/5s duration\s*\.?$/i.test(p)) p = p.replace(/[.\s]+$/, '') + ', 5s duration';
+            alvo.promptAnimacao = p.replace(/duration\s*\.$/i, 'duration');
+            alvo.promptAnimacaoOrigem = 'ia';
+            alvo._animDesc = c_descChave(alvo);
+          }
+        }
+      } catch (e) {
+        console.warn('[PlanoCenas] Falha na IA dos prompts de animação; usando reserva por cena:', e);
+      }
     }
 
-    return 'Cinematic slow camera push-in, subtle atmospheric dust motes floating in warm directional light, gentle natural movement, 5s duration';
+    // Reserva por cena para tudo que faltou; depois reprova e refaz repetidos / sem relação com a cena
+    for (const c of animadas) {
+      if (!c.promptAnimacao || c.promptAnimacaoOrigem !== 'ia') {
+        c.promptAnimacao = gerarPromptAnimacaoCurto(c, contexto);
+        c.promptAnimacaoOrigem = 'reserva';
+        c._animDesc = c_descChave(c);
+      }
+    }
+    const check = validarAnimarTxt(gerarAnimarTxt(cenas), cenas);
+    if (!check.ok) {
+      const ruins = new Set();
+      check.problemas.forEach(p => {
+        (p.cenas ? p.cenas.slice(1) : [p.cena]).forEach(n => n && ruins.add(String(n)));
+      });
+      for (const c of animadas) {
+        if (ruins.has(String(c.numero).padStart(2, '0'))) {
+          c.promptAnimacao = gerarPromptAnimacaoCurto(c, contexto);
+          c.promptAnimacaoOrigem = 'reserva';
+          c._animDesc = c_descChave(c);
+        }
+      }
+    }
+    return cenas;
+  }
+
+  function c_descChave(cena) {
+    return String(cena?.descricaoVisual || '');
+  }
+
+  /** Garante que o prompt de animação guardado ainda corresponde à descrição atual da cena (senão refaz). */
+  function atualizarPromptAnimacaoSeNecessario(cena, contexto = {}) {
+    if (!cena.promptAnimacao || cena._animDesc !== c_descChave(cena)) {
+      cena.promptAnimacao = gerarPromptAnimacaoCurto(cena, contexto);
+      cena.promptAnimacaoOrigem = 'reserva';
+      cena._animDesc = c_descChave(cena);
+    }
   }
 
   /**
@@ -2628,17 +2799,13 @@ Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
 
     // 1. Cena 1 (Abertura) é SEMPRE marcada como ANIMAR
     cenas[0].animar = true;
-    if (!cenas[0].promptAnimacao) {
-      cenas[0].promptAnimacao = gerarPromptAnimacaoCurto(cenas[0], contexto);
-    }
+    atualizarPromptAnimacaoSeNecessario(cenas[0], contexto);
 
     // Se tiver menos de 3 cenas no total, marca todas
     if (cenas.length <= 3) {
       for (let i = 0; i < cenas.length; i++) {
         cenas[i].animar = true;
-        if (!cenas[i].promptAnimacao) {
-          cenas[i].promptAnimacao = gerarPromptAnimacaoCurto(cenas[i], contexto);
-        }
+        atualizarPromptAnimacaoSeNecessario(cenas[i], contexto);
       }
       return cenas;
     }
@@ -2695,9 +2862,7 @@ Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
     for (let i = 0; i < cenas.length; i++) {
       if (selecionadosIndices.has(i)) {
         cenas[i].animar = true;
-        if (!cenas[i].promptAnimacao) {
-          cenas[i].promptAnimacao = gerarPromptAnimacaoCurto(cenas[i], contexto);
-        }
+        atualizarPromptAnimacaoSeNecessario(cenas[i], contexto);
       } else {
         cenas[i].animar = false;
       }
@@ -2716,7 +2881,7 @@ Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
     if (animadas.length === 0 && cenas.length > 0) {
       // Fallback: se nenhuma estiver explicitamente marcada, anima pelo menos a cena 1
       cenas[0].animar = true;
-      if (!cenas[0].promptAnimacao) cenas[0].promptAnimacao = gerarPromptAnimacaoCurto(cenas[0]);
+      atualizarPromptAnimacaoSeNecessario(cenas[0]);
       animadas.push(cenas[0]);
     }
 
@@ -3348,6 +3513,8 @@ Output EXCLUSIVELY a valid JSON array of 3 objects with keys: "tipo", "nome", "d
     gerarDescricoesTxt,
     gerarPromptsTxt,
     gerarPromptAnimacaoCurto,
+    gerarPromptsAnimacaoComIa,
+    validarAnimarTxt,
     marcarCenasParaAnimar,
     gerarAnimarTxt,
     gerarGanchosVisuaisAbertura,

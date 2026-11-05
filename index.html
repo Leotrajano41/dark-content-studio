@@ -3587,10 +3587,12 @@ REGRAS ESTRITAS DO ROTEIRO:
   2. NUNCA repita a mesma frase de mini-gancho no mesmo roteiro.
   3. NUNCA prometa algo sensacionalista que o texto bíblico não sustenta.
 - CHAMADA PARA AÇÃO (CTA) CONTEXTUALIZADA COM O TEMA:
-  A chamada para ação no fechamento do vídeo DEVE ser natural, de exatamente UMA frase, e intimamente contextualizada com a história bíblica narrada (ex.: "se até Moisés errou, compartilhe com alguém que precisa ouvir isso hoje", "se a fidelidade de Daniel sustentou sua vida na cova, compartilhe esta verdade com quem precisa de ânimo").
-  É ESTRITAMENTE PROIBIDO usar CTA genérico do tipo "deixe seu like e se inscreva" como única chamada.
+  A chamada para ação é o ÚLTIMO parágrafo do vídeo e DEVE ser UMA frase só, curta (no máximo 35 palavras), natural e ligada ao tema/personagem da história narrada (ex.: "se a fidelidade de Daniel sustentou sua vida na cova, compartilhe esta verdade com quem precisa de ânimo hoje").
+  É ESTRITAMENTE PROIBIDO: (1) usar "inscreva-se", "se inscreva" ou "ative o sino" como parte principal ou secundária do CTA; (2) prometer próximos vídeos, episódios, capítulos ou estudos ("nos próximos capítulos veremos...", "em breve", "acompanhe"); (3) CTA genérico do tipo "deixe seu like"; (4) usar rótulos, colchetes ou marcações como [CTA], [FIM], negrito ou indicações de tom/música.
+- FIDELIDADE BÍBLICA NO FECHAMENTO E NO CTA (mesma regra de separar texto bíblico de interpretação):
+  O parágrafo de conclusão e o CTA só podem afirmar o que o texto bíblico afirma. Tudo que for aplicação ou interpretação deve vir como aplicação ("a lição que fica", "podemos aprender") e nunca como fato narrado. NUNCA invente falas, gestos, sentimentos ou fatos que a Escritura não registra, e NUNCA use termos que o texto não traz: Moisés NÃO é chamado de "gago" nem "gaguejava" (Êxodo 4:10 diz "pesado de boca e pesado de língua"; use essa forma bíblica ou simplesmente não mencione).
 - OBRIGATORIEDADE DO DESFECHO COMPLETO DO EPISÓDIO BÍBLICO (NUNCA DEIXE O EPISÓDIO INCOMPLETO):
-  Todo roteiro bíblico DEVE narrar o clímax e o desfecho concreto e completo do acontecimento histórico (ex: em Elias no Carmelo, narre obrigatoriamente a oração de Elias, o fogo de Deus caindo do céu e consumindo o holocausto, a lenha, as pedras e a água, e a reação imediata de todo o povo caindo com o rosto em terra e proclamando que o Senhor é Deus; em Davi e Golias, o arremesso da pedra, o impacto decisivo cravando na testa e a queda do gigante). É ESTRITAMENTE PROIBIDO cortar ou encerrar a narrativa antes de relatar a intervenção divina e a conclusão do episódio histórico, antes de passar para a conclusão e para o CTA de inscrição.
+  Todo roteiro bíblico DEVE narrar o clímax e o desfecho concreto e completo do acontecimento histórico (ex: em Elias no Carmelo, narre obrigatoriamente a oração de Elias, o fogo de Deus caindo do céu e consumindo o holocausto, a lenha, as pedras e a água, e a reação imediata de todo o povo caindo com o rosto em terra e proclamando que o Senhor é Deus; em Davi e Golias, o arremesso da pedra, o impacto decisivo cravando na testa e a queda do gigante). É ESTRITAMENTE PROIBIDO cortar ou encerrar a narrativa antes de relatar a intervenção divina e a conclusão do episódio histórico, antes de passar para a conclusão e para o CTA.
 
 POSTURA OBRIGATÓRIA DO NARRADOR:
 - Trate todo relato bíblico como verdade sagrada afirmada diretamente: 'o fogo caiu', nunca 'o relato diz que o fogo teria caído'.
@@ -5918,16 +5920,16 @@ function garantirCtaNoUltimoParagrafo(texto, idioma = 'pt', estiloRoteiro = '') 
   const id = (idioma || '').toLowerCase();
 
   const ctaCurto = id.includes('ingl') || id.includes('en')
-    ? 'Share this truth with someone who needs to hear it today, and subscribe to follow upcoming biblical accounts.'
+    ? 'Share this account and subscribe to follow upcoming biblical accounts.'
     : (id.includes('espanh') || id.includes('es'))
-      ? 'Comparte esta verdad con alguien que necesita escucharla hoy, y suscríbete para acompañar los próximos relatos.'
-      : 'Compartilhe esta verdade com quem precisa ouvir isso hoje e inscreva-se para acompanhar os próximos relatos.';
+      ? 'Comparte este relato y suscríbete para acompañar los próximos relatos bíblicos.'
+      : 'Compartilhe este relato e inscreva-se para acompanhar os próximos relatos.';
 
   const ctaLongo = id.includes('ingl') || id.includes('en')
-    ? 'If this biblical account strengthened your faith, share it with someone who needs this message today and subscribe to the channel to follow upcoming studies.'
+    ? 'If this account strengthened your faith, share it with someone and subscribe to follow upcoming biblical studies.'
     : (id.includes('espanh') || id.includes('es'))
-      ? 'Si este relato bíblico fortaleció tu fe, compártelo con alguien que necesita este mensaje hoy y suscríbete al canal para acompañar los próximos estudios.'
-      : 'Se este relato bíblico fortaleceu sua fé, compartilhe com alguém que precisa dessa mensagem hoje e inscreva-se no canal para acompanhar os próximos estudos.';
+      ? 'Si este relato fortaleció tu fe, compártelo con alguien y suscríbete para acompañar los próximos estudios.'
+      : 'Se este relato bíblico fortaleceu sua fé, compartilhe com alguém e inscreva-se para acompanhar os próximos estudos.';
 
   const ctaPadrao = isShorts ? ctaCurto : ctaLongo;
 
@@ -5937,7 +5939,7 @@ function garantirCtaNoUltimoParagrafo(texto, idioma = 'pt', estiloRoteiro = '') 
   // Regex para identificar sentença de CTA ou convite intermediário
   const ctaSentenceRegex = /(?:^|[.!?]\s*)(?:[^.!?\n]*\b(?:subscrib(?:e|ing)|inscreva-se|se\s+inscreva|inscrev(?:a|er)\s+(?:no|neste)\s+canal|join\s+(?:this\s+)?channel|follow\s+(?:this\s+)?channel|acompanhe\s+(?:este|o)\s+canal|suscr[ií]bete|suscribir|ative\s+o\s+sino|vamos\s+em\s+frente|let\x27?s\s+move\s+on)\b[^.!?\n]*[.!?]?)/gi;
 
-  const REGEX_CTA_DETECTOR = /(?<![\p{L}])(?:inscreva-se|se\s+inscreva|inscrev(?:a|er)\s+(?:no|neste)\s+canal|subscribe|acompanhe\s+(?:este|o)\s+canal|suscr[ií]bete|ative\s+o\s+sino|compartilhe\s+(?:com\s+algu[eé]m|esta\s+mensagem|este\s+v[ií]deo|este\s+estudo|esta\s+verdade)|share\s+(?:this|with)|comparte\s+(?:con|este))(?![\p{L}])/iu;
+  const REGEX_CTA_DETECTOR = /(?<![\p{L}])(?:inscreva-se|se\s+inscreva|inscrev(?:a|er)\s+(?:no|neste)\s+canal|subscribe|acompanhe\s+(?:este|o)\s+canal|suscr[ií]bete|ative\s+o\s+sino|compartilhe\s+(?:com|esta|este|essa|esse|isso)|share\s+(?:this|with)|comparte\s+(?:con|este))(?![\p{L}])/iu;
   const ehCta = (p) => REGEX_CTA_DETECTOR.test(p || '');
 
   if (isCatalogo) {
@@ -6049,6 +6051,70 @@ function garantirCtaNoUltimoParagrafo(texto, idioma = 'pt', estiloRoteiro = '') 
   return paragrafos.join('\n\n');
 }
 window.garantirCtaNoUltimoParagrafo = garantirCtaNoUltimoParagrafo;
+
+/**
+ * PONTO 2 & 3: Validação e Regeneração Estruturada do Fechamento / CTA via IA
+ * Garante que o CTA seja exatamente UMA frase curta (até 35 palavras), ligada ao tema,
+ * sem 'inscreva-se', sem prometer próximos episódios e com fidelidade bíblica total (sem 'gago').
+ * Se estiver fora da regra, regenera SOMENTE o parágrafo de fechamento via IA (sem troca cega de palavras).
+ */
+async function validarERegenerarFechamento(texto, ideia = '', idioma = 'pt', modelo = '') {
+  if (!texto || typeof texto !== 'string') return { texto, modificado: false };
+
+  const validCta = typeof RegrasModule !== 'undefined' && RegrasModule.validarCtaFinal
+    ? RegrasModule.validarCtaFinal(texto, ideia)
+    : { ok: true, problemas: [] };
+
+  const validFid = typeof RegrasModule !== 'undefined' && RegrasModule.validarFidelidadeFechamento
+    ? RegrasModule.validarFidelidadeFechamento(texto)
+    : { ok: true, problemas: [] };
+
+  if (validCta.ok && validFid.ok) {
+    return { texto, modificado: false, cta: validCta.cta };
+  }
+
+  const paras = texto.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  if (paras.length === 0) return { texto, modificado: false };
+
+  const ultimoOriginal = paras[paras.length - 1];
+
+  // Se tiver API configurada (ou mock nos testes), regenera só o fechamento
+  if (typeof OpenRouterAPI !== 'undefined' && (OpenRouterAPI.getApiKey?.() || OpenRouterAPI.generateContent)) {
+    try {
+      const promptReescrita = `Reescreva SOMENTE o parágrafo final de chamada para ação (CTA) deste roteiro bíblico sobre: "${ideia}".
+
+FECHAMENTO ATUAL (COM PROBLEMAS):
+"${ultimoOriginal}"
+
+PROBLEMAS IDENTIFICADOS:
+${validCta.problemas.map(p => `- ${p.tipo}: ${p.detalhe}`).concat(validFid.problemas.map(f => `- ${f.tipo}: ${f.termo}`)).join('\n')}
+
+REGRAS OBRIGATÓRIAS DO NOVO CTA:
+1. Deve ser EXATAMENTE UMA frase única (máximo 35 palavras).
+2. Conectada intimamente com a história/personagem bíblico narrado (ex: "se até Moisés hesitou diante da sarça mas foi sustentado por Deus, compartilhe esta verdade com quem precisa de renovo hoje").
+3. ESTRITAMENTE PROIBIDO: qualquer menção a "inscreva-se", "se inscreva", "ative o sino", "inscrição" ou "canal".
+4. ESTRITAMENTE PROIBIDO: prometer próximos vídeos, episódios, capítulos ou continuações ("nos próximos episódios", "em breve", "acompanhe os próximos").
+5. FIDELIDADE BÍBLICA: NUNCA use termos fora do texto como "gago" ou "gaguejava" (Êxodo 4:10 diz "pesado de boca e pesado de língua").
+6. Formato de saída: devolva APENAS o texto da nova frase final, sem aspas, sem colchetes, sem introdução.`;
+
+      const mod = modelo || (OpenRouterAPI.getModelIdeas ? OpenRouterAPI.getModelIdeas() : '');
+      const resp = await OpenRouterAPI.generateContent(promptReescrita, mod, SCRIPT_SYSTEM_PROMPT);
+      let novoCta = String(resp || '').trim().replace(/^["'\[]+|["'\]]+$/g, '').replace(/[\r\n]+/g, ' ');
+      const mFrase = novoCta.match(/[^.!?]+[.!?]*/);
+      if (mFrase) novoCta = mFrase[0].trim();
+
+      if (novoCta && novoCta.length > 10) {
+        paras[paras.length - 1] = novoCta;
+        return { texto: paras.join('\n\n'), modificado: true, cta: novoCta };
+      }
+    } catch (e) {
+      console.warn('[Fechamento] Falha ao regenerar CTA com IA:', e);
+    }
+  }
+
+  return { texto, modificado: false, cta: ultimoOriginal };
+}
+window.validarERegenerarFechamento = validarERegenerarFechamento;
 
 /**
  * VALIDADOR DE ESTRUTURA: Catálogo em N itens (Item 7)
@@ -7600,7 +7666,7 @@ Every biblical documentary MUST follow this precise 7-part narrative progression
 - SECTION 4: Turning Point / Conflict (The decisive crisis, divine confrontation, critical turning point, or divine decree).
 - SECTION 5: Consequence (The immediate historical and scriptural outcomes of the turning point/conflict).
 - SECTION 6: Later Unfolding / Aftermath (Subsequent biblical references, later historical witness, or long-term scriptural impact across generations).
-- SECTION 7: Conclusion + Subscription Call (Solemn concluding reflection on divine sovereignty and enduring biblical truth. STRICTLY AT MOST 120 WORDS in total plus the final 20-word channel subscription sentence. STRICTLY FORBIDDEN: repeating or re-summarizing earlier video scenes/chapters, and STRICTLY FORBIDDEN: homiletic preaching or repetitive rhetorical devices like 'The narrative does not shift. The vocabulary does not change...').
+- SECTION 7: Conclusion + Contextual Call to Action (Solemn concluding reflection on divine sovereignty and enduring biblical truth. STRICTLY AT MOST 120 WORDS in total, followed by ONE final CTA sentence of at most 35 words tied to this story's theme/character. STRICTLY FORBIDDEN in the CTA: "inscreva-se"/subscribe wording and promises of upcoming videos/episodes/chapters. STRICTLY FORBIDDEN: repeating or re-summarizing earlier video scenes/chapters, and STRICTLY FORBIDDEN: homiletic preaching or repetitive rhetorical devices like 'The narrative does not shift. The vocabulary does not change...').
 
 CRITICAL ALLOCATION OF EXCLUSIVE EVENTS AND VERSES (ZERO REPETITION):
 1. For EACH of the 7 sections, you MUST list:
@@ -7818,7 +7884,8 @@ CRITICAL RULES (NON-NEGOTIABLE & ZERO TOLERANCE):
    * MAXIMUM OF 120 WORDS IN TOTAL for the concluding reflection.
    * STRICTLY PROHIBITED from repeating the summary of earlier chapters, re-listing scenes, or preaching homilies.
    * Focus strictly on divine sovereignty and the eternal biblical truth.
-   * FINAL CTA CONTEXTUALIZADO COM O TEMA: Termine OBRIGATORIAMENTE com exatamente UMA frase de chamada para ação (CTA) natural e intimamente contextualizada com a história bíblica contada neste vídeo (ex: "se até Moisés errou, compartilhe com alguém que precisa ouvir isso hoje" ou "se a voz do Senhor chamou um homem simples no deserto, compartilhe esta verdade com quem precisa de renovo"). É ESTRITAMENTE PROIBIDO CTA genérico tipo "deixe seu like e se inscreva no canal" como chamada única.`}
+   * FINAL CTA CONTEXTUALIZADO COM O TEMA: o ÚLTIMO parágrafo deve ser EXATAMENTE UMA frase de chamada para ação (CTA), de no máximo 35 palavras, natural e intimamente contextualizada com o tema/personagem desta história (ex: "se a voz do Senhor chamou um homem simples no deserto, compartilhe esta verdade com quem precisa de renovo hoje"). É ESTRITAMENTE PROIBIDO: (1) usar "inscreva-se", "se inscreva" ou "ative o sino"; (2) prometer próximos vídeos, episódios ou capítulos ("nos próximos capítulos veremos...", "em breve", "acompanhe"); (3) CTA genérico tipo "deixe seu like"; (4) rótulos, colchetes, negrito ou indicações como [FIM] ou [Música].
+   * FIDELIDADE BÍBLICA NO FECHAMENTO E NO CTA: separe texto bíblico de interpretação também aqui. Afirme como fato SOMENTE o que a Escritura registra; aplicações entram como lição ("a lição que fica é..."). NUNCA chame Moisés de "gago" nem diga que "gaguejava" (Êxodo 4:10 diz "pesado de boca e pesado de língua" — use essa forma ou não mencione). NUNCA invente falas, sentimentos ou fatos que o texto bíblico não traz.`}
 3. ZERO BACKSTAGE / META-LANGUAGE & ZERO INTERNAL LABELS:
    - STRICTLY FORBIDDEN to use presentation or backstage phrases like "in the next section", "as we transition", "we will explore", "as we continue our exploration", "moving ahead", "as the narrative unfolds". Speak directly as an ancient chronicle without stepping out of the story.
    - STRICTLY FORBIDDEN to utter internal architectural labels like "Canonical Boundary", "Opening Hook", "Section", "Point", "Outline", "Role" in the spoken text.
@@ -10431,7 +10498,7 @@ function auditarEstruturaFinal(texto, estiloRoteiro = '', ancoraSecao7 = '') {
   const avisos = [];
   if (/Cat[aá]logo/i.test(String(estiloRoteiro))) return avisos; // o Catálogo tem CTA intermediário por desenho
   const paras = String(texto || '').split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
-  const ehCta = (p) => /(?<![\p{L}])(?:inscreva-se|se\s+inscreva|inscrev(?:a|er)\s+(?:no|neste)\s+canal|subscribe|acompanhe\s+(?:este|o)\s+canal|suscr[ií]bete|ative\s+o\s+sino)(?![\p{L}])/iu.test(p || '');
+  const ehCta = (p) => /(?<![\p{L}])(?:inscreva-se|se\s+inscreva|inscrev(?:a|er)\s+(?:no|neste)\s+canal|subscribe|acompanhe\s+(?:este|o)\s+canal|suscr[ií]bete|ative\s+o\s+sino|compartilh(?:e|ar)\s+(?:com|esta|este|essa|esse|isso)|share\s+(?:this|with|it)|comparte\s+(?:con|este|esta))(?![\p{L}])/iu.test(p || '');
   const idxCtas = paras.map((p, i) => ehCta(p) ? i : -1).filter(i => i >= 0);
   if (idxCtas.length > 1) avisos.push({ tipo: 'mais_de_um_cta', trecho: `${idxCtas.length} parágrafos de convite de inscrição` });
   if (idxCtas.length && idxCtas[idxCtas.length - 1] !== paras.length - 1) avisos.push({ tipo: 'conteudo_depois_do_cta', trecho: 'Há texto depois do convite de inscrição' });
@@ -10448,7 +10515,7 @@ window.auditarEstruturaFinal = auditarEstruturaFinal;
 
 function indiceInicioFechamento(paragrafos, ancora) {
   const norm = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
-  const ehCta = (p) => /(?<![\p{L}])(?:inscreva-se|se\s+inscreva|inscrev(?:a|er)\s+(?:no|neste)\s+canal|subscribe|acompanhe\s+(?:este|o)\s+canal|suscr[ií]bete|ative\s+o\s+sino)(?![\p{L}])/iu.test(p || '');
+  const ehCta = (p) => /(?<![\p{L}])(?:inscreva-se|se\s+inscreva|inscrev(?:a|er)\s+(?:no|neste)\s+canal|subscribe|acompanhe\s+(?:este|o)\s+canal|suscr[ií]bete|ative\s+o\s+sino|compartilh(?:e|ar)\s+(?:com|esta|este|essa|esse|isso)|share\s+(?:this|with|it)|comparte\s+(?:con|este|esta))(?![\p{L}])/iu.test(p || '');
   const a = norm(ancora).slice(0, 30);
   if (a.length >= 15) {
     const limite = Math.max(0, paragrafos.length - 6);
@@ -11005,6 +11072,12 @@ window.gerarRoteiroEmSeteSecoes = gerarRoteiroEmSeteSecoes;
       // 5.1 Garante convite de inscrição ANTES do ajuste de extensão (o CTA entra no orçamento de palavras!)
       if (typeof garantirCtaNoUltimoParagrafo === 'function') {
         resultText = garantirCtaNoUltimoParagrafo(resultText, idioma, estiloRoteiro);
+      }
+
+      // 5.1b Validação e Regeneração Estruturada do Fechamento / CTA via IA
+      if (typeof validarERegenerarFechamento === 'function') {
+        const fechamentoRes = await validarERegenerarFechamento(resultText, ideia, idioma, modeloRevisao);
+        resultText = fechamentoRes.texto;
       }
 
       // 5.2 Ajustar extensão estrita para respeitar o teto de palavras da duração selecionada (COM CTA INCLUÍDO)
@@ -11623,7 +11696,7 @@ ${resultText}`;
       // Geração dos ganchos visuais da abertura (Conservadora, Mediana, Ousada)
       try {
         const chamarIaAbertura = hasKey ? async (promptAbertura) => {
-          return await OpenRouterAPI.generateContent(promptAbertura, modeloPrompts);
+          return await OpenRouterAPI.generateContent(promptAbertura, OpenRouterAPI.getModelCenas());
         } : null;
         const ganchos = await PlanoCenasModule.gerarGanchosVisuaisAbertura(
           narracaoLimpa,
@@ -11635,6 +11708,13 @@ ${resultText}`;
       } catch (errGanchos) {
         console.warn('[Ganchos Abertura] Falha ao gerar opções de abertura:', errGanchos);
       }
+
+      // Prompt de animação de CADA cena marcada, gerado a partir da descrição visual daquela cena (modelo de cenas)
+      await PlanoCenasModule.gerarPromptsAnimacaoComIa(
+        plano.cenas,
+        { tema: inputTema, personagemPrincipal: personagem },
+        hasKey ? async (promptAnim) => OpenRouterAPI.generateContent(promptAnim, OpenRouterAPI.getModelCenas()) : null
+      );
 
       const cenasTxt = PlanoCenasModule.gerarCenasTxt(plano.cenas, narracaoLimpa);
       const descricoesTxt = PlanoCenasModule.gerarDescricoesTxt(plano.cenas);
@@ -11764,6 +11844,12 @@ ${resultText}`;
         narracaoLimpa,
         chamarIaFn,
         { tema: inputTema, personagemPrincipal: personagem, fichasPersonagens: window._fichasPersonagensAtual }
+      );
+
+      await PlanoCenasModule.gerarPromptsAnimacaoComIa(
+        window._planoDeCenasAtual.cenas,
+        { tema: inputTema, personagemPrincipal: personagem },
+        async (promptAnim) => OpenRouterAPI.generateContent(promptAnim, OpenRouterAPI.getModelCenas())
       );
 
       const cenasTxt = PlanoCenasModule.gerarCenasTxt(window._planoDeCenasAtual.cenas, narracaoLimpa);

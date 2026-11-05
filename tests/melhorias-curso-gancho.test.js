@@ -94,11 +94,64 @@ function assert(cond, msg) {
     assert(/^\d{2}\s*\|\s*.+5s duration/i.test(linha), `Linha no padrão correto "NN | [prompt 5s duration]": ${linha}`);
   });
 
+  console.log('\n🚫 4.1 Validador de animar.txt contra linhas repetidas ou genéricas');
+  // Linhas iguais devem falhar
+  const txtRepetido = '01 | Cinematic slow push-in, gentle flames, 5s duration\n02 | Cinematic slow push-in, gentle flames, 5s duration';
+  const valRep = PlanoCenasModule.validarAnimarTxt(txtRepetido);
+  assert(!valRep.ok && valRep.problemas.some(p => p.tipo === 'igual'), 'validarAnimarTxt detecta e reprova linhas idênticas');
+
+  // Linhas quase iguais devem falhar
+  const txtQuaseIgual = '01 | Cinematic slow push-in camera, gentle flickering supernatural flames and warm golden light, 5s duration\n02 | Cinematic slow push-in camera, gentle flickering supernatural flames and warm golden light, subtle embers, 5s duration';
+  const valQuase = PlanoCenasModule.validarAnimarTxt(txtQuaseIgual);
+  assert(!valQuase.ok && valQuase.problemas.some(p => p.tipo === 'quase_igual'), 'validarAnimarTxt detecta e reprova linhas quase iguais (>70% similaridade)');
+
+  // Linhas específicas por cena passam
+  const cenasDiferentes = [
+    { numero: 1, descricaoVisual: 'Moses watching flock of sheep in Midian desert with wooden staff', animar: true },
+    { numero: 2, descricaoVisual: 'Burning bush completely enveloped in vibrant supernatural flames', animar: true },
+    { numero: 3, descricaoVisual: 'Bare feet on dry sacred ground beside removed leather sandals', animar: true }
+  ];
+  cenasDiferentes.forEach(c => { c.promptAnimacao = PlanoCenasModule.gerarPromptAnimacaoCurto(c); });
+  const txtDiferente = PlanoCenasModule.gerarAnimarTxt(cenasDiferentes);
+  const valDif = PlanoCenasModule.validarAnimarTxt(txtDiferente, cenasDiferentes);
+  assert(valDif.ok, 'validarAnimarTxt aprova quando cada linha é diferente e coerente com sua cena');
+  assert(cenasDiferentes[0].promptAnimacao.includes('sheep'), 'Cena 1 (ovelhas) tem animação focada em ovelhas/pastor');
+  assert(cenasDiferentes[1].promptAnimacao.includes('flame'), 'Cena 2 (sarça) tem animação focada em chamas');
+  assert(cenasDiferentes[2].promptAnimacao.includes('feet') || cenasDiferentes[2].promptAnimacao.includes('sandals'), 'Cena 3 (sandálias) tem animação focada em pés/sandálias');
+
   console.log('\n📜 5. Dica de Consistência do Gemini no HTML');
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf-8');
   assert(html.includes('Para o personagem manter o mesmo rosto, anexe no Gemini a imagem já aprovada do personagem junto com o prompt da nova cena.'), 'Dica de consistência facial presente no index.html');
   assert(html.includes('card-gancho-visual-abertura'), 'Card de ganchos visuais presente no HTML');
   assert(html.includes('animar.txt'), 'animar.txt incluído no pacote scriptorium');
+
+  console.log('\n🛡️ 6. Regras de CTA (1 frase só, <=35 palavras, sem inscreva-se, sem próximos vídeos)');
+  const RegrasModule = require('../js/regras-conteudo.js');
+
+  // CTA com "inscreva-se" deve falhar
+  const ctaComInscricao = 'Se Deus chamou Moisés no deserto, compartilhe com quem precisa e inscreva-se no canal para acompanhar os próximos vídeos.';
+  const valCta1 = RegrasModule.validarCtaFinal(ctaComInscricao, 'Moisés na sarça ardente');
+  assert(!valCta1.ok && valCta1.problemas.some(p => p.tipo === 'inscreva_se'), 'Reprova CTA que contém inscreva-se');
+  assert(valCta1.problemas.some(p => p.tipo === 'promete_proximos'), 'Reprova CTA que promete próximos vídeos');
+
+  // CTA com mais de 35 palavras deve falhar
+  const ctaLongo = 'Moisés saiu do deserto diferente de como entrou porque descobriu quem estava com ele e se você conhece alguém que hoje se sente fraco, hesitante e incapaz diante do que Deus tem pedido em sua vida compartilhe esta mensagem agora mesmo.';
+  const valCtaLongo = RegrasModule.validarCtaFinal(ctaLongo, 'Moisés na sarça ardente');
+  assert(!valCtaLongo.ok && valCtaLongo.problemas.some(p => p.tipo === 'longo_demais'), 'Reprova CTA com mais de 35 palavras');
+
+  // CTA válido: 1 frase, curta, contextualizada com ação
+  const ctaValido = 'Se a voz de Deus chamou Moisés no deserto árido, compartilhe esta verdade com quem precisa de renovo hoje.';
+  const valCtaOk = RegrasModule.validarCtaFinal(ctaValido, 'Moisés na sarça ardente');
+  assert(valCtaOk.ok, 'Aprova CTA válido de 1 frase curta contextualizada');
+
+  console.log('\n📖 7. Fidelidade Bíblica no Fechamento (sem "gago")');
+  const textoComGago = 'Deus chamou Moisés diante da sarça.\n\nO Senhor capacitou um gago a confrontar Faraó.\n\nCompartilhe com quem precisa.';
+  const valGago = RegrasModule.validarFidelidadeFechamento(textoComGago);
+  assert(!valGago.ok && valGago.problemas.some(p => p.tipo === 'termo_fora_do_texto_biblico'), 'Reprova "gago" no fechamento do roteiro');
+
+  const textoFiel = 'Deus chamou Moisés diante da sarça.\n\nO Senhor sustentou aquele que se dizia pesado de boca e pesado de língua.\n\nCompartilhe com quem precisa.';
+  const valFiel = RegrasModule.validarFidelidadeFechamento(textoFiel);
+  assert(valFiel.ok, 'Aprova expressão bíblica "pesado de boca e pesado de língua"');
 
   console.log(`\n🎉 ${total} verificações do teste melhorias-curso-gancho passaram com sucesso!\n`);
 })().catch(err => {
