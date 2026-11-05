@@ -1527,7 +1527,12 @@ CRITICAL RULES:
 10. Do NOT include Portuguese words.
 11. Do NOT use generic placeholders like "biblical tableau", "artistic depiction" or "scene representing". Describe the physical concrete action.
 12. CRITICAL SCENE NUMBERING RULE: You MUST PRESERVE the exact scene numbers from INPUT SCENES: [${numerosEsperados}]. DO NOT restart numbering from "01" if scenes are ${numerosEsperados}!
-13. Output EXCLUSIVELY a valid JSON array of objects with "numero" and "descricaoVisual".
+13. STRICT BIBLICAL FIDELITY & ZERO INVENTED CHARACTERS / SPECTATORS:
+    - Depict ONLY the specific characters, people and elements explicitly mentioned or required by this narration excerpt.
+    - NEVER invent onlookers, crowds, witnesses, shepherds, villagers, guards, or spectators if the script and biblical text does not state they are present.
+    - For example, in Exodus 3 at the burning bush in Mount Horeb, Moses is completely alone in solitude before God; it is STRICTLY FORBIDDEN to invent other shepherds, onlookers, or observers watching the bush!
+    - If a scene is a solitary moment of prayer, wilderness solitude, or private divine encounter, depict strictly that solitary figure alone.
+14. Output EXCLUSIVELY a valid JSON array of objects with "numero" and "descricaoVisual".
 ${blocoFichasIa}${blocoAnteriores}
 INPUT SCENES:
 ${cenasFormatadas}
@@ -1695,6 +1700,23 @@ ${exemploJson}`;
       const temAguaNoTrecho = /(?<![\p{L}])(?:mar|mares|oceano|oceanos|[aá]guas?|beber|sede|fonte|rio|ribeiro|po[cç]o|jorr(?:ar|ou)|brot(?:ar|aram)|manancial|navio|barco|porto|profundezas?)(?![\p{L}])/iu.test(trechoPt);
       if (!temAguaNoTrecho) {
         return { valido: false, motivo: 'Contém termos aquáticos ("water"/"waters") sem menção a água no trecho narrativo.' };
+      }
+    }
+
+    // 1b. Detecção de personagens ou espectadores inventados sem menção no relato/trecho
+    // Ex: "pastores ao redor", "onlookers", "crowd" quando o relato é um encontro ou oração solitária (Moisés na sarça ardente)
+    const ehCenaSolitaria = /(?<![\p{L}])(?:sar[çc]a|ardente|horebe|deserto|deserta|ermo|caverna|sozinho|s[oó]|orava|orou|solit[aá]ri[oa]|monte\s+horebe|monte\s+sinai)(?![\p{L}])/iu.test(contextoGeral);
+    const temMencaoPessoasNoTrecho = /(?<![\p{L}])(?:pastor(?:es)?|multid[aã]o|povo|homens|mulheres|espectador(?:es)?|testemunhas?|olhavam|assistiam|soldados?|anci[aã]os?|disc[íi]pulos?)(?![\p{L}])/iu.test(trechoPt || '');
+
+    if (ehCenaSolitaria && !temMencaoPessoasNoTrecho) {
+      // Ignora menções legítimas a indumentária como "shepherd's staff" ou "shepherd's pouch"
+      const descSemVestes = desc.replace(/\bshepherd['’]?s\s+(?:staff|pouch|tunic|cloak|rod)\b/gi, 'staff');
+      const matchInventados = descSemVestes.match(/\b(?:shepherds\b|nearby\s+shepherd\b|other\s+shepherds?\b|shepherds?\s+(?:looking|watching|standing|gazing|surrounding)|onlookers?|crowd|spectators?|bystanders?|villagers?|witnesses|group\s+of\s+men)\b/i);
+      if (matchInventados) {
+        return {
+          valido: false,
+          motivo: `Contém personagens ou espectadores inventados ("${matchInventados[0]}") não mencionados no relato bíblico desta cena.`
+        };
       }
     }
 
@@ -2634,7 +2656,7 @@ Output strictly JSON: [{"numero": "${c.numero}", "descricaoVisual": "..."}]`;
       [/\b(?:sandal|sandals|barefoot|bare feet|feet|foot)\b/, 'dust lifts softly around the feet as they settle on the ground'],
       [/\b(?:kneel|kneels|kneeling|prayer|praying|prays|bows?|bowing|prostrat\w*|face down)\b/, 'the head bows slowly and the robes settle around the body'],
       [/\b(?:staff|rod)\b/, 'the hand tightens around the staff while the robe stirs in the wind'],
-      [/\b(?:sheep|flock|lambs?|shepherd)\b/, 'sheep drift slowly across the slope as the shepherd moves among them'],
+      [/\b(?:sheep|flock|lambs?)\b/, 'sheep drift slowly across the slope while grazing'],
       [/\b(?:water|sea|ocean|wave|waves|river|rain|ripples?)\b/, 'water ripples and mist rises from the surface'],
       [/\b(?:crowd|people|army|multitude|soldiers|onlookers|assembly|elders)\b/, 'figures shift and murmur while dust rises from the ground'],
       [/\b(?:cloud|clouds|sky|storm|rays?|glory|heaven|heavens|light beam)\b/, 'clouds drift and rays of light shift slowly across the scene'],
@@ -2724,6 +2746,7 @@ For EACH scene below, write ONE animation prompt in English based ONLY on that s
 RULES:
 - Every prompt MUST be different from the others and use the specific subject/objects of its own scene. NEVER reuse a template sentence between scenes.
 - Do NOT add elements that are not in the scene's visual description (no flames, storms, water or crowds unless the description has them).
+- STRICT BIBLICAL ACCURACY: Do NOT invent or add secondary characters, onlookers, shepherds, crowds, or people not present in the scene's visual description.
 - Never depict God as a human figure; divine presence only as light.
 - 20 to 40 words. End with exactly: "5s duration".
 - One line of plain text per prompt (no markdown, no quotes).
@@ -2927,6 +2950,7 @@ GENERATE ONE OF EACH MANDATORY TYPE:
 
 RULES:
 - No written text or words in the image.
+- STRICT FIDELITY TO SCRIPT & BIBLICAL ACCURACY: Never invent secondary people, onlookers, crowds, or shepherds unless explicitly in the biblical passage (e.g. Moses at the burning bush in Exodus 3 is solitary — zero onlookers or shepherds!).
 - Each concept MUST contain:
   * tipo: "CONSERVADORA" | "MEDIANA" | "OUSADA"
   * nome: short Portuguese title (max 5 words)

@@ -153,6 +153,40 @@ function assert(cond, msg) {
   const valFiel = RegrasModule.validarFidelidadeFechamento(textoFiel);
   assert(valFiel.ok, 'Aprova expressão bíblica "pesado de boca e pesado de língua"');
 
+  console.log('\n⚡ 8. Regras no Shorts, Médio e Catálogo (sem CTA genérico)');
+  const vm = require('vm');
+  const context = { window: {}, document: { getElementById: () => null } };
+  vm.createContext(context);
+  const matchShortsFn = html.match(/function\s+garantirExtensaoShorts[\s\S]*?\n\}/);
+  assert(matchShortsFn, 'Função garantirExtensaoShorts encontrada no HTML');
+  vm.runInContext(matchShortsFn[0], context);
+
+  // Testa que garantirExtensaoShorts NÃO injeta o CTA genérico de inscrição
+  const textoShortsEntrada = 'No monte Horebe uma sarça ardia sem se queimar.\n\nMoisés ouviu a voz de Deus ordenar que tirasse as sandálias dos pés.\n\nSe você busca discernimento no deserto, compartilhe esta verdade sagrada hoje.';
+  const shortsAjustado = context.garantirExtensaoShorts(textoShortsEntrada);
+  assert(!shortsAjustado.includes('Inscreva-se no canal para mais estudos e relatos bíblicos sagrados'), 'garantirExtensaoShorts não injeta CTA genérico de inscrição');
+  assert(!shortsAjustado.toLowerCase().includes('inscreva-se'), 'garantirExtensaoShorts não contém inscreva-se');
+
+  console.log('\n👁️ 9. Fidelidade Bíblica no Plano de Cenas (zero pastores/espectadores inventados na sarça)');
+  const trechoMoisésSarça = 'Moisés aproximou-se para ver por que a sarça não se consumia.';
+  const contextoMoises = { tema: 'Moisés na sarça ardente (Êxodo 3)', ideia: 'Moisés na sarça ardente' };
+
+  // Reprova pastores inventados ao redor da sarça
+  const descComPastores = 'Moses and nearby shepherds looking in awe at the burning bush on the rocky slope';
+  const valPastores = PlanoCenasModule.validarDescricaoVisualCena(descComPastores, trechoMoisésSarça, contextoMoises);
+  assert(!valPastores.valido, 'Reprova pastores inventados ao redor da sarça em Êxodo 3');
+  assert(valPastores.motivo.includes('personagens ou espectadores inventados'), 'Motivo identifica pastores/espectadores inventados');
+
+  // Reprova multidão/espectadores inventados
+  const descComMultidao = 'A crowd of onlookers watching the supernatural flames of the bush';
+  const valMultidao = PlanoCenasModule.validarDescricaoVisualCena(descComMultidao, trechoMoisésSarça, contextoMoises);
+  assert(!valMultidao.valido, 'Reprova multidão de onlookers na sarça');
+
+  // Aprova cajado de pastor de Moisés ("shepherd\'s staff") em cena solitária
+  const descCajadoOk = "A medium shot of solitary Moses holding a wooden shepherd's staff gazing at the radiant burning bush";
+  const valCajadoOk = PlanoCenasModule.validarDescricaoVisualCena(descCajadoOk, trechoMoisésSarça, contextoMoises);
+  assert(valCajadoOk.valido, 'Aprova "shepherd\'s staff" como indumentária legítima sem acusar pastores inventados');
+
   console.log(`\n🎉 ${total} verificações do teste melhorias-curso-gancho passaram com sucesso!\n`);
 })().catch(err => {
   console.error(err);
